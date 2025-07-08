@@ -1,0 +1,136 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import BuyButton from '../components/BuyButton.astro';
+---
+
+<Layout
+  title="Pricing - SaaS Boilerplate"
+  description="Choose the perfect plan for your SaaS project"
+>
+  <Header />
+  
+  <main>
+    <section class="py-20">
+      <div class="container mx-auto px-4">
+        <div class="text-center mb-12">
+          <h1 class="text-4xl font-bold mb-4">Simple, Transparent Pricing</h1>
+          <p class="text-xl text-base-content/70">
+            Choose the perfect plan for your project
+          </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <!-- Starter Plan -->
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title text-2xl">Starter</h3>
+              <div class="py-4">
+                <span class="text-4xl font-bold">$99</span>
+                <span class="text-base-content/70">one-time</span>
+              </div>
+              <ul class="space-y-2 mb-6">
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Complete source code
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Basic documentation
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Email support
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  1 year updates
+                </li>
+              </ul>
+              <BuyButton 
+                text="Get Starter" 
+                priceId="price_starter"
+                variant="ghost"
+                className="w-full"
+              />
+            </div>
+          </div>
+          
+          <!-- Pro Plan -->
+          <div class="card bg-primary text-primary-content shadow-xl scale-105">
+            <div class="card-body">
+              <div class="badge badge-secondary mb-2">Most Popular</div>
+              <h3 class="card-title text-2xl">Pro</h3>
+              <div class="py-4">
+                <span class="text-4xl font-bold">$199</span>
+                <span class="text-primary-content/70">one-time</span>
+              </div>
+              <ul class="space-y-2 mb-6">
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Everything in Starter
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Premium components
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Priority support
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Lifetime updates
+                </li>
+              </ul>
+              <BuyButton 
+                text="Get Pro" 
+                priceId="price_pro"
+                variant="accent"
+                className="w-full"
+              />
+            </div>
+          </div>
+          
+          <!-- Enterprise Plan -->
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title text-2xl">Enterprise</h3>
+              <div class="py-4">
+                <span class="text-4xl font-bold">$499</span>
+                <span class="text-base-content/70">one-time</span>
+              </div>
+              <ul class="space-y-2 mb-6">
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Everything in Pro
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Custom integrations
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  1-on-1 consultation
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  White-label rights
+                </li>
+              </ul>
+              <BuyButton 
+                text="Get Enterprise" 
+                priceId="price_enterprise"
+                variant="ghost"
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+</Layout>

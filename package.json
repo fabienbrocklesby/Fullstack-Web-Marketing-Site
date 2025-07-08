@@ -1,0 +1,38 @@
+{
+  "name": "fullstack-saas-boilerplate",
+  "private": true,
+  "description": "Full-stack SaaS marketing site with Astro frontend and Strapi backend",
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "prepare": "husky install",
+    "reset": "pnpm run reset:db && pnpm run restart",
+    "reset:db": "rm -rf backend/.tmp && rm -rf backend/build && rm -rf backend/dist",
+    "reset:hard": "pnpm run reset:db && rm -rf node_modules && rm -rf */node_modules && pnpm install",
+    "restart": "pkill -f 'strapi develop' || true && pnpm run dev",
+    "backend:admin": "cd backend && pnpm strapi admin:create-user",
+    "backend:reset": "cd backend && rm -rf .tmp build dist && pnpm strapi develop",
+    "setup": "pnpm install && pnpm run reset:db && echo 'Setup complete! Run: pnpm dev'"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,astro,json,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

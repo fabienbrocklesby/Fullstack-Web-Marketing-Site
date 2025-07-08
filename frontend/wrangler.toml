@@ -1,0 +1,12 @@
+name = "saas-boilerplate"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[env.production]
+PUBLIC_CMS_URL = "https://your-strapi-backend.ondigitalocean.app"
+
+[env.preview]
+PUBLIC_CMS_URL = "https://your-strapi-backend.ondigitalocean.app"
+
+[env.development]
+PUBLIC_CMS_URL = "http://localhost:1337"

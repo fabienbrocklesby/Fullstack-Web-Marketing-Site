@@ -1,0 +1,53 @@
+{
+  "kind": "collectionType",
+  "collectionName": "purchases",
+  "info": {
+    "singularName": "purchase",
+    "pluralName": "purchases",
+    "displayName": "Purchase",
+    "description": "Purchase records from Stripe"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "stripeSessionId": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "amount": {
+      "type": "decimal",
+      "required": true
+    },
+    "currency": {
+      "type": "string",
+      "default": "usd"
+    },
+    "customerEmail": {
+      "type": "email"
+    },
+    "priceId": {
+      "type": "string",
+      "required": true
+    },
+    "affiliate": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::affiliate.affiliate",
+      "inversedBy": "purchases"
+    },
+    "commissionAmount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "commissionPaid": {
+      "type": "boolean",
+      "default": false
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

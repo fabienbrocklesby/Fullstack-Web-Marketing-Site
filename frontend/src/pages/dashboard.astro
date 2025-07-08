@@ -1,0 +1,291 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Marketing Dashboard">
+  <main class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100 shadow-md">
+      <div class="flex-1">
+        <a class="btn btn-ghost text-xl">Marketing Dashboard</a>
+      </div>
+      <div class="flex-none">
+        <div class="dropdown dropdown-end">
+          <label tabindex="0" class="btn btn-ghost">
+            <span id="user-email">Loading...</span>
+          </label>
+          <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+            <li><a id="logout-btn">Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <div class="container mx-auto p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Total Sales -->
+        <div class="stat bg-base-100 shadow-lg rounded-lg">
+          <div class="stat-title">Total Sales</div>
+          <div class="stat-value" id="total-sales">$0</div>
+          <div class="stat-desc">This month</div>
+        </div>
+        
+        <!-- Total Commission -->
+        <div class="stat bg-base-100 shadow-lg rounded-lg">
+          <div class="stat-title">Your Commission</div>
+          <div class="stat-value text-success" id="total-commission">$0</div>
+          <div class="stat-desc">This month</div>
+        </div>
+        
+        <!-- Conversion Rate -->
+        <div class="stat bg-base-100 shadow-lg rounded-lg">
+          <div class="stat-title">Conversion Rate</div>
+          <div class="stat-value" id="conversion-rate">0%</div>
+          <div class="stat-desc">This month</div>
+        </div>
+      </div>
+      
+      <!-- Recent Sales -->
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h2 class="card-title">Recent Sales</h2>
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                  <th>Commission</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="sales-table">
+                <tr>
+                  <td colspan="5" class="text-center">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Affiliate Link Generator -->
+      <div class="card bg-base-100 shadow-lg mt-6">
+        <div class="card-body">
+          <h2 class="card-title">Your Affiliate Link</h2>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Your unique affiliate code:</span>
+            </label>
+            <div class="input-group">
+              <input type="text" id="affiliate-code" class="input input-bordered flex-1" readonly />
+              <button class="btn btn-primary" id="copy-code">Copy</button>
+            </div>
+          </div>
+          <div class="form-control mt-4">
+            <label class="label">
+              <span class="label-text">Your affiliate link:</span>
+            </label>
+            <div class="input-group">
+              <input type="text" id="affiliate-link" class="input input-bordered flex-1" readonly />
+              <button class="btn btn-primary" id="copy-link">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  // Check if user is logged in
+  const jwt = localStorage.getItem('jwt');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  if (!jwt || !user.id) {
+    window.location.href = '/login';
+    return; // Exit early to prevent API calls
+  }
+  
+  // Display user email
+  const userEmailElement = document.getElementById('user-email');
+  if (userEmailElement) {
+    userEmailElement.textContent = user.email || 'User';
+  }
+  
+  // Logout functionality
+  document.getElementById('logout-btn')?.addEventListener('click', () => {
+    localStorage.removeItem('jwt');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  });
+  
+  // Copy functionality
+  document.getElementById('copy-code')?.addEventListener('click', () => {
+    const codeInput = document.getElementById('affiliate-code') as HTMLInputElement;
+    if (codeInput) {
+      codeInput.select();
+      document.execCommand('copy');
+      alert('Affiliate code copied!');
+    }
+  });
+  
+  document.getElementById('copy-link')?.addEventListener('click', () => {
+    const linkInput = document.getElementById('affiliate-link') as HTMLInputElement;
+    if (linkInput) {
+      linkInput.select();
+      document.execCommand('copy');
+      alert('Affiliate link copied!');
+    }
+  });
+  
+  // Load dashboard data
+  async function loadDashboardData() {
+    try {
+      const cmsUrl = document.documentElement.getAttribute('data-cms-url') || 'http://localhost:1337';
+      
+      // Double-check authentication before making API calls
+      const jwt = localStorage.getItem('jwt');
+      if (!jwt) {
+        window.location.href = '/login';
+        return;
+      }
+      
+      // Get user's affiliate data
+      const affiliateResponse = await fetch(`${cmsUrl}/api/my-affiliates`, {
+        headers: {
+          'Authorization': `Bearer ${jwt}`,
+        },
+      });
+      
+      if (!affiliateResponse.ok) {
+        if (affiliateResponse.status === 401 || affiliateResponse.status === 403) {
+          // Authentication failed, redirect to login
+          localStorage.removeItem('jwt');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error('Failed to fetch affiliate data');
+      }
+      
+      const affiliateData = await affiliateResponse.json();
+      let affiliate = affiliateData.data?.[0];
+      
+      // Create affiliate if doesn't exist
+      if (!affiliate) {
+        console.log('Creating new affiliate record...');
+        const createResponse = await fetch(`${cmsUrl}/api/my-affiliates`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${jwt}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            data: {
+              email: user.email,
+              name: user.username || user.email,
+              isActive: true,
+            },
+          }),
+        });
+        
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
+          console.error('Failed to create affiliate:', errorData);
+          throw new Error('Failed to create affiliate record');
+        }
+        
+        const createData = await createResponse.json();
+        affiliate = createData.data;
+        console.log('Affiliate created:', affiliate);
+      }
+      
+      // Update affiliate code and link
+      const codeInput = document.getElementById('affiliate-code') as HTMLInputElement;
+      const linkInput = document.getElementById('affiliate-link') as HTMLInputElement;
+      
+      if (codeInput && linkInput && affiliate) {
+        const affiliateCode = affiliate.attributes?.code || affiliate.code || `user_${user.id}`;
+        codeInput.value = affiliateCode;
+        linkInput.value = `${window.location.origin}/pricing?ref=${affiliateCode}`;
+      }
+      
+      // Get purchases for this affiliate
+      const purchasesResponse = await fetch(`${cmsUrl}/api/my-purchases?filters[affiliate][id][$eq]=${affiliate?.id}&populate=*`, {
+        headers: {
+          'Authorization': `Bearer ${jwt}`,
+        },
+      });
+      
+      let purchases = [];
+      if (purchasesResponse.ok) {
+        const purchasesData = await purchasesResponse.json();
+        purchases = purchasesData.data || [];
+      }
+      
+      // Calculate stats
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const thisMonthPurchases = purchases.filter((purchase: any) => {
+        const purchaseDate = new Date(purchase.attributes?.createdAt);
+        return purchaseDate.getMonth() === currentMonth && purchaseDate.getFullYear() === currentYear;
+      });
+      
+      const totalSales = thisMonthPurchases.reduce((sum: number, purchase: any) => {
+        return sum + (purchase.attributes?.amount || 0);
+      }, 0);
+      
+      const totalCommission = thisMonthPurchases.reduce((sum: number, purchase: any) => {
+        return sum + (purchase.attributes?.commissionAmount || 0);
+      }, 0);
+      
+      const conversionRate = purchases.length > 0 ? ((purchases.length / (purchases.length + 10)) * 100).toFixed(1) : '0';
+      
+      // Update stats
+      const totalSalesElement = document.getElementById('total-sales');
+      const totalCommissionElement = document.getElementById('total-commission');
+      const conversionRateElement = document.getElementById('conversion-rate');
+      
+      if (totalSalesElement) totalSalesElement.textContent = `$${totalSales.toFixed(2)}`;
+      if (totalCommissionElement) totalCommissionElement.textContent = `$${totalCommission.toFixed(2)}`;
+      if (conversionRateElement) conversionRateElement.textContent = `${conversionRate}%`;
+      
+      // Update sales table
+      const salesTableElement = document.getElementById('sales-table');
+      if (salesTableElement) {
+        if (purchases.length === 0) {
+          salesTableElement.innerHTML = '<tr><td colspan="5" class="text-center">No sales yet. Share your affiliate link to start earning!</td></tr>';
+        } else {
+          salesTableElement.innerHTML = purchases.slice(0, 10).map((purchase: any) => {
+            const date = new Date(purchase.attributes?.createdAt || purchase.createdAt).toLocaleDateString();
+            const amount = purchase.attributes?.amount || purchase.amount || 0;
+            const commission = purchase.attributes?.commissionAmount || purchase.commissionAmount || 0;
+            const status = purchase.attributes?.status || purchase.status || 'completed';
+            const customerEmail = purchase.attributes?.customerEmail || purchase.customerEmail || 'Anonymous';
+            
+            return `
+              <tr>
+                <td>${date}</td>
+                <td>${customerEmail}</td>
+                <td>$${amount.toFixed(2)}</td>
+                <td class="text-success">$${commission.toFixed(2)}</td>
+                <td><span class="badge badge-${status === 'completed' ? 'success' : 'warning'}">${status}</span></td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'alert alert-error mb-4';
+      errorDiv.innerHTML = `<span>Error loading dashboard: ${error.message}</span>`;
+      document.querySelector('.container')?.prepend(errorDiv);
+    }
+  }
+  
+  // Load data on page load
+  loadDashboardData();
+</script>

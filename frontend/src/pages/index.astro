@@ -1,0 +1,87 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import BuyButton from '../components/BuyButton.astro';
+---
+
+<Layout
+  title="SaaS Boilerplate - Build Your SaaS Faster"
+  description="A production-ready SaaS marketing site boilerplate with Astro and Strapi"
+>
+  <Header />
+  
+  <main>
+    <!-- Hero Section -->
+    <section class="hero min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10">
+      <div class="hero-content text-center">
+        <div class="max-w-md">
+          <h1 class="text-5xl font-bold">Build Your SaaS Faster</h1>
+          <p class="py-6">
+            A production-ready SaaS marketing site boilerplate with modern tools, 
+            affiliate tracking, and seamless payments integration.
+          </p>
+          <BuyButton text="Get Started Now" variant="primary" className="btn-lg" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-20 bg-base-100">
+      <div class="container mx-auto px-4">
+        <h2 class="text-4xl font-bold text-center mb-12">Features</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title">🚀 Modern Stack</h3>
+              <p>Built with Astro, Strapi, and Tailwind CSS for optimal performance and developer experience.</p>
+            </div>
+          </div>
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title">💳 Stripe Integration</h3>
+              <p>Complete payment processing with Stripe Checkout and webhook handling.</p>
+            </div>
+          </div>
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title">🔗 Affiliate System</h3>
+              <p>Built-in affiliate tracking with cookie-based referral management.</p>
+            </div>
+          </div>
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title">📱 Responsive Design</h3>
+              <p>Mobile-first design with DaisyUI components for beautiful interfaces.</p>
+            </div>
+          </div>
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title">🔍 SEO Optimized</h3>
+              <p>Built-in SEO optimization with meta tags, sitemap, and structured data.</p>
+            </div>
+          </div>
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title">🚀 Production Ready</h3>
+              <p>Deployment-ready configuration for Cloudflare Pages and DigitalOcean.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 bg-primary text-primary-content">
+      <div class="container mx-auto px-4 text-center">
+        <h2 class="text-4xl font-bold mb-4">Ready to Build Your SaaS?</h2>
+        <p class="text-xl mb-8 opacity-90">
+          Start with our production-ready boilerplate and save months of development time.
+        </p>
+        <BuyButton text="Get Started Today" variant="accent" className="btn-lg" />
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+</Layout>

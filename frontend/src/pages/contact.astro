@@ -1,0 +1,119 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout
+  title="Contact - SaaS Boilerplate"
+  description="Get in touch with our team"
+>
+  <Header />
+  
+  <main>
+    <section class="py-20">
+      <div class="container mx-auto px-4">
+        <div class="max-w-4xl mx-auto">
+          <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4">Contact Us</h1>
+            <p class="text-xl text-base-content/70">
+              Have questions? We'd love to hear from you.
+            </p>
+          </div>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <!-- Contact Form -->
+            <div class="card bg-base-200 shadow-lg">
+              <div class="card-body">
+                <h2 class="card-title mb-6">Send us a message</h2>
+                <form class="space-y-4">
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">Name</span>
+                    </label>
+                    <input type="text" class="input input-bordered" required />
+                  </div>
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">Email</span>
+                    </label>
+                    <input type="email" class="input input-bordered" required />
+                  </div>
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">Subject</span>
+                    </label>
+                    <input type="text" class="input input-bordered" required />
+                  </div>
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">Message</span>
+                    </label>
+                    <textarea class="textarea textarea-bordered h-32" required></textarea>
+                  </div>
+                  <button type="submit" class="btn btn-primary w-full">
+                    Send Message
+                  </button>
+                </form>
+              </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="space-y-8">
+              <div class="card bg-base-200 shadow-lg">
+                <div class="card-body">
+                  <h3 class="card-title mb-4">Get in Touch</h3>
+                  <div class="space-y-4">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        <span class="text-primary-content text-sm">📧</span>
+                      </div>
+                      <div>
+                        <p class="font-semibold">Email</p>
+                        <p class="text-base-content/70">hello@yoursite.com</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        <span class="text-primary-content text-sm">💬</span>
+                      </div>
+                      <div>
+                        <p class="font-semibold">Support</p>
+                        <p class="text-base-content/70">support@yoursite.com</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        <span class="text-primary-content text-sm">🏢</span>
+                      </div>
+                      <div>
+                        <p class="font-semibold">Business</p>
+                        <p class="text-base-content/70">business@yoursite.com</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card bg-base-200 shadow-lg">
+                <div class="card-body">
+                  <h3 class="card-title mb-4">Frequently Asked Questions</h3>
+                  <div class="space-y-2">
+                    <p class="text-sm text-base-content/70">
+                      Check out our <a href="/faq" class="link link-primary">FAQ page</a> for common questions.
+                    </p>
+                    <p class="text-sm text-base-content/70">
+                      For technical support, please use our <a href="/docs" class="link link-primary">documentation</a>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+</Layout>

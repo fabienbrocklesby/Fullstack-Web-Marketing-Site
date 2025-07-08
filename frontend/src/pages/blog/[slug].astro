@@ -1,0 +1,90 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export async function getStaticPaths() {
+  const posts = [
+    {
+      slug: 'getting-started-saas-development',
+      title: 'Getting Started with SaaS Development',
+      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
+      date: '2024-01-15',
+      author: 'John Doe',
+    },
+    {
+      slug: 'building-modern-web-applications',
+      title: 'Building Modern Web Applications',
+      content: 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua...',
+      date: '2024-01-10',
+      author: 'Jane Smith',
+    },
+    {
+      slug: 'payment-integration-best-practices',
+      title: 'Payment Integration Best Practices',
+      content: 'Ut enim ad minim veniam, quis nostrud exercitation ullamco...',
+      date: '2024-01-05',
+      author: 'Mike Johnson',
+    },
+  ];
+
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+---
+
+<Layout
+  title={`${post.title} - Blog`}
+  description={post.content.substring(0, 160)}
+>
+  <Header />
+  
+  <main>
+    <article class="py-20">
+      <div class="container mx-auto px-4">
+        <div class="max-w-4xl mx-auto">
+          <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4">{post.title}</h1>
+            <div class="flex justify-center items-center space-x-4 text-base-content/70">
+              <span>By {post.author}</span>
+              <span>•</span>
+              <span>{post.date}</span>
+            </div>
+          </header>
+          
+          <div class="prose prose-lg max-w-none">
+            <p>{post.content}</p>
+            
+            <p>
+              This is a demo blog post. In a real application, you would fetch this content 
+              from your Strapi CMS and render it as rich content with proper formatting.
+            </p>
+            
+            <h2>Key Features of This Boilerplate</h2>
+            <ul>
+              <li>Astro for lightning-fast static site generation</li>
+              <li>Strapi CMS for content management</li>
+              <li>Stripe integration for payments</li>
+              <li>Affiliate tracking system</li>
+              <li>SEO optimization</li>
+              <li>Responsive design with Tailwind CSS</li>
+            </ul>
+            
+            <h2>Getting Started</h2>
+            <p>
+              To get started with this boilerplate, follow the setup instructions in the 
+              main README file. The entire stack is designed to be production-ready 
+              out of the box.
+            </p>
+          </div>
+        </div>
+      </div>
+    </article>
+  </main>
+  
+  <Footer />
+</Layout>
