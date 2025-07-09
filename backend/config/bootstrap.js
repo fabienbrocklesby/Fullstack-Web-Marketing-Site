@@ -1,71 +1,98 @@
 module.exports = async ({ strapi }) => {
   // Check if strapi is properly initialized
   if (!strapi || !strapi.query) {
-    console.log('Strapi not fully initialized, skipping bootstrap');
+    console.log("Strapi not fully initialized, skipping bootstrap");
     return;
   }
 
   try {
     // Set up permissions for authenticated users
-    const pluginStore = strapi.store({ type: 'plugin', name: 'users-permissions' });
-    
+    const pluginStore = strapi.store({
+      type: "plugin",
+      name: "users-permissions",
+    });
+
     // Get the authenticated role
     const authenticatedRole = await strapi
-      .query('plugin::users-permissions.role')
-      .findOne({ where: { type: 'authenticated' } });
+      .query("plugin::users-permissions.role")
+      .findOne({ where: { type: "authenticated" } });
 
     if (authenticatedRole) {
       // Enable custom affiliate routes for authenticated users
       const permissions = await strapi
-        .query('plugin::users-permissions.permission')
+        .query("plugin::users-permissions.permission")
         .findMany({
           where: {
             role: authenticatedRole.id,
             action: {
               $in: [
-                'api::affiliate.affiliate.find',
-                'api::affiliate.affiliate.findOne',
-                'api::affiliate.affiliate.create',
-                'api::affiliate.affiliate.update',
-                'api::affiliate.affiliate.delete'
-              ]
-            }
-          }
+                "api::affiliate.affiliate.find",
+                "api::affiliate.affiliate.findOne",
+                "api::affiliate.affiliate.create",
+                "api::affiliate.affiliate.update",
+                "api::affiliate.affiliate.delete",
+              ],
+            },
+          },
         });
 
       // Enable all affiliate permissions for authenticated users
       const actionsToEnable = [
-        'api::affiliate.affiliate.find',
-        'api::affiliate.affiliate.findOne', 
-        'api::affiliate.affiliate.create',
-        'api::affiliate.affiliate.update',
-        'api::affiliate.affiliate.delete'
+        "api::affiliate.affiliate.find",
+        "api::affiliate.affiliate.findOne",
+        "api::affiliate.affiliate.create",
+        "api::affiliate.affiliate.update",
+        "api::affiliate.affiliate.delete",
       ];
 
       for (const action of actionsToEnable) {
-        const existingPermission = permissions.find(p => p.action === action);
+        const existingPermission = permissions.find((p) => p.action === action);
         if (existingPermission) {
-          await strapi.query('plugin::users-permissions.permission').update({
+          await strapi.query("plugin::users-permissions.permission").update({
             where: { id: existingPermission.id },
-            data: { enabled: true }
+            data: { enabled: true },
           });
         } else {
-          await strapi.query('plugin::users-permissions.permission').create({
+          await strapi.query("plugin::users-permissions.permission").create({
             data: {
               action,
               subject: null,
               properties: {},
               conditions: [],
               role: authenticatedRole.id,
-              enabled: true
-            }
+              enabled: true,
+            },
           });
         }
       }
 
-      console.log('✅ Affiliate permissions enabled for authenticated users');
+      console.log("✅ Affiliate permissions enabled for authenticated users");
+    }
+
+    // Run seeder if SEED_DATA environment variable is set
+    if (process.env.SEED_DATA === "true") {
+      console.log(
+        "🌱 SEED_DATA environment variable detected, running seeder...",
+      );
+
+      try {
+        const seeder = require("../test-data-seeder");
+
+        // Small delay to ensure Strapi is fully loaded
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        // Make strapi globally available for the seeder
+        global.strapi = strapi;
+
+        await seeder.clearAllData();
+        await seeder.createTestData();
+
+        console.log("🎉 Bootstrap seeding completed!");
+      } catch (error) {
+        console.error("❌ Bootstrap seeding failed:", error);
+      }
     }
   } catch (error) {
-    console.error('Error in bootstrap:', error);
+    console.error("Error in bootstrap:", error);
   }
 };

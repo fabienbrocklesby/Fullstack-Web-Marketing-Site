@@ -14,7 +14,15 @@
     "restart": "pkill -f 'strapi develop' || true && pnpm run dev",
     "backend:admin": "cd backend && pnpm strapi admin:create-user",
     "backend:reset": "cd backend && rm -rf .tmp build dist && pnpm strapi develop",
-    "setup": "pnpm install && pnpm run reset:db && echo 'Setup complete! Run: pnpm dev'"
+    "setup": "pnpm install && pnpm run reset:db && echo 'Setup complete! Run: pnpm dev'",
+    "demo:setup": "pnpm run demo:reset && node demo-seeder.cjs",
+    "demo:reset": "pkill -f 'strapi develop' || true && rm -rf backend/.tmp && rm -rf backend/build && rm -rf backend/dist && rm -rf backend/public/uploads/* && cd backend && pnpm install",
+    "demo:start": "echo '🌱 Starting with demo data...' && SEED_DATA=true pnpm run dev",
+    "demo:complete": "echo '🚀 Setting up complete demo environment...' && pnpm run demo:reset && pnpm run demo:build && pnpm run demo:seed && echo '✅ Demo ready! Run: pnpm demo:start'",
+    "demo:build": "echo '📦 Building backend for demo...' && cd backend && pnpm install && pnpm build",
+    "demo:seed": "echo '🌱 Seeding demo data...' && node demo-seeder.cjs",
+    "demo:quick": "echo '⚡ Quick demo setup (assumes backend is built)...' && pnpm run demo:seed && echo '✅ Demo data ready! Run: pnpm dev'",
+    "demo:verify": "echo '🔍 Verifying demo data...' && node demo-verify.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

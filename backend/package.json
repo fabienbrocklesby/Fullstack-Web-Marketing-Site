@@ -10,7 +10,8 @@
     "start": "strapi start",
     "strapi": "strapi",
     "lint": "eslint . --ext .js --ignore-path .gitignore",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed": "node scripts/seed-data.js"
   },
   "keywords": [
     "strapi",
@@ -31,7 +32,8 @@
     "react-router-dom": "^5.3.4",
     "sqlite3": "^5.1.7",
     "stripe": "^14.0.0",
-    "styled-components": "^5.3.3"
+    "styled-components": "^5.3.3",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
