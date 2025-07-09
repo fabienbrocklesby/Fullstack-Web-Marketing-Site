@@ -1,0 +1,66 @@
+{
+  "kind": "collectionType",
+  "collectionName": "customers",
+  "info": {
+    "singularName": "customer",
+    "pluralName": "customers",
+    "displayName": "Customer",
+    "description": "Customer accounts for license management"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "email": {
+      "type": "email",
+      "required": true,
+      "unique": true
+    },
+    "firstName": {
+      "type": "string",
+      "required": true
+    },
+    "lastName": {
+      "type": "string",
+      "required": true
+    },
+    "password": {
+      "type": "password",
+      "required": true,
+      "private": true
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "emailVerified": {
+      "type": "boolean",
+      "default": false
+    },
+    "stripeCustomerId": {
+      "type": "string",
+      "unique": true
+    },
+    "purchases": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::purchase.purchase",
+      "mappedBy": "customer"
+    },
+    "licenseKeys": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::license-key.license-key",
+      "mappedBy": "customer"
+    },
+    "resetPasswordToken": {
+      "type": "string",
+      "private": true
+    },
+    "resetPasswordExpires": {
+      "type": "datetime",
+      "private": true
+    }
+  }
+}

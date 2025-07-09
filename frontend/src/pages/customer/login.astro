@@ -1,14 +1,14 @@
 ---
-import Layout from "../layouts/Layout.astro";
+import Layout from "../../layouts/Layout.astro";
 ---
 
-<Layout title="Team Login - Staff Portal">
+<Layout title="Customer Login">
   <main class="hero min-h-screen bg-base-200">
     <div class="hero-content text-center">
       <div class="max-w-md">
         <div class="card w-full max-w-sm shadow-2xl bg-base-100">
           <div class="card-body">
-            <h1 class="text-2xl font-bold mb-6">Team Portal</h1>
+            <h1 class="text-2xl font-bold mb-6">Customer Login</h1>
             <form id="login-form">
               <div class="form-control">
                 <label class="label">
@@ -35,14 +35,18 @@ import Layout from "../layouts/Layout.astro";
                 />
               </div>
               <div class="form-control mt-6">
-                <button type="submit" class="btn btn-primary"
-                  >Access Portal</button
-                >
+                <button type="submit" class="btn btn-primary">Login</button>
               </div>
             </form>
             <div id="error-message" class="alert alert-error mt-4 hidden">
               <span id="error-text"></span>
             </div>
+            <p class="text-center mt-4">
+              Don't have an account? <a
+                href="/customer/register"
+                class="link link-primary">Register here</a
+              >
+            </p>
           </div>
         </div>
       </div>
@@ -65,17 +69,20 @@ import Layout from "../layouts/Layout.astro";
 
       if (!emailInput || !passwordInput || !errorDiv || !errorText) return;
 
+      // Hide previous error
+      errorDiv.classList.add("hidden");
+
       try {
         const cmsUrl =
           document.documentElement.getAttribute("data-cms-url") ||
           "http://localhost:1337";
-        const response = await fetch(`${cmsUrl}/api/auth/local`, {
+        const response = await fetch(`${cmsUrl}/api/customers/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            identifier: emailInput.value,
+            email: emailInput.value,
             password: passwordInput.value,
           }),
         });
@@ -83,15 +90,38 @@ import Layout from "../layouts/Layout.astro";
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error?.message || "Login failed");
+          throw new Error(data.error || "Login failed");
         }
 
-        // Store the JWT token
-        localStorage.setItem("jwt", data.jwt);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        // Store the customer token
+        localStorage.setItem("customerToken", data.token);
+        localStorage.setItem("customer", JSON.stringify(data.customer));
 
-        // Redirect to dashboard
-        window.location.href = "/dashboard";
+        // Check URL parameters for product selection and redirect
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get("product");
+        const redirectType = urlParams.get("redirect");
+
+        // Check if there's a selected product in localStorage
+        const selectedProduct = localStorage.getItem("selectedProduct");
+
+        if ((productId && redirectType === "checkout") || selectedProduct) {
+          // Redirect to checkout flow
+          const priceId =
+            productId ||
+            (selectedProduct ? JSON.parse(selectedProduct).priceId : null);
+          if (
+            priceId &&
+            typeof (window as any).proceedToCheckout === "function"
+          ) {
+            await (window as any).proceedToCheckout(priceId);
+          } else {
+            window.location.href = "/customer/dashboard";
+          }
+        } else {
+          // Normal login flow - redirect to customer dashboard
+          window.location.href = "/customer/dashboard";
+        }
       } catch (error) {
         errorDiv.classList.remove("hidden");
         errorText.textContent =

@@ -1,8 +1,8 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import BuyButton from '../components/BuyButton.astro';
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import BuyButton from "../components/BuyButton.astro";
 ---
 
 <Layout
@@ -10,17 +10,39 @@ import BuyButton from '../components/BuyButton.astro';
   description="Choose the perfect plan for your SaaS project"
 >
   <Header />
-  
+
   <main>
     <section class="py-20">
       <div class="container mx-auto px-4">
         <div class="text-center mb-12">
           <h1 class="text-4xl font-bold mb-4">Simple, Transparent Pricing</h1>
-          <p class="text-xl text-base-content/70">
+          <p class="text-xl text-base-content/70 mb-6">
             Choose the perfect plan for your project
           </p>
+          <div class="alert alert-info max-w-2xl mx-auto">
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <div>
+              <h3 class="font-semibold">One License, One Device</h3>
+              <p class="text-sm">
+                Each license key can only be activated on a single device for
+                security and compliance.
+              </p>
+            </div>
+          </div>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <!-- Starter Plan -->
           <div class="card bg-base-200 shadow-lg">
@@ -48,15 +70,15 @@ import BuyButton from '../components/BuyButton.astro';
                   1 year updates
                 </li>
               </ul>
-              <BuyButton 
-                text="Get Starter" 
+              <BuyButton
+                text="Get Starter"
                 priceId="price_starter"
                 variant="ghost"
                 className="w-full"
               />
             </div>
           </div>
-          
+
           <!-- Pro Plan -->
           <div class="card bg-primary text-primary-content shadow-xl scale-105">
             <div class="card-body">
@@ -84,15 +106,15 @@ import BuyButton from '../components/BuyButton.astro';
                   Lifetime updates
                 </li>
               </ul>
-              <BuyButton 
-                text="Get Pro" 
+              <BuyButton
+                text="Get Pro"
                 priceId="price_pro"
                 variant="accent"
                 className="w-full"
               />
             </div>
           </div>
-          
+
           <!-- Enterprise Plan -->
           <div class="card bg-base-200 shadow-lg">
             <div class="card-body">
@@ -119,8 +141,8 @@ import BuyButton from '../components/BuyButton.astro';
                   White-label rights
                 </li>
               </ul>
-              <BuyButton 
-                text="Get Enterprise" 
+              <BuyButton
+                text="Get Enterprise"
                 priceId="price_enterprise"
                 variant="ghost"
                 className="w-full"
@@ -131,6 +153,6 @@ import BuyButton from '../components/BuyButton.astro';
       </div>
     </section>
   </main>
-  
+
   <Footer />
 </Layout>

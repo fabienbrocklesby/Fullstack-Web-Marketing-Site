@@ -3,92 +3,121 @@ export interface Props {
   text?: string;
   priceId?: string;
   className?: string;
-  variant?: 'primary' | 'secondary' | 'accent' | 'ghost';
+  variant?: "primary" | "secondary" | "accent" | "ghost";
 }
 
-const { 
-  text = 'Buy Now', 
-  priceId = 'price_default',
-  className = '',
-  variant = 'primary'
+const {
+  text = "Buy Now",
+  priceId = "price_default",
+  className = "",
+  variant = "primary",
 } = Astro.props;
 
 // Generate unique button ID for each price
 const buttonId = `buy-button-${priceId}`;
 ---
 
-<button 
+<button
   id={buttonId}
   class={`btn btn-${variant} ${className}`}
   data-price-id={priceId}
 >
->
+  >
   {text}
 </button>
 
 <script>
-  import Cookies from 'js-cookie';
+  import Cookies from "js-cookie";
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener("DOMContentLoaded", () => {
     // Capture affiliate code from URL and save to cookies
     const urlParams = new URLSearchParams(window.location.search);
-    const affiliateCode = urlParams.get('ref');
-    
+    const affiliateCode = urlParams.get("ref");
+
     if (affiliateCode) {
-      Cookies.set('affiliate_code', affiliateCode, { expires: 30 });
+      Cookies.set("affiliate_code", affiliateCode, { expires: 30 });
     }
 
     // Handle buy button click - find all buy buttons
     const buyButtons = document.querySelectorAll('[id^="buy-button-"]');
-    buyButtons.forEach(buyButton => {
+    buyButtons.forEach((buyButton) => {
       if (buyButton) {
-        buyButton.addEventListener('click', async (e) => {
+        buyButton.addEventListener("click", async (e) => {
           e.preventDefault();
-          
-          const priceId = buyButton.getAttribute('data-price-id');
-          const savedAffiliateCode = Cookies.get('affiliate_code');
-          
-          const buttonElement = buyButton as HTMLButtonElement;
-          const originalText = buttonElement.innerHTML;
-          
-          try {
-            buttonElement.disabled = true;
-            buttonElement.innerHTML = 'Loading...';
-            
-            const cmsUrl = document.documentElement.getAttribute('data-cms-url') || 'http://localhost:1337';
-            const response = await fetch(`${cmsUrl}/api/affiliate-checkout`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                priceId,
-                affiliateCode: savedAffiliateCode || null,
-                successUrl: window.location.origin + '/success',
-                cancelUrl: window.location.href,
-              }),
-            });
-            
-            if (!response.ok) {
-              const errorData = await response.json();
-              console.error('Checkout error response:', errorData);
-              throw new Error(errorData.error?.message || errorData.message || 'Failed to create checkout session');
-            }
-            
-            const { url } = await response.json();
-            if (url) {
-              window.location.href = url;
-            } else {
-              throw new Error('No checkout URL received');
-            }
-          } catch (error) {
-            console.error('Checkout error:', error);
-            buttonElement.disabled = false;
-            buttonElement.innerHTML = originalText;
-            alert(`Something went wrong: ${error instanceof Error ? error.message : 'Please try again.'}`);
+
+          const priceId = buyButton.getAttribute("data-price-id");
+
+          // Store selected product in localStorage for later purchase
+          localStorage.setItem(
+            "selectedProduct",
+            JSON.stringify({
+              priceId,
+              timestamp: Date.now(),
+            }),
+          );
+
+          // Check if customer is already logged in
+          const customerToken = localStorage.getItem("customerToken");
+          const customer = JSON.parse(localStorage.getItem("customer") || "{}");
+
+          if (customerToken && customer.id) {
+            // Customer is logged in, proceed to checkout
+            await proceedToCheckout(priceId || "");
+          } else {
+            // Redirect to customer registration with product info
+            window.location.href = `/customer/register?product=${encodeURIComponent(priceId ?? "")}&redirect=checkout`;
           }
         });
       }
     });
   });
+
+  async function proceedToCheckout(priceId: string) {
+    const savedAffiliateCode = Cookies.get("affiliate_code");
+    const customerToken = localStorage.getItem("customerToken");
+
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      const response = await fetch(`${cmsUrl}/api/customer-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${customerToken}`,
+        },
+        body: JSON.stringify({
+          priceId,
+          affiliateCode: savedAffiliateCode || null,
+          successUrl: window.location.origin + "/customer/success",
+          cancelUrl: window.location.origin + "/customer/dashboard",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Checkout error response:", errorData);
+        throw new Error(
+          errorData.error?.message ||
+            errorData.message ||
+            "Failed to create checkout session",
+        );
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert(
+        `Something went wrong: ${error instanceof Error ? error.message : "Please try again."}`,
+      );
+    }
+  }
+
+  // Make proceedToCheckout available globally for use in other scripts
+  (window as any).proceedToCheckout = proceedToCheckout;
 </script>

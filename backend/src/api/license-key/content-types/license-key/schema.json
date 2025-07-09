@@ -1,0 +1,68 @@
+{
+  "kind": "collectionType",
+  "collectionName": "license_keys",
+  "info": {
+    "singularName": "license-key",
+    "pluralName": "license-keys",
+    "displayName": "License Key",
+    "description": "License keys for customer products"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "key": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "productName": {
+      "type": "string",
+      "required": true
+    },
+    "priceId": {
+      "type": "string",
+      "required": true
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::customer.customer",
+      "inversedBy": "licenseKeys"
+    },
+    "purchase": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::purchase.purchase"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "isUsed": {
+      "type": "boolean",
+      "default": false
+    },
+    "deviceInfo": {
+      "type": "json",
+      "description": "Information about the device where the license is used"
+    },
+    "activatedAt": {
+      "type": "datetime"
+    },
+    "expiresAt": {
+      "type": "datetime"
+    },
+    "maxActivations": {
+      "type": "integer",
+      "default": 1,
+      "min": 1
+    },
+    "currentActivations": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    }
+  }
+}

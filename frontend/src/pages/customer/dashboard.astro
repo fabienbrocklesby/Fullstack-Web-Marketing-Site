@@ -1,0 +1,471 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Customer Dashboard">
+  <main class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100">
+      <div class="navbar-start">
+        <div class="dropdown">
+          <label tabindex="0" class="btn btn-ghost lg:hidden">
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h8m-8 6h16"></path>
+            </svg>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            <li><a href="/customer/dashboard">Dashboard</a></li>
+            <li><a href="/customer/profile">Profile</a></li>
+          </ul>
+        </div>
+        <a href="/customer/dashboard" class="btn btn-ghost normal-case text-xl"
+          >Customer Portal</a
+        >
+      </div>
+      <div class="navbar-center hidden lg:flex">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/customer/dashboard">Dashboard</a></li>
+          <li><a href="/customer/profile">Profile</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end">
+        <div class="dropdown dropdown-end">
+          <label tabindex="0" class="btn btn-ghost">
+            <span id="customer-name">Customer</span>
+            <svg
+              class="w-4 h-4 ml-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            <li><a href="/customer/profile">Profile</a></li>
+            <li><a id="logout-btn">Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Customer Info Card -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">
+              <div class="avatar placeholder">
+                <div
+                  class="bg-neutral-focus text-neutral-content rounded-full w-8"
+                >
+                  <span class="text-xs" id="customer-initials">CU</span>
+                </div>
+              </div>
+              Account Info
+            </h2>
+            <div class="space-y-2">
+              <div>
+                <span class="text-sm opacity-70">Name:</span>
+                <span id="customer-full-name" class="ml-2">Loading...</span>
+              </div>
+              <div>
+                <span class="text-sm opacity-70">Email:</span>
+                <span id="customer-email" class="ml-2">Loading...</span>
+              </div>
+              <div>
+                <span class="text-sm opacity-70">Customer ID:</span>
+                <span id="customer-id" class="ml-2">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Quick Stats</h2>
+            <div class="stats stats-vertical">
+              <div class="stat">
+                <div class="stat-title">Total Licenses</div>
+                <div class="stat-value text-primary" id="total-licenses">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-title">Active Licenses</div>
+                <div class="stat-value text-success" id="active-licenses">
+                  0
+                </div>
+              </div>
+              <div class="stat">
+                <div class="stat-title">Available Licenses</div>
+                <div class="stat-value text-info" id="available-licenses">
+                  0
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Recent Activity</h2>
+            <div id="recent-activity" class="space-y-2">
+              <div class="text-sm opacity-70">Loading recent activity...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- License Keys Section -->
+      <div class="card bg-base-100 shadow-xl mt-8">
+        <div class="card-body">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="card-title">Your License Keys</h2>
+            <a href="/pricing" class="btn btn-primary btn-sm">
+              <svg
+                class="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Purchase License
+            </a>
+          </div>
+          <div id="license-keys-container">
+            <div class="text-center py-8">
+              <div class="loading loading-spinner loading-lg"></div>
+              <p class="mt-4">Loading your license keys...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  // Check if customer is logged in
+  const customerToken = localStorage.getItem("customerToken");
+  const customer = JSON.parse(localStorage.getItem("customer") || "{}");
+
+  if (!customerToken || !customer.id) {
+    window.location.href = "/customer/login";
+    return;
+  }
+
+  // Customer info will be loaded from API, not localStorage
+
+  // Logout functionality
+  document.getElementById("logout-btn")?.addEventListener("click", () => {
+    localStorage.removeItem("customerToken");
+    localStorage.removeItem("customer");
+    window.location.href = "/customer/login";
+  });
+
+  // Load dashboard data
+  async function loadDashboardData() {
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+
+      // Get customer profile
+      const profileResponse = await fetch(`${cmsUrl}/api/customers/me`, {
+        headers: {
+          Authorization: `Bearer ${customerToken}`,
+        },
+      });
+
+      if (!profileResponse.ok) {
+        if (profileResponse.status === 401) {
+          localStorage.removeItem("customerToken");
+          localStorage.removeItem("customer");
+          window.location.href = "/customer/login";
+          return;
+        }
+        throw new Error("Failed to fetch profile");
+      }
+
+      const profileData = await profileResponse.json();
+      const customerData = profileData.customer;
+
+      // Update customer info in UI
+      updateCustomerInfo(customerData);
+
+      // Get license keys
+      const licenseResponse = await fetch(`${cmsUrl}/api/license-keys`, {
+        headers: {
+          Authorization: `Bearer ${customerToken}`,
+        },
+      });
+
+      if (!licenseResponse.ok) {
+        throw new Error("Failed to fetch license keys");
+      }
+
+      const licenseData = await licenseResponse.json();
+      displayLicenseKeys(licenseData.licenseKeys);
+      updateStats(licenseData.licenseKeys);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      const container = document.getElementById("license-keys-container");
+      if (container) {
+        container.innerHTML = `
+          <div class="alert alert-error">
+            <span>Error loading data: ${error.message}</span>
+          </div>
+        `;
+      }
+    }
+  }
+
+  function updateCustomerInfo(customerData) {
+    const customerNameElement = document.getElementById("customer-name");
+    const customerInitialsElement =
+      document.getElementById("customer-initials");
+    const customerFullNameElement =
+      document.getElementById("customer-full-name");
+    const customerEmailElement = document.getElementById("customer-email");
+    const customerIdElement = document.getElementById("customer-id");
+
+    if (customerNameElement) {
+      customerNameElement.textContent =
+        `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+        "Customer";
+    }
+
+    if (customerInitialsElement) {
+      const initials = `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}`;
+      customerInitialsElement.textContent = initials || "CU";
+    }
+
+    if (customerFullNameElement) {
+      customerFullNameElement.textContent =
+        `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+        "Customer";
+    }
+
+    if (customerEmailElement) {
+      customerEmailElement.textContent = customerData.email || "No email";
+    }
+
+    if (customerIdElement) {
+      customerIdElement.textContent = customerData.id || "No ID";
+    }
+
+    // Update localStorage with fresh data
+    localStorage.setItem("customer", JSON.stringify(customerData));
+  }
+
+  function displayLicenseKeys(licenseKeys) {
+    const container = document.getElementById("license-keys-container");
+    if (!container) return;
+
+    if (licenseKeys.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8">
+          <div class="text-6xl mb-4">🔐</div>
+          <h3 class="text-lg font-semibold mb-2">No License Keys Yet</h3>
+          <p class="text-gray-600">Your license keys will appear here after making a purchase.</p>
+          <a href="/pricing" class="btn btn-primary mt-4">View Products</a>
+        </div>
+      `;
+      return;
+    }
+
+    const licenseCardsHTML = licenseKeys
+      .map(
+        (license) => `
+      <div class="card bg-base-100 border shadow-sm">
+        <div class="card-body">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h3 class="card-title text-lg">${license.productName}</h3>
+              <p class="text-sm opacity-70">License Key</p>
+            </div>
+            <div class="badge ${license.isActive ? "badge-success" : "badge-error"}">
+              ${license.isActive ? "Active" : "Inactive"}
+            </div>
+          </div>
+          
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">License Key</span>
+            </label>
+            <div class="input-group">
+              <input type="text" value="${license.key}" class="input input-bordered flex-1" readonly />
+              <button class="btn btn-primary" onclick="copyToClipboard('${license.key}')">Copy</button>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <span class="text-sm opacity-70">Status:</span>
+              <span class="ml-2 badge ${license.isUsed ? "badge-warning" : "badge-success"}">
+                ${license.isUsed ? "Used" : "Available"}
+              </span>
+            </div>
+            <div>
+              <span class="text-sm opacity-70">Activations:</span>
+              <span class="ml-2">${license.currentActivations}/${license.maxActivations}</span>
+            </div>
+          </div>
+          
+          ${
+            license.isUsed
+              ? `
+            <div class="mt-4">
+              <span class="text-sm opacity-70">Activated:</span>
+              <span class="ml-2">${new Date(license.activatedAt).toLocaleDateString()}</span>
+            </div>
+          `
+              : ""
+          }
+          
+          <div class="card-actions justify-end mt-4">
+            ${
+              !license.isUsed
+                ? `
+              <button class="btn btn-primary btn-sm" onclick="activateLicense('${license.id}')">
+                Activate License
+              </button>
+            `
+                : `
+              <button class="btn btn-warning btn-sm" onclick="deactivateLicense('${license.id}')">
+                Deactivate License
+              </button>
+            `
+            }
+          </div>
+        </div>
+      </div>
+    `,
+      )
+      .join("");
+
+    container.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        ${licenseCardsHTML}
+      </div>
+    `;
+  }
+
+  function updateStats(licenseKeys) {
+    const totalLicenses = licenseKeys.length;
+    const activeLicenses = licenseKeys.filter(
+      (license) => license.isUsed,
+    ).length;
+    const availableLicenses = licenseKeys.filter(
+      (license) => !license.isUsed && license.isActive,
+    ).length;
+
+    const totalElement = document.getElementById("total-licenses");
+    const activeElement = document.getElementById("active-licenses");
+    const availableElement = document.getElementById("available-licenses");
+
+    if (totalElement) totalElement.textContent = totalLicenses;
+    if (activeElement) activeElement.textContent = activeLicenses;
+    if (availableElement) availableElement.textContent = availableLicenses;
+  }
+
+  // Global functions for license management
+  (window as any).copyToClipboard = function (text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("License key copied to clipboard!");
+    });
+  };
+
+  (window as any).activateLicense = async function (licenseId: string) {
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      const response = await fetch(
+        `${cmsUrl}/api/license-keys/${licenseId}/activate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            deviceInfo: {
+              userAgent: navigator.userAgent,
+              platform: navigator.platform,
+              timestamp: new Date().toISOString(),
+            },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to activate license");
+      }
+
+      alert("License activated successfully!");
+      loadDashboardData(); // Reload data
+    } catch (error) {
+      alert(`Error activating license: ${(error as Error).message}`);
+    }
+  };
+
+  (window as any).deactivateLicense = async function (licenseId: string) {
+    if (!confirm("Are you sure you want to deactivate this license?")) {
+      return;
+    }
+
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      const response = await fetch(
+        `${cmsUrl}/api/license-keys/${licenseId}/deactivate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to deactivate license");
+      }
+
+      alert("License deactivated successfully!");
+      loadDashboardData(); // Reload data
+    } catch (error) {
+      alert(`Error deactivating license: ${(error as Error).message}`);
+    }
+  };
+
+  // Load dashboard data on page load
+  loadDashboardData();
+</script>

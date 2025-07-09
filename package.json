@@ -1,5 +1,6 @@
 {
   "name": "fullstack-saas-boilerplate",
+  "type": "module",
   "private": true,
   "description": "Full-stack SaaS marketing site with Astro frontend and Strapi backend",
   "scripts": {
@@ -7,7 +8,6 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
-    "prepare": "husky install",
     "reset": "pnpm run reset:db && pnpm run restart",
     "reset:db": "rm -rf backend/.tmp && rm -rf backend/build && rm -rf backend/dist",
     "reset:hard": "pnpm run reset:db && rm -rf node_modules && rm -rf */node_modules && pnpm install",
@@ -21,14 +21,20 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
-    "husky": "^9.0.0",
+    "husky": "^9.1.7",
     "lint-staged": "^15.0.0",
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0",
+    "prettier-plugin-astro": "^0.12.3"
   },
   "lint-staged": {
-    "**/*.{js,jsx,astro,json,md}": [
-      "prettier --write",
-      "eslint --fix"
+    "**/*.{js,jsx}": [
+      "prettier --write"
+    ],
+    "**/*.{json,md}": [
+      "prettier --write"
+    ],
+    "**/*.astro": [
+      "prettier --write"
     ]
   },
   "engines": {

@@ -38,6 +38,17 @@
       "target": "api::affiliate.affiliate",
       "inversedBy": "purchases"
     },
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::customer.customer",
+      "inversedBy": "purchases"
+    },
+    "licenseKey": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::license-key.license-key"
+    },
     "commissionAmount": {
       "type": "decimal",
       "default": 0

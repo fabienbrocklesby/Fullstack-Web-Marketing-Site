@@ -1,0 +1,398 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Customer Profile">
+  <main class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100">
+      <div class="navbar-start">
+        <a href="/customer/dashboard" class="btn btn-ghost normal-case text-xl"
+          >← Back to Dashboard</a
+        >
+      </div>
+      <div class="navbar-center">
+        <span class="text-xl font-semibold">Customer Profile</span>
+      </div>
+      <div class="navbar-end">
+        <button id="logout-btn" class="btn btn-ghost">Logout</button>
+      </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Profile Information -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title mb-4">Profile Information</h2>
+            <form id="profile-form">
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">First Name</span>
+                </label>
+                <input
+                  type="text"
+                  id="firstName"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Last Name</span>
+                </label>
+                <input
+                  type="text"
+                  id="lastName"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Email</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+              <div class="form-control mt-6">
+                <button type="submit" class="btn btn-primary"
+                  >Update Profile</button
+                >
+              </div>
+            </form>
+            <div id="profile-message" class="mt-4 hidden">
+              <div class="alert">
+                <span id="profile-text"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title mb-4">Change Password</h2>
+            <form id="password-form">
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Current Password</span>
+                </label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">New Password</span>
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Confirm New Password</span>
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+              <div class="form-control mt-6">
+                <button type="submit" class="btn btn-primary"
+                  >Change Password</button
+                >
+              </div>
+            </form>
+            <div id="password-message" class="mt-4 hidden">
+              <div class="alert">
+                <span id="password-text"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Stats -->
+      <div class="card bg-base-100 shadow-xl mt-8">
+        <div class="card-body">
+          <h2 class="card-title mb-4">Account Statistics</h2>
+          <div class="stats stats-vertical lg:stats-horizontal shadow">
+            <div class="stat">
+              <div class="stat-title">Member Since</div>
+              <div class="stat-value text-primary" id="member-since">-</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Total Purchases</div>
+              <div class="stat-value text-secondary" id="total-purchases">
+                0
+              </div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Active Licenses</div>
+              <div class="stat-value text-accent" id="active-licenses">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Account Status</div>
+              <div class="stat-value text-success" id="account-status">
+                Active
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  // Check if customer is logged in
+  const customerToken = localStorage.getItem("customerToken");
+  const customer = JSON.parse(localStorage.getItem("customer") || "{}");
+
+  if (!customerToken || !customer.id) {
+    window.location.href = "/customer/login";
+    return;
+  }
+
+  // Logout functionality
+  document.getElementById("logout-btn")?.addEventListener("click", () => {
+    localStorage.removeItem("customerToken");
+    localStorage.removeItem("customer");
+    window.location.href = "/customer/login";
+  });
+
+  // Load customer profile
+  async function loadProfile() {
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+
+      const response = await fetch(`${cmsUrl}/api/customers/me`, {
+        headers: {
+          Authorization: `Bearer ${customerToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("customerToken");
+          localStorage.removeItem("customer");
+          window.location.href = "/customer/login";
+          return;
+        }
+        throw new Error("Failed to load profile");
+      }
+
+      const data = await response.json();
+      const customerData = data.customer;
+
+      // Fill form fields
+      const firstNameInput = document.getElementById(
+        "firstName",
+      ) as HTMLInputElement;
+      const lastNameInput = document.getElementById(
+        "lastName",
+      ) as HTMLInputElement;
+      const emailInput = document.getElementById("email") as HTMLInputElement;
+
+      if (firstNameInput) firstNameInput.value = customerData.firstName || "";
+      if (lastNameInput) lastNameInput.value = customerData.lastName || "";
+      if (emailInput) emailInput.value = customerData.email || "";
+
+      // Update stats
+      const memberSinceElement = document.getElementById("member-since");
+      const totalPurchasesElement = document.getElementById("total-purchases");
+      const activeLicensesElement = document.getElementById("active-licenses");
+      const accountStatusElement = document.getElementById("account-status");
+
+      if (memberSinceElement) {
+        const joinDate = new Date(customerData.createdAt);
+        memberSinceElement.textContent = joinDate.toLocaleDateString();
+      }
+
+      if (totalPurchasesElement) {
+        totalPurchasesElement.textContent = customerData.purchases?.length || 0;
+      }
+
+      if (activeLicensesElement) {
+        const activeLicenses =
+          customerData.licenseKeys?.filter((key: any) => key.isUsed) || [];
+        activeLicensesElement.textContent = activeLicenses.length;
+      }
+
+      if (accountStatusElement) {
+        accountStatusElement.textContent = customerData.isActive
+          ? "Active"
+          : "Inactive";
+        accountStatusElement.className = customerData.isActive
+          ? "stat-value text-success"
+          : "stat-value text-error";
+      }
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      showMessage("profile", "Error loading profile", "error");
+    }
+  }
+
+  // Profile form submission
+  document
+    .getElementById("profile-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const firstNameInput = document.getElementById(
+        "firstName",
+      ) as HTMLInputElement;
+      const lastNameInput = document.getElementById(
+        "lastName",
+      ) as HTMLInputElement;
+      const emailInput = document.getElementById("email") as HTMLInputElement;
+
+      if (!firstNameInput || !lastNameInput || !emailInput) return;
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(`${cmsUrl}/api/customers/profile`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName: firstNameInput.value,
+            lastName: lastNameInput.value,
+            email: emailInput.value,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to update profile");
+        }
+
+        const data = await response.json();
+
+        // Update local storage
+        localStorage.setItem("customer", JSON.stringify(data.customer));
+
+        showMessage("profile", "Profile updated successfully!", "success");
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        showMessage("profile", `Error: ${(error as Error).message}`, "error");
+      }
+    });
+
+  // Password form submission
+  document
+    .getElementById("password-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const currentPasswordInput = document.getElementById(
+        "currentPassword",
+      ) as HTMLInputElement;
+      const newPasswordInput = document.getElementById(
+        "newPassword",
+      ) as HTMLInputElement;
+      const confirmPasswordInput = document.getElementById(
+        "confirmPassword",
+      ) as HTMLInputElement;
+
+      if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput)
+        return;
+
+      // Validate passwords match
+      if (newPasswordInput.value !== confirmPasswordInput.value) {
+        showMessage("password", "New passwords do not match", "error");
+        return;
+      }
+
+      // Validate password strength
+      if (newPasswordInput.value.length < 8) {
+        showMessage(
+          "password",
+          "Password must be at least 8 characters long",
+          "error",
+        );
+        return;
+      }
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(`${cmsUrl}/api/customers/password`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            currentPassword: currentPasswordInput.value,
+            newPassword: newPasswordInput.value,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to change password");
+        }
+
+        // Clear password fields
+        currentPasswordInput.value = "";
+        newPasswordInput.value = "";
+        confirmPasswordInput.value = "";
+
+        showMessage("password", "Password changed successfully!", "success");
+      } catch (error) {
+        console.error("Error changing password:", error);
+        showMessage("password", `Error: ${(error as Error).message}`, "error");
+      }
+    });
+
+  function showMessage(
+    type: string,
+    message: string,
+    alertType: "success" | "error" | "info",
+  ) {
+    const messageDiv = document.getElementById(`${type}-message`);
+    const textSpan = document.getElementById(`${type}-text`);
+
+    if (messageDiv && textSpan) {
+      textSpan.textContent = message;
+      messageDiv.classList.remove("hidden");
+
+      // Update alert class
+      const alertDiv = messageDiv.querySelector(".alert");
+      if (alertDiv) {
+        alertDiv.className = `alert alert-${alertType}`;
+      }
+
+      // Hide message after 5 seconds
+      setTimeout(() => {
+        messageDiv.classList.add("hidden");
+      }, 5000);
+    }
+  }
+
+  // Load profile on page load
+  loadProfile();
+</script>
