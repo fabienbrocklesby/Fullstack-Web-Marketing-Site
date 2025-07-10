@@ -900,6 +900,35 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
   };
 }
 
+export interface ApiLicenseLicense extends Schema.CollectionType {
+  collectionName: "licenses";
+  info: {
+    singularName: "license";
+    pluralName: "licenses";
+    displayName: "License (JWT Portal)";
+    description: "JWT-based license management for offline applications";
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::license.license",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::license.license",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
   collectionName: "license_keys";
   info: {
@@ -926,6 +955,15 @@ export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
       "api::purchase.purchase"
     >;
     isActive: Attribute.Boolean & Attribute.DefaultTo<true>;
+    status: Attribute.Enumeration<["unused", "active"]> &
+      Attribute.DefaultTo<"unused">;
+    jti: Attribute.String;
+    machineId: Attribute.String;
+    typ: Attribute.Enumeration<
+      ["trial", "paid", "starter", "pro", "enterprise"]
+    > &
+      Attribute.DefaultTo<"paid">;
+    trialStart: Attribute.DateTime;
     isUsed: Attribute.Boolean & Attribute.DefaultTo<false>;
     deviceInfo: Attribute.JSON;
     activatedAt: Attribute.DateTime;
@@ -946,6 +984,7 @@ export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
         number
       > &
       Attribute.DefaultTo<0>;
+    deactivationCode: Attribute.Text;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1070,6 +1109,7 @@ declare module "@strapi/types" {
       "plugin::users-permissions.user": PluginUsersPermissionsUser;
       "api::affiliate.affiliate": ApiAffiliateAffiliate;
       "api::customer.customer": ApiCustomerCustomer;
+      "api::license.license": ApiLicenseLicense;
       "api::license-key.license-key": ApiLicenseKeyLicenseKey;
       "api::page.page": ApiPagePage;
       "api::purchase.purchase": ApiPurchasePurchase;

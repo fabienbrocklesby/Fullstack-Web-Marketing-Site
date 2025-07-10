@@ -607,6 +607,358 @@ module.exports = {
       };
     }
   },
+
+  /**
+   * License Portal: Activate a license key
+   * POST /api/license/activate
+   */
+  async licenseActivate(ctx) {
+    const jwt = require("jsonwebtoken");
+    const { v4: uuidv4 } = require("uuid");
+    const crypto = require("crypto");
+
+    try {
+      const { licenceKey, machineId } = ctx.request.body;
+
+      // Validate input
+      if (!licenceKey || !machineId) {
+        ctx.status = 400;
+        ctx.body = { error: "licenceKey and machineId are required" };
+        return;
+      }
+
+      // Find the license by key
+      const license = await strapi.entityService.findMany(
+        "api::license-key.license-key",
+        {
+          filters: { key: licenceKey },
+          limit: 1,
+        },
+      );
+
+      if (!license || license.length === 0) {
+        ctx.status = 404;
+        ctx.body = { error: "License key not found" };
+        return;
+      }
+
+      const licenseRecord = license[0];
+
+      // Check if license is already active
+      if (licenseRecord.status === "active") {
+        ctx.status = 400;
+        ctx.body = { error: "License is already active on another device" };
+        return;
+      }
+
+      // For trial licenses, only allow one-time activation
+      if (licenseRecord.typ === "trial" && licenseRecord.status !== "unused") {
+        ctx.status = 400;
+        ctx.body = { error: "Trial license has already been used" };
+        return;
+      }
+
+      // Generate new license key and deactivation code for security
+      const generateShortKey = () => {
+        const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // No confusing chars like 0,O,1,I
+        let result = "";
+        for (let i = 0; i < 12; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+          if (i === 3 || i === 7) result += "-"; // Add dashes for readability
+        }
+        return result;
+      };
+
+      const generateDeactivationCode = () => {
+        const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+        let result = "";
+        for (let i = 0; i < 8; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+      };
+
+      // Map license types to proper prefixes
+      const getPrefix = (typ) => {
+        const prefixMap = {
+          trial: "TRIAL",
+          starter: "STARTER",
+          pro: "PRO",
+          enterprise: "ENTERPRISE",
+          paid: "PAID",
+        };
+        return prefixMap[typ] || typ.toUpperCase();
+      };
+
+      // Generate new identifiers
+      const jti = uuidv4();
+      const newLicenseKey = `${getPrefix(licenseRecord.typ)}-${generateShortKey()}`;
+      const deactivationCode = generateDeactivationCode();
+      const now = new Date();
+      const trialStart = licenseRecord.typ === "trial" ? now : undefined;
+
+      // Encrypt deactivation code using license key as encryption key
+      const encryptDeactivationCode = (code, licenseKey) => {
+        const algorithm = "aes-256-cbc";
+        const key = crypto.createHash("sha256").update(licenseKey).digest();
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv(algorithm, key, iv);
+        let encrypted = cipher.update(code, "utf8", "hex");
+        encrypted += cipher.final("hex");
+        return iv.toString("hex") + ":" + encrypted;
+      };
+
+      const encryptedDeactivationCode = encryptDeactivationCode(
+        deactivationCode,
+        newLicenseKey,
+      );
+
+      // Update license record with new key and encrypted deactivation code
+      const updatedLicense = await strapi.entityService.update(
+        "api::license-key.license-key",
+        licenseRecord.id,
+        {
+          data: {
+            key: newLicenseKey, // Generate new key to prevent reuse
+            status: "active",
+            jti,
+            machineId,
+            trialStart,
+            activatedAt: now,
+            isUsed: true,
+            deactivationCode: encryptedDeactivationCode, // Store encrypted deactivation code
+            currentActivations: 1, // Always 1 for single device
+            maxActivations: 1, // Always 1 for single device
+          },
+        },
+      );
+
+      // Create JWT payload with deactivation code
+      const payload = {
+        iss: process.env.JWT_ISSUER || `https://${ctx.request.host}`,
+        sub: licenseRecord.id.toString(),
+        jti,
+        typ: licenseRecord.typ,
+        machineId,
+        deactivationCode, // Include deactivation code in JWT
+        licenseKey: newLicenseKey,
+        iat: Math.floor(now.getTime() / 1000),
+      };
+
+      // Add trialStart for trial licenses
+      if (licenseRecord.typ === "trial") {
+        payload.trialStart = Math.floor(now.getTime() / 1000);
+      }
+
+      // Get private key from environment
+      const privateKey = process.env.JWT_PRIVATE_KEY;
+      if (!privateKey) {
+        console.error("JWT_PRIVATE_KEY not found in environment");
+        ctx.status = 500;
+        ctx.body = { error: "JWT private key not configured" };
+        return;
+      }
+
+      // Sign JWT with RS256
+      const token = jwt.sign(payload, privateKey, {
+        algorithm: "RS256",
+        noTimestamp: true, // We set iat manually
+      });
+
+      console.log(
+        `✅ License activated: ${newLicenseKey} for machine: ${machineId}`,
+      );
+
+      ctx.status = 200;
+      ctx.body = {
+        jwt: token,
+        jti,
+        machineId,
+        licenseKey: newLicenseKey, // Return new license key
+        deactivationCode, // Return deactivation code
+        ...(licenseRecord.typ === "trial" && { trialStart: now.toISOString() }),
+      };
+    } catch (error) {
+      console.error("License activation error:", error);
+      console.error("Error stack:", error.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error", details: error.message };
+    }
+  },
+
+  /**
+   * License Portal: Deactivate a license key
+   * POST /api/license/deactivate
+   */
+  async licenseDeactivate(ctx) {
+    try {
+      const { licenceKey, deactivationCode } = ctx.request.body;
+
+      // Validate input
+      if (!licenceKey || !deactivationCode) {
+        ctx.status = 400;
+        ctx.body = { error: "licenceKey and deactivationCode are required" };
+        return;
+      }
+
+      // Find the active license (without checking deactivation code yet)
+      const license = await strapi.entityService.findMany(
+        "api::license-key.license-key",
+        {
+          filters: {
+            key: licenceKey,
+            status: "active",
+          },
+          limit: 1,
+        },
+      );
+
+      if (!license || license.length === 0) {
+        ctx.status = 404;
+        ctx.body = { error: "License key not found or not active" };
+        return;
+      }
+
+      const licenseRecord = license[0];
+
+      // Decrypt and verify deactivation code
+      const decryptDeactivationCode = (encryptedCode, licenseKey) => {
+        try {
+          const algorithm = "aes-256-cbc";
+          const key = crypto.createHash("sha256").update(licenseKey).digest();
+          const parts = encryptedCode.split(":");
+          if (parts.length !== 2) return null;
+          const iv = Buffer.from(parts[0], "hex");
+          const encrypted = parts[1];
+          const decipher = crypto.createDecipheriv(algorithm, key, iv);
+          let decrypted = decipher.update(encrypted, "hex", "utf8");
+          decrypted += decipher.final("utf8");
+          return decrypted;
+        } catch (error) {
+          return null; // Invalid encryption/decryption
+        }
+      };
+
+      const decryptedCode = decryptDeactivationCode(
+        licenseRecord.deactivationCode,
+        licenceKey,
+      );
+
+      if (!decryptedCode || decryptedCode !== deactivationCode) {
+        ctx.status = 400;
+        ctx.body = { error: "Invalid deactivation code" };
+        return;
+      }
+
+      // Generate new unused license key for future use
+      const generateShortKey = () => {
+        const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // No confusing chars
+        let result = "";
+        for (let i = 0; i < 12; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+          if (i === 3 || i === 7) result += "-";
+        }
+        return result;
+      };
+
+      // Map license types to proper prefixes
+      const getPrefix = (typ) => {
+        const prefixMap = {
+          trial: "TRIAL",
+          starter: "STARTER",
+          pro: "PRO",
+          enterprise: "ENTERPRISE",
+          paid: "PAID",
+        };
+        return prefixMap[typ] || typ.toUpperCase();
+      };
+
+      const newLicenseKey = `${getPrefix(licenseRecord.typ)}-${generateShortKey()}`;
+
+      // Deactivate and reset the license with new key
+      await strapi.entityService.update(
+        "api::license-key.license-key",
+        licenseRecord.id,
+        {
+          data: {
+            key: newLicenseKey, // New license key for reuse
+            status: "unused",
+            jti: null,
+            machineId: null,
+            trialStart: null,
+            activatedAt: null,
+            isUsed: false,
+            deactivationCode: null, // Clear the encrypted deactivation code
+            currentActivations: 0,
+          },
+        },
+      );
+
+      console.log(
+        `✅ License deactivated and reset: ${licenceKey} -> ${newLicenseKey}`,
+      );
+
+      ctx.status = 200;
+      ctx.body = {
+        success: true,
+        message: "License deactivated successfully",
+        newLicenseKey: newLicenseKey,
+      };
+    } catch (error) {
+      console.error("License deactivation error:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to deactivate license",
+        details: error.message,
+      };
+    }
+  },
+
+  /**
+   * License Portal: Reset all licenses to unused state (for testing)
+   * POST /api/license/reset
+   */
+  async licenseReset(ctx) {
+    try {
+      console.log("🔄 Resetting all licenses to unused state...");
+
+      // Find all license keys
+      const licenses = await strapi.entityService.findMany(
+        "api::license-key.license-key",
+      );
+
+      console.log(`Found ${licenses.length} licenses to reset`);
+
+      for (const license of licenses) {
+        await strapi.entityService.update(
+          "api::license-key.license-key",
+          license.id,
+          {
+            data: {
+              status: "unused",
+              jti: null,
+              machineId: null,
+              trialStart: null,
+              activatedAt: null,
+              isUsed: false,
+            },
+          },
+        );
+        console.log(`   ✓ Reset license: ${license.key}`);
+      }
+
+      ctx.status = 200;
+      ctx.body = {
+        success: true,
+        message: `Reset ${licenses.length} licenses to unused state`,
+        licenses: licenses.map((l) => ({ key: l.key, typ: l.typ })),
+      };
+    } catch (error) {
+      console.error("License reset error:", error);
+      ctx.status = 500;
+      ctx.body = { error: "Failed to reset licenses", details: error.message };
+    }
+  },
 };
 
 // Helper function to generate license key

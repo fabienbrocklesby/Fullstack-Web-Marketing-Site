@@ -40,9 +40,32 @@
       "type": "boolean",
       "default": true
     },
+    "status": {
+      "type": "enumeration",
+      "enum": ["unused", "active"],
+      "default": "unused"
+    },
+    "jti": {
+      "type": "string",
+      "description": "Current activation UUID (JWT ID)"
+    },
+    "machineId": {
+      "type": "string",
+      "description": "Hash of device fingerprint that license is locked to"
+    },
+    "typ": {
+      "type": "enumeration",
+      "enum": ["trial", "paid", "starter", "pro", "enterprise"],
+      "default": "paid"
+    },
+    "trialStart": {
+      "type": "datetime",
+      "description": "Trial start date (only for trial licenses)"
+    },
     "isUsed": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "Legacy field - kept for backward compatibility"
     },
     "deviceInfo": {
       "type": "json",
@@ -63,6 +86,10 @@
       "type": "integer",
       "default": 0,
       "min": 0
+    },
+    "deactivationCode": {
+      "type": "text",
+      "description": "Encrypted deactivation code for secure license deactivation"
     }
   }
 }

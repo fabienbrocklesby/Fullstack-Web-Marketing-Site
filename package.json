@@ -22,7 +22,8 @@
     "demo:build": "echo '📦 Building backend for demo...' && cd backend && pnpm install && pnpm build",
     "demo:seed": "echo '🌱 Seeding demo data...' && node demo-seeder.cjs",
     "demo:quick": "echo '⚡ Quick demo setup (assumes backend is built)...' && pnpm run demo:seed && echo '✅ Demo data ready! Run: pnpm dev'",
-    "demo:verify": "echo '🔍 Verifying demo data...' && node demo-verify.cjs"
+    "demo:verify": "echo '🔍 Verifying demo data...' && node demo-verify.cjs",
+    "decrypt": "node decrypt-deactivation-code.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

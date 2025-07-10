@@ -43,5 +43,30 @@ module.exports = {
         middlewares: ["global::customer-auth"],
       },
     },
+    // License Portal Endpoints
+    {
+      method: "POST",
+      path: "/license/activate",
+      handler: "custom.licenseActivate",
+      config: {
+        auth: false,
+      },
+    },
+    {
+      method: "POST",
+      path: "/license/deactivate",
+      handler: "custom.licenseDeactivate",
+      config: {
+        auth: false,
+      },
+    },
+    {
+      method: "POST",
+      path: "/license/reset",
+      handler: "custom.licenseReset",
+      config: {
+        auth: false,
+      },
+    },
   ],
 };

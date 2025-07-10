@@ -175,119 +175,118 @@ import Layout from "../../layouts/Layout.astro";
 
   if (!customerToken || !customer.id) {
     window.location.href = "/customer/login";
-    return;
-  }
+  } else {
+    // Customer info will be loaded from API, not localStorage
 
-  // Customer info will be loaded from API, not localStorage
+    // Logout functionality
+    document.getElementById("logout-btn")?.addEventListener("click", () => {
+      localStorage.removeItem("customerToken");
+      localStorage.removeItem("customer");
+      window.location.href = "/customer/login";
+    });
 
-  // Logout functionality
-  document.getElementById("logout-btn")?.addEventListener("click", () => {
-    localStorage.removeItem("customerToken");
-    localStorage.removeItem("customer");
-    window.location.href = "/customer/login";
-  });
+    // Load dashboard data
+    async function loadDashboardData() {
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
 
-  // Load dashboard data
-  async function loadDashboardData() {
-    try {
-      const cmsUrl =
-        document.documentElement.getAttribute("data-cms-url") ||
-        "http://localhost:1337";
+        // Get customer profile
+        const profileResponse = await fetch(`${cmsUrl}/api/customers/me`, {
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+          },
+        });
 
-      // Get customer profile
-      const profileResponse = await fetch(`${cmsUrl}/api/customers/me`, {
-        headers: {
-          Authorization: `Bearer ${customerToken}`,
-        },
-      });
-
-      if (!profileResponse.ok) {
-        if (profileResponse.status === 401) {
-          localStorage.removeItem("customerToken");
-          localStorage.removeItem("customer");
-          window.location.href = "/customer/login";
-          return;
+        if (!profileResponse.ok) {
+          if (profileResponse.status === 401) {
+            localStorage.removeItem("customerToken");
+            localStorage.removeItem("customer");
+            window.location.href = "/customer/login";
+            return;
+          }
+          throw new Error("Failed to fetch profile");
         }
-        throw new Error("Failed to fetch profile");
-      }
 
-      const profileData = await profileResponse.json();
-      const customerData = profileData.customer;
+        const profileData = await profileResponse.json();
+        const customerData = profileData.customer;
 
-      // Update customer info in UI
-      updateCustomerInfo(customerData);
+        // Update customer info in UI
+        updateCustomerInfo(customerData);
 
-      // Get license keys
-      const licenseResponse = await fetch(`${cmsUrl}/api/license-keys`, {
-        headers: {
-          Authorization: `Bearer ${customerToken}`,
-        },
-      });
+        // Get license keys
+        const licenseResponse = await fetch(`${cmsUrl}/api/license-keys`, {
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+          },
+        });
 
-      if (!licenseResponse.ok) {
-        throw new Error("Failed to fetch license keys");
-      }
+        if (!licenseResponse.ok) {
+          throw new Error("Failed to fetch license keys");
+        }
 
-      const licenseData = await licenseResponse.json();
-      displayLicenseKeys(licenseData.licenseKeys);
-      updateStats(licenseData.licenseKeys);
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-      const container = document.getElementById("license-keys-container");
-      if (container) {
-        container.innerHTML = `
+        const licenseData = await licenseResponse.json();
+        displayLicenseKeys(licenseData.licenseKeys);
+        updateStats(licenseData.licenseKeys);
+        updateRecentActivity(customerData.purchases, licenseData.licenseKeys);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        const container = document.getElementById("license-keys-container");
+        if (container) {
+          container.innerHTML = `
           <div class="alert alert-error">
             <span>Error loading data: ${error.message}</span>
           </div>
         `;
+        }
       }
     }
-  }
 
-  function updateCustomerInfo(customerData) {
-    const customerNameElement = document.getElementById("customer-name");
-    const customerInitialsElement =
-      document.getElementById("customer-initials");
-    const customerFullNameElement =
-      document.getElementById("customer-full-name");
-    const customerEmailElement = document.getElementById("customer-email");
-    const customerIdElement = document.getElementById("customer-id");
+    function updateCustomerInfo(customerData) {
+      const customerNameElement = document.getElementById("customer-name");
+      const customerInitialsElement =
+        document.getElementById("customer-initials");
+      const customerFullNameElement =
+        document.getElementById("customer-full-name");
+      const customerEmailElement = document.getElementById("customer-email");
+      const customerIdElement = document.getElementById("customer-id");
 
-    if (customerNameElement) {
-      customerNameElement.textContent =
-        `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
-        "Customer";
+      if (customerNameElement) {
+        customerNameElement.textContent =
+          `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+          "Customer";
+      }
+
+      if (customerInitialsElement) {
+        const initials = `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}`;
+        customerInitialsElement.textContent = initials || "CU";
+      }
+
+      if (customerFullNameElement) {
+        customerFullNameElement.textContent =
+          `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+          "Customer";
+      }
+
+      if (customerEmailElement) {
+        customerEmailElement.textContent = customerData.email || "No email";
+      }
+
+      if (customerIdElement) {
+        customerIdElement.textContent = customerData.id || "No ID";
+      }
+
+      // Update localStorage with fresh data
+      localStorage.setItem("customer", JSON.stringify(customerData));
     }
 
-    if (customerInitialsElement) {
-      const initials = `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}`;
-      customerInitialsElement.textContent = initials || "CU";
-    }
+    function displayLicenseKeys(licenseKeys) {
+      const container = document.getElementById("license-keys-container");
+      if (!container) return;
 
-    if (customerFullNameElement) {
-      customerFullNameElement.textContent =
-        `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
-        "Customer";
-    }
-
-    if (customerEmailElement) {
-      customerEmailElement.textContent = customerData.email || "No email";
-    }
-
-    if (customerIdElement) {
-      customerIdElement.textContent = customerData.id || "No ID";
-    }
-
-    // Update localStorage with fresh data
-    localStorage.setItem("customer", JSON.stringify(customerData));
-  }
-
-  function displayLicenseKeys(licenseKeys) {
-    const container = document.getElementById("license-keys-container");
-    if (!container) return;
-
-    if (licenseKeys.length === 0) {
-      container.innerHTML = `
+      if (licenseKeys.length === 0) {
+        container.innerHTML = `
         <div class="text-center py-8">
           <div class="text-6xl mb-4">🔐</div>
           <h3 class="text-lg font-semibold mb-2">No License Keys Yet</h3>
@@ -295,12 +294,12 @@ import Layout from "../../layouts/Layout.astro";
           <a href="/pricing" class="btn btn-primary mt-4">View Products</a>
         </div>
       `;
-      return;
-    }
+        return;
+      }
 
-    const licenseCardsHTML = licenseKeys
-      .map(
-        (license) => `
+      const licenseCardsHTML = licenseKeys
+        .map(
+          (license) => `
       <div class="card bg-base-100 border shadow-sm">
         <div class="card-body">
           <div class="flex justify-between items-start mb-4">
@@ -327,12 +326,12 @@ import Layout from "../../layouts/Layout.astro";
             <div>
               <span class="text-sm opacity-70">Status:</span>
               <span class="ml-2 badge ${license.isUsed ? "badge-warning" : "badge-success"}">
-                ${license.isUsed ? "Used" : "Available"}
+                ${license.isUsed ? "Active" : "Available"}
               </span>
             </div>
             <div>
-              <span class="text-sm opacity-70">Activations:</span>
-              <span class="ml-2">${license.currentActivations}/${license.maxActivations}</span>
+              <span class="text-sm opacity-70">Type:</span>
+              <span class="ml-2">${license.productName}</span>
             </div>
           </div>
           
@@ -348,124 +347,185 @@ import Layout from "../../layouts/Layout.astro";
           }
           
           <div class="card-actions justify-end mt-4">
-            ${
-              !license.isUsed
-                ? `
-              <button class="btn btn-primary btn-sm" onclick="activateLicense('${license.id}')">
-                Activate License
-              </button>
-            `
-                : `
-              <button class="btn btn-warning btn-sm" onclick="deactivateLicense('${license.id}')">
-                Deactivate License
-              </button>
-            `
-            }
+            <button class="btn btn-primary btn-sm" onclick="copyToClipboard('${license.key}')">
+              📋 Copy License Key
+            </button>
           </div>
         </div>
       </div>
     `,
-      )
-      .join("");
+        )
+        .join("");
 
-    container.innerHTML = `
+      container.innerHTML = `
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         ${licenseCardsHTML}
       </div>
     `;
-  }
+    }
 
-  function updateStats(licenseKeys) {
-    const totalLicenses = licenseKeys.length;
-    const activeLicenses = licenseKeys.filter(
-      (license) => license.isUsed,
-    ).length;
-    const availableLicenses = licenseKeys.filter(
-      (license) => !license.isUsed && license.isActive,
-    ).length;
+    function updateStats(licenseKeys) {
+      const totalLicenses = licenseKeys.length;
+      const activeLicenses = licenseKeys.filter(
+        (license) => license.isUsed,
+      ).length;
+      const availableLicenses = licenseKeys.filter(
+        (license) => !license.isUsed && license.isActive,
+      ).length;
 
-    const totalElement = document.getElementById("total-licenses");
-    const activeElement = document.getElementById("active-licenses");
-    const availableElement = document.getElementById("available-licenses");
+      const totalElement = document.getElementById("total-licenses");
+      const activeElement = document.getElementById("active-licenses");
+      const availableElement = document.getElementById("available-licenses");
 
-    if (totalElement) totalElement.textContent = totalLicenses;
-    if (activeElement) activeElement.textContent = activeLicenses;
-    if (availableElement) availableElement.textContent = availableLicenses;
-  }
+      if (totalElement) totalElement.textContent = totalLicenses;
+      if (activeElement) activeElement.textContent = activeLicenses;
+      if (availableElement) availableElement.textContent = availableLicenses;
+    }
 
-  // Global functions for license management
-  (window as any).copyToClipboard = function (text: string) {
-    navigator.clipboard.writeText(text).then(() => {
-      alert("License key copied to clipboard!");
-    });
-  };
+    function updateRecentActivity(purchases, licenseKeys) {
+      const container = document.getElementById("recent-activity");
+      if (!container) return;
 
-  (window as any).activateLicense = async function (licenseId: string) {
-    try {
-      const cmsUrl =
-        document.documentElement.getAttribute("data-cms-url") ||
-        "http://localhost:1337";
-      const response = await fetch(
-        `${cmsUrl}/api/license-keys/${licenseId}/activate`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${customerToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            deviceInfo: {
-              userAgent: navigator.userAgent,
-              platform: navigator.platform,
-              timestamp: new Date().toISOString(),
+      // Combine purchases and license activations into a single activity feed
+      const activities = [
+        // Sample object to help TypeScript infer the type
+        ...(purchases && purchases.length > 0
+          ? purchases.map((purchase) => ({
+              type: "purchase",
+              date: new Date(purchase.createdAt),
+              text: `Purchased ${purchase.metadata?.product || "product"}`,
+              amount: `$${purchase.amount}`,
+              icon: "💳",
+            }))
+          : []),
+        ...(licenseKeys && licenseKeys.length > 0
+          ? licenseKeys
+              .filter((license) => license.isUsed && license.activatedAt)
+              .map((license) => ({
+                type: "activation",
+                date: new Date(license.activatedAt),
+                text: `Activated ${license.productName} license`,
+                icon: "🔑",
+              }))
+          : []),
+      ];
+
+      // Sort activities by date (most recent first)
+      activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+      // Take only the 5 most recent activities
+      const recentActivities = activities.slice(0, 5);
+
+      if (recentActivities.length === 0) {
+        container.innerHTML = `
+        <div class="text-center py-4">
+          <div class="text-4xl mb-2">📋</div>
+          <p class="text-sm opacity-70">No recent activity</p>
+        </div>
+      `;
+        return;
+      }
+
+      let activitiesHTML = "";
+      for (const activity of recentActivities) {
+        const dateStr = new Date(activity.date).toLocaleDateString();
+        const timeStr = new Date(activity.date).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const amountStr = activity.amount
+          ? `<div class="text-sm font-semibold text-primary">${activity.amount}</div>`
+          : "";
+
+        activitiesHTML += `
+        <div class="flex items-center space-x-3 py-2">
+          <div class="text-lg">${activity.icon}</div>
+          <div class="flex-1">
+            <p class="text-sm font-medium">${activity.text}</p>
+            <p class="text-xs opacity-70">${dateStr} ${timeStr}</p>
+          </div>
+          ${amountStr}
+        </div>
+      `;
+      }
+
+      container.innerHTML = activitiesHTML;
+    }
+
+    // Global functions for license management
+    (window as any).copyToClipboard = function (text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("License key copied to clipboard!");
+      });
+    };
+
+    (window as any).activateLicense = async function (licenseId) {
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+        const response = await fetch(
+          `${cmsUrl}/api/license-keys/${licenseId}/activate`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+              "Content-Type": "application/json",
             },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to activate license");
-      }
-
-      alert("License activated successfully!");
-      loadDashboardData(); // Reload data
-    } catch (error) {
-      alert(`Error activating license: ${(error as Error).message}`);
-    }
-  };
-
-  (window as any).deactivateLicense = async function (licenseId: string) {
-    if (!confirm("Are you sure you want to deactivate this license?")) {
-      return;
-    }
-
-    try {
-      const cmsUrl =
-        document.documentElement.getAttribute("data-cms-url") ||
-        "http://localhost:1337";
-      const response = await fetch(
-        `${cmsUrl}/api/license-keys/${licenseId}/deactivate`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${customerToken}`,
+            body: JSON.stringify({
+              deviceInfo: {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                timestamp: new Date().toISOString(),
+              },
+            }),
           },
-        },
-      );
+        );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to deactivate license");
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to activate license");
+        }
+
+        alert("License activated successfully!");
+        loadDashboardData(); // Reload data
+      } catch (error) {
+        alert(`Error activating license: ${(error as Error).message}`);
+      }
+    };
+
+    (window as any).deactivateLicense = async function (licenseId: string) {
+      if (!confirm("Are you sure you want to deactivate this license?")) {
+        return;
       }
 
-      alert("License deactivated successfully!");
-      loadDashboardData(); // Reload data
-    } catch (error) {
-      alert(`Error deactivating license: ${(error as Error).message}`);
-    }
-  };
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+        const response = await fetch(
+          `${cmsUrl}/api/license-keys/${licenseId}/deactivate`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+            },
+          },
+        );
 
-  // Load dashboard data on page load
-  loadDashboardData();
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to deactivate license");
+        }
+
+        alert("License deactivated successfully!");
+        loadDashboardData(); // Reload data
+      } catch (error) {
+        alert(`Error deactivating license: ${(error as Error).message}`);
+      }
+    };
+
+    // Load dashboard data on page load
+    loadDashboardData();
+  } // End of login check
 </script>

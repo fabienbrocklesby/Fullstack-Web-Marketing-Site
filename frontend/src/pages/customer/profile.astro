@@ -164,235 +164,241 @@ import Layout from "../../layouts/Layout.astro";
 
   if (!customerToken || !customer.id) {
     window.location.href = "/customer/login";
-    return;
-  }
+  } else {
+    // Logout functionality
+    document.getElementById("logout-btn")?.addEventListener("click", () => {
+      localStorage.removeItem("customerToken");
+      localStorage.removeItem("customer");
+      window.location.href = "/customer/login";
+    });
 
-  // Logout functionality
-  document.getElementById("logout-btn")?.addEventListener("click", () => {
-    localStorage.removeItem("customerToken");
-    localStorage.removeItem("customer");
-    window.location.href = "/customer/login";
-  });
-
-  // Load customer profile
-  async function loadProfile() {
-    try {
-      const cmsUrl =
-        document.documentElement.getAttribute("data-cms-url") ||
-        "http://localhost:1337";
-
-      const response = await fetch(`${cmsUrl}/api/customers/me`, {
-        headers: {
-          Authorization: `Bearer ${customerToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem("customerToken");
-          localStorage.removeItem("customer");
-          window.location.href = "/customer/login";
-          return;
-        }
-        throw new Error("Failed to load profile");
-      }
-
-      const data = await response.json();
-      const customerData = data.customer;
-
-      // Fill form fields
-      const firstNameInput = document.getElementById(
-        "firstName",
-      ) as HTMLInputElement;
-      const lastNameInput = document.getElementById(
-        "lastName",
-      ) as HTMLInputElement;
-      const emailInput = document.getElementById("email") as HTMLInputElement;
-
-      if (firstNameInput) firstNameInput.value = customerData.firstName || "";
-      if (lastNameInput) lastNameInput.value = customerData.lastName || "";
-      if (emailInput) emailInput.value = customerData.email || "";
-
-      // Update stats
-      const memberSinceElement = document.getElementById("member-since");
-      const totalPurchasesElement = document.getElementById("total-purchases");
-      const activeLicensesElement = document.getElementById("active-licenses");
-      const accountStatusElement = document.getElementById("account-status");
-
-      if (memberSinceElement) {
-        const joinDate = new Date(customerData.createdAt);
-        memberSinceElement.textContent = joinDate.toLocaleDateString();
-      }
-
-      if (totalPurchasesElement) {
-        totalPurchasesElement.textContent = customerData.purchases?.length || 0;
-      }
-
-      if (activeLicensesElement) {
-        const activeLicenses =
-          customerData.licenseKeys?.filter((key: any) => key.isUsed) || [];
-        activeLicensesElement.textContent = activeLicenses.length;
-      }
-
-      if (accountStatusElement) {
-        accountStatusElement.textContent = customerData.isActive
-          ? "Active"
-          : "Inactive";
-        accountStatusElement.className = customerData.isActive
-          ? "stat-value text-success"
-          : "stat-value text-error";
-      }
-    } catch (error) {
-      console.error("Error loading profile:", error);
-      showMessage("profile", "Error loading profile", "error");
-    }
-  }
-
-  // Profile form submission
-  document
-    .getElementById("profile-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const firstNameInput = document.getElementById(
-        "firstName",
-      ) as HTMLInputElement;
-      const lastNameInput = document.getElementById(
-        "lastName",
-      ) as HTMLInputElement;
-      const emailInput = document.getElementById("email") as HTMLInputElement;
-
-      if (!firstNameInput || !lastNameInput || !emailInput) return;
-
+    // Load customer profile
+    async function loadProfile() {
       try {
         const cmsUrl =
           document.documentElement.getAttribute("data-cms-url") ||
           "http://localhost:1337";
 
-        const response = await fetch(`${cmsUrl}/api/customers/profile`, {
-          method: "PUT",
+        const response = await fetch(`${cmsUrl}/api/customers/me`, {
           headers: {
             Authorization: `Bearer ${customerToken}`,
-            "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            firstName: firstNameInput.value,
-            lastName: lastNameInput.value,
-            email: emailInput.value,
-          }),
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to update profile");
+          if (response.status === 401) {
+            localStorage.removeItem("customerToken");
+            localStorage.removeItem("customer");
+            window.location.href = "/customer/login";
+            return;
+          }
+          throw new Error("Failed to load profile");
         }
 
         const data = await response.json();
+        const customerData = data.customer;
 
-        // Update local storage
-        localStorage.setItem("customer", JSON.stringify(data.customer));
+        // Fill form fields
+        const firstNameInput = document.getElementById(
+          "firstName",
+        ) as HTMLInputElement;
+        const lastNameInput = document.getElementById(
+          "lastName",
+        ) as HTMLInputElement;
+        const emailInput = document.getElementById("email") as HTMLInputElement;
 
-        showMessage("profile", "Profile updated successfully!", "success");
-      } catch (error) {
-        console.error("Error updating profile:", error);
-        showMessage("profile", `Error: ${(error as Error).message}`, "error");
-      }
-    });
+        if (firstNameInput) firstNameInput.value = customerData.firstName || "";
+        if (lastNameInput) lastNameInput.value = customerData.lastName || "";
+        if (emailInput) emailInput.value = customerData.email || "";
 
-  // Password form submission
-  document
-    .getElementById("password-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
+        // Update stats
+        const memberSinceElement = document.getElementById("member-since");
+        const totalPurchasesElement =
+          document.getElementById("total-purchases");
+        const activeLicensesElement =
+          document.getElementById("active-licenses");
+        const accountStatusElement = document.getElementById("account-status");
 
-      const currentPasswordInput = document.getElementById(
-        "currentPassword",
-      ) as HTMLInputElement;
-      const newPasswordInput = document.getElementById(
-        "newPassword",
-      ) as HTMLInputElement;
-      const confirmPasswordInput = document.getElementById(
-        "confirmPassword",
-      ) as HTMLInputElement;
-
-      if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput)
-        return;
-
-      // Validate passwords match
-      if (newPasswordInput.value !== confirmPasswordInput.value) {
-        showMessage("password", "New passwords do not match", "error");
-        return;
-      }
-
-      // Validate password strength
-      if (newPasswordInput.value.length < 8) {
-        showMessage(
-          "password",
-          "Password must be at least 8 characters long",
-          "error",
-        );
-        return;
-      }
-
-      try {
-        const cmsUrl =
-          document.documentElement.getAttribute("data-cms-url") ||
-          "http://localhost:1337";
-
-        const response = await fetch(`${cmsUrl}/api/customers/password`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${customerToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            currentPassword: currentPasswordInput.value,
-            newPassword: newPasswordInput.value,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to change password");
+        if (memberSinceElement) {
+          const joinDate = new Date(customerData.createdAt);
+          memberSinceElement.textContent = joinDate.toLocaleDateString();
         }
 
-        // Clear password fields
-        currentPasswordInput.value = "";
-        newPasswordInput.value = "";
-        confirmPasswordInput.value = "";
+        if (totalPurchasesElement) {
+          totalPurchasesElement.textContent =
+            customerData.purchases?.length || 0;
+        }
 
-        showMessage("password", "Password changed successfully!", "success");
+        if (activeLicensesElement) {
+          const activeLicenses =
+            customerData.licenseKeys?.filter((key: any) => key.isUsed) || [];
+          activeLicensesElement.textContent = activeLicenses.length;
+        }
+
+        if (accountStatusElement) {
+          accountStatusElement.textContent = customerData.isActive
+            ? "Active"
+            : "Inactive";
+          accountStatusElement.className = customerData.isActive
+            ? "stat-value text-success"
+            : "stat-value text-error";
+        }
       } catch (error) {
-        console.error("Error changing password:", error);
-        showMessage("password", `Error: ${(error as Error).message}`, "error");
+        console.error("Error loading profile:", error);
+        showMessage("profile", "Error loading profile", "error");
       }
-    });
-
-  function showMessage(
-    type: string,
-    message: string,
-    alertType: "success" | "error" | "info",
-  ) {
-    const messageDiv = document.getElementById(`${type}-message`);
-    const textSpan = document.getElementById(`${type}-text`);
-
-    if (messageDiv && textSpan) {
-      textSpan.textContent = message;
-      messageDiv.classList.remove("hidden");
-
-      // Update alert class
-      const alertDiv = messageDiv.querySelector(".alert");
-      if (alertDiv) {
-        alertDiv.className = `alert alert-${alertType}`;
-      }
-
-      // Hide message after 5 seconds
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
     }
-  }
 
-  // Load profile on page load
-  loadProfile();
+    // Profile form submission
+    document
+      .getElementById("profile-form")
+      ?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const firstNameInput = document.getElementById(
+          "firstName",
+        ) as HTMLInputElement;
+        const lastNameInput = document.getElementById(
+          "lastName",
+        ) as HTMLInputElement;
+        const emailInput = document.getElementById("email") as HTMLInputElement;
+
+        if (!firstNameInput || !lastNameInput || !emailInput) return;
+
+        try {
+          const cmsUrl =
+            document.documentElement.getAttribute("data-cms-url") ||
+            "http://localhost:1337";
+
+          const response = await fetch(`${cmsUrl}/api/customers/profile`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              firstName: firstNameInput.value,
+              lastName: lastNameInput.value,
+              email: emailInput.value,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to update profile");
+          }
+
+          const data = await response.json();
+
+          // Update local storage
+          localStorage.setItem("customer", JSON.stringify(data.customer));
+
+          showMessage("profile", "Profile updated successfully!", "success");
+        } catch (error) {
+          console.error("Error updating profile:", error);
+          showMessage("profile", `Error: ${(error as Error).message}`, "error");
+        }
+      });
+
+    // Password form submission
+    document
+      .getElementById("password-form")
+      ?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const currentPasswordInput = document.getElementById(
+          "currentPassword",
+        ) as HTMLInputElement;
+        const newPasswordInput = document.getElementById(
+          "newPassword",
+        ) as HTMLInputElement;
+        const confirmPasswordInput = document.getElementById(
+          "confirmPassword",
+        ) as HTMLInputElement;
+
+        if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput)
+          return;
+
+        // Validate passwords match
+        if (newPasswordInput.value !== confirmPasswordInput.value) {
+          showMessage("password", "New passwords do not match", "error");
+          return;
+        }
+
+        // Validate password strength
+        if (newPasswordInput.value.length < 8) {
+          showMessage(
+            "password",
+            "Password must be at least 8 characters long",
+            "error",
+          );
+          return;
+        }
+
+        try {
+          const cmsUrl =
+            document.documentElement.getAttribute("data-cms-url") ||
+            "http://localhost:1337";
+
+          const response = await fetch(`${cmsUrl}/api/customers/password`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              currentPassword: currentPasswordInput.value,
+              newPassword: newPasswordInput.value,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to change password");
+          }
+
+          // Clear password fields
+          currentPasswordInput.value = "";
+          newPasswordInput.value = "";
+          confirmPasswordInput.value = "";
+
+          showMessage("password", "Password changed successfully!", "success");
+        } catch (error) {
+          console.error("Error changing password:", error);
+          showMessage(
+            "password",
+            `Error: ${(error as Error).message}`,
+            "error",
+          );
+        }
+      });
+
+    function showMessage(
+      type: string,
+      message: string,
+      alertType: "success" | "error" | "info",
+    ) {
+      const messageDiv = document.getElementById(`${type}-message`);
+      const textSpan = document.getElementById(`${type}-text`);
+
+      if (messageDiv && textSpan) {
+        textSpan.textContent = message;
+        messageDiv.classList.remove("hidden");
+
+        // Update alert class
+        const alertDiv = messageDiv.querySelector(".alert");
+        if (alertDiv) {
+          alertDiv.className = `alert alert-${alertType}`;
+        }
+
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          messageDiv.classList.add("hidden");
+        }, 5000);
+      }
+    }
+
+    // Load profile on page load
+    loadProfile();
+  } // End of login check
 </script>

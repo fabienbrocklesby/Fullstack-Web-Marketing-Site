@@ -346,6 +346,29 @@ We implement appropriate technical and organizational measures to protect your p
           // Create corresponding license key
           const licenseKey = `${product.priceId.toUpperCase()}-${uuidv4().replace(/-/g, "").substring(0, 12).toUpperCase()}`;
 
+          const isUsed = Math.random() > 0.4; // 60% chance of being used
+          const isTrialLicense = Math.random() > 0.8; // 20% chance of being trial
+
+          // Map product priceId to proper license type
+          let licenseType;
+          if (isTrialLicense) {
+            licenseType = "trial";
+          } else {
+            switch (product.priceId) {
+              case "price_starter":
+                licenseType = "starter";
+                break;
+              case "price_pro":
+                licenseType = "pro";
+                break;
+              case "price_enterprise":
+                licenseType = "enterprise";
+                break;
+              default:
+                licenseType = "paid";
+            }
+          }
+
           const licenseData = {
             key: licenseKey,
             productName: product.name,
@@ -353,35 +376,48 @@ We implement appropriate technical and organizational measures to protect your p
             customer: customer.id,
             purchase: purchase.id,
             isActive: true,
-            isUsed: Math.random() > 0.4, // 60% chance of being used
-            maxActivations: product.maxActivations,
-            currentActivations:
-              Math.random() > 0.4
-                ? Math.floor(Math.random() * product.maxActivations)
-                : 0,
-            activatedAt:
-              Math.random() > 0.4
+            isUsed: isUsed,
+            status: isUsed ? "active" : "unused",
+            typ: licenseType,
+            jti: isUsed ? require("uuid").v4() : null,
+            machineId: isUsed
+              ? require("crypto")
+                  .createHash("sha256")
+                  .update(`machine-${customer.id}-${Math.random()}`)
+                  .digest("hex")
+              : null,
+            trialStart:
+              isTrialLicense && isUsed
                 ? new Date(
                     purchaseData.createdAt.getTime() +
                       Math.random() * 7 * 24 * 60 * 60 * 1000,
                   )
                 : null,
+            maxActivations: product.maxActivations,
+            currentActivations: isUsed
+              ? Math.floor(Math.random() * product.maxActivations)
+              : 0,
+            activatedAt: isUsed
+              ? new Date(
+                  purchaseData.createdAt.getTime() +
+                    Math.random() * 7 * 24 * 60 * 60 * 1000,
+                )
+              : null,
             expiresAt: new Date(
               purchaseData.createdAt.getTime() + 365 * 24 * 60 * 60 * 1000,
             ), // 1 year from purchase
-            deviceInfo:
-              Math.random() > 0.4
-                ? {
-                    os: ["Windows 11", "macOS Ventura", "Ubuntu 22.04"][
-                      Math.floor(Math.random() * 3)
-                    ],
-                    browser: ["Chrome", "Firefox", "Safari", "Edge"][
-                      Math.floor(Math.random() * 4)
-                    ],
-                    ipAddress: `192.168.1.${Math.floor(Math.random() * 254) + 1}`,
-                    userAgent: "Mozilla/5.0 (Test Device) TestBrowser/1.0",
-                  }
-                : null,
+            deviceInfo: isUsed
+              ? {
+                  os: ["Windows 11", "macOS Ventura", "Ubuntu 22.04"][
+                    Math.floor(Math.random() * 3)
+                  ],
+                  browser: ["Chrome", "Firefox", "Safari", "Edge"][
+                    Math.floor(Math.random() * 4)
+                  ],
+                  ipAddress: `192.168.1.${Math.floor(Math.random() * 254) + 1}`,
+                  userAgent: "Mozilla/5.0 (Test Device) TestBrowser/1.0",
+                }
+              : null,
           };
 
           await strapi.entityService.create("api::license-key.license-key", {
@@ -402,6 +438,82 @@ We implement appropriate technical and organizational measures to protect your p
     console.log("   Customer Login: customer1@example.com / password123");
     console.log("   Customer Login: customer2@example.com / password123");
     console.log("   Customer Login: customer3@example.com / password123");
+
+    // Create some standalone license keys for JWT portal testing
+    await this.createStandaloneLicenseKeys();
+  },
+
+  async createStandaloneLicenseKeys() {
+    console.log(
+      "🔑 Creating standalone license keys for JWT portal testing...",
+    );
+
+    const testLicenseKeys = [
+      {
+        key: "TRIAL-CNC-001-DEMO",
+        productName: "CNC Pro Trial",
+        priceId: "trial_cnc_pro",
+        typ: "trial",
+        status: "unused",
+        maxActivations: 1,
+      },
+      {
+        key: "PAID-CNC-002-DEMO",
+        productName: "CNC Pro License",
+        priceId: "price_cnc_pro",
+        typ: "paid",
+        status: "unused",
+        maxActivations: 3,
+      },
+      {
+        key: "PAID-CNC-003-ACTIVE",
+        productName: "CNC Standard",
+        priceId: "price_cnc_standard",
+        typ: "paid",
+        status: "active",
+        maxActivations: 1,
+        jti: require("uuid").v4(),
+        machineId: require("crypto")
+          .createHash("sha256")
+          .update("demo-machine-001")
+          .digest("hex"),
+        activatedAt: new Date(),
+      },
+    ];
+
+    for (const licenseData of testLicenseKeys) {
+      // Check if license key already exists
+      const existing = await strapi.entityService.findMany(
+        "api::license-key.license-key",
+        {
+          filters: { key: licenseData.key },
+        },
+      );
+
+      if (existing.length === 0) {
+        await strapi.entityService.create("api::license-key.license-key", {
+          data: {
+            ...licenseData,
+            isActive: true,
+            isUsed: licenseData.status === "active",
+            currentActivations: licenseData.status === "active" ? 1 : 0,
+            expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+          },
+        });
+        console.log(
+          `   ✓ Created test license: ${licenseData.key} (${licenseData.typ})`,
+        );
+      } else {
+        console.log(`   ⚠ License already exists: ${licenseData.key}`);
+      }
+    }
+
+    console.log("🔑 Test license keys for JWT portal:");
+    console.log("   Trial License: TRIAL-CNC-001-DEMO (unused, 7-day trial)");
+    console.log("   Paid License: PAID-CNC-002-DEMO (unused, 3 activations)");
+    console.log(
+      "   Active License: PAID-CNC-003-ACTIVE (active on demo-machine-001)",
+    );
   },
 
   async clearAllData() {
