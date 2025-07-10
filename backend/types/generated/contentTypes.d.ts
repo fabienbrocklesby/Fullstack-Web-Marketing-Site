@@ -867,7 +867,7 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
     email: Attribute.Email & Attribute.Required & Attribute.Unique;
     firstName: Attribute.String & Attribute.Required;
     lastName: Attribute.String & Attribute.Required;
-    password: Attribute.Password & Attribute.Required & Attribute.Private;
+    password: Attribute.String & Attribute.Required & Attribute.Private;
     isActive: Attribute.Boolean & Attribute.DefaultTo<true>;
     emailVerified: Attribute.Boolean & Attribute.DefaultTo<false>;
     stripeCustomerId: Attribute.String & Attribute.Unique;

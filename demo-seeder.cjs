@@ -38,8 +38,8 @@ async function main() {
 
     console.log('🔧 Initializing Strapi...');
     
-    // Import Strapi from the backend directory
-    const strapiFactory = require('./backend/node_modules/@strapi/strapi');
+    // Import Strapi using absolute path
+    const strapiFactory = require(path.join(backendPath, 'node_modules/@strapi/strapi'));
     
     // Load Strapi from backend directory
     const app = await strapiFactory().load();
@@ -49,8 +49,8 @@ async function main() {
     // Make strapi globally available
     global.strapi = app;
     
-    // Import the seeder from backend directory
-    const seeder = require('./backend/test-data-seeder');
+    // Import the seeder using absolute path
+    const seeder = require(path.join(backendPath, 'test-data-seeder'));
     
     console.log('🧹 Clearing existing data...');
     await seeder.clearAllData();
