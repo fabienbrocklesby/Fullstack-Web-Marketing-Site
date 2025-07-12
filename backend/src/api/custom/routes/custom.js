@@ -68,5 +68,14 @@ module.exports = {
         auth: false,
       },
     },
+    // Development-only endpoint to recalculate commission amounts
+    {
+      method: "POST",
+      path: "/dev/recalculate-commissions",
+      handler: "custom.devRecalculateCommissions",
+      config: {
+        auth: false,
+      },
+    },
   ],
 };

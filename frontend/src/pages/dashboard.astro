@@ -24,33 +24,65 @@ import Layout from "../layouts/Layout.astro";
     </div>
 
     <div class="container mx-auto p-6">
+      <!-- Date Range Selector -->
+      <div class="card bg-base-100 shadow-lg mb-6">
+        <div class="card-body">
+          <h2 class="card-title">Date Range</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">From Date</span>
+              </label>
+              <input type="date" id="date-from" class="input input-bordered" />
+            </div>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">To Date</span>
+              </label>
+              <input type="date" id="date-to" class="input input-bordered" />
+            </div>
+            <div class="form-control">
+              <button class="btn btn-primary" id="apply-date-filter">
+                Apply Filter
+              </button>
+              <button
+                class="btn btn-outline btn-sm mt-2"
+                id="reset-date-filter"
+              >
+                Show All Time
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <!-- Total Sales -->
         <div class="stat bg-base-100 shadow-lg rounded-lg">
           <div class="stat-title">Total Sales</div>
           <div class="stat-value" id="total-sales">$0</div>
-          <div class="stat-desc">This month</div>
+          <div class="stat-desc" id="total-sales-desc">All time</div>
         </div>
 
         <!-- Total Commission -->
         <div class="stat bg-base-100 shadow-lg rounded-lg">
           <div class="stat-title">Your Commission</div>
           <div class="stat-value text-success" id="total-commission">$0</div>
-          <div class="stat-desc">This month</div>
+          <div class="stat-desc" id="total-commission-desc">All time</div>
         </div>
 
         <!-- Conversion Rate -->
         <div class="stat bg-base-100 shadow-lg rounded-lg">
           <div class="stat-title">Conversion Rate</div>
           <div class="stat-value" id="conversion-rate">0%</div>
-          <div class="stat-desc">This month</div>
+          <div class="stat-desc" id="conversion-rate-desc">All time</div>
         </div>
       </div>
 
       <!-- Recent Sales -->
       <div class="card bg-base-100 shadow-lg">
         <div class="card-body">
-          <h2 class="card-title">Recent Sales</h2>
+          <h2 class="card-title">Sales</h2>
           <div class="overflow-x-auto">
             <table class="table">
               <thead>
@@ -157,7 +189,15 @@ import Layout from "../layouts/Layout.astro";
     });
 
     // Load dashboard data
-    async function loadDashboardData() {
+    let currentDateRange: { from: string | null; to: string | null } = {
+      from: null,
+      to: null,
+    };
+
+    async function loadDashboardData(
+      dateFrom: string | null = null,
+      dateTo: string | null = null,
+    ) {
       try {
         const cmsUrl =
           document.documentElement.getAttribute("data-cms-url") ||
@@ -238,15 +278,23 @@ import Layout from "../layouts/Layout.astro";
           linkInput.value = `${window.location.origin}/pricing?ref=${affiliateCode}`;
         }
 
+        // Build purchase API URL with date filtering
+        let purchaseUrl = `${cmsUrl}/api/my-purchases?populate=*`;
+
+        // Add date filters if specified
+        if (dateFrom) {
+          purchaseUrl += `&filters[createdAt][$gte]=${dateFrom}T00:00:00.000Z`;
+        }
+        if (dateTo) {
+          purchaseUrl += `&filters[createdAt][$lte]=${dateTo}T23:59:59.999Z`;
+        }
+
         // Get purchases for this affiliate
-        const purchasesResponse = await fetch(
-          `${cmsUrl}/api/my-purchases?filters[affiliate][id][$eq]=${affiliate?.id}&populate=*`,
-          {
-            headers: {
-              Authorization: `Bearer ${jwt}`,
-            },
+        const purchasesResponse = await fetch(purchaseUrl, {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
           },
-        );
+        });
 
         let purchases = [];
         if (purchasesResponse.ok) {
@@ -254,35 +302,37 @@ import Layout from "../layouts/Layout.astro";
           purchases = purchasesData.data || [];
         }
 
-        // Calculate stats
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const thisMonthPurchases = purchases.filter((purchase: any) => {
-          const purchaseDate = new Date(purchase.attributes?.createdAt);
-          return (
-            purchaseDate.getMonth() === currentMonth &&
-            purchaseDate.getFullYear() === currentYear
-          );
-        });
+        // Calculate stats for the filtered purchases
+        const totalSales = purchases.reduce((sum: number, purchase: any) => {
+          return sum + (purchase.amount || 0);
+        }, 0);
 
-        const totalSales = thisMonthPurchases.reduce(
+        const totalCommission = purchases.reduce(
           (sum: number, purchase: any) => {
-            return sum + (purchase.attributes?.amount || 0);
+            return sum + (purchase.commissionAmount || 0);
           },
           0,
         );
 
-        const totalCommission = thisMonthPurchases.reduce(
-          (sum: number, purchase: any) => {
-            return sum + (purchase.attributes?.commissionAmount || 0);
-          },
-          0,
-        );
-
+        // Simple conversion rate calculation (could be improved with more data)
         const conversionRate =
           purchases.length > 0
             ? ((purchases.length / (purchases.length + 10)) * 100).toFixed(1)
             : "0";
+
+        // Update stats descriptions based on date range
+        let dateRangeDesc = "All time";
+        if (dateFrom && dateTo) {
+          const fromDateFormatted = new Date(dateFrom).toLocaleDateString();
+          const toDateFormatted = new Date(dateTo).toLocaleDateString();
+          dateRangeDesc = `${fromDateFormatted} to ${toDateFormatted}`;
+        } else if (dateFrom) {
+          const fromDateFormatted = new Date(dateFrom).toLocaleDateString();
+          dateRangeDesc = `From ${fromDateFormatted}`;
+        } else if (dateTo) {
+          const toDateFormatted = new Date(dateTo).toLocaleDateString();
+          dateRangeDesc = `Until ${toDateFormatted}`;
+        }
 
         // Update stats
         const totalSalesElement = document.getElementById("total-sales");
@@ -290,6 +340,14 @@ import Layout from "../layouts/Layout.astro";
           document.getElementById("total-commission");
         const conversionRateElement =
           document.getElementById("conversion-rate");
+        const totalSalesDescElement =
+          document.getElementById("total-sales-desc");
+        const totalCommissionDescElement = document.getElementById(
+          "total-commission-desc",
+        );
+        const conversionRateDescElement = document.getElementById(
+          "conversion-rate-desc",
+        );
 
         if (totalSalesElement)
           totalSalesElement.textContent = `$${totalSales.toFixed(2)}`;
@@ -298,31 +356,34 @@ import Layout from "../layouts/Layout.astro";
         if (conversionRateElement)
           conversionRateElement.textContent = `${conversionRate}%`;
 
+        if (totalSalesDescElement)
+          totalSalesDescElement.textContent = dateRangeDesc;
+        if (totalCommissionDescElement)
+          totalCommissionDescElement.textContent = dateRangeDesc;
+        if (conversionRateDescElement)
+          conversionRateDescElement.textContent = dateRangeDesc;
+
         // Update sales table
         const salesTableElement = document.getElementById("sales-table");
         if (salesTableElement) {
           if (purchases.length === 0) {
             salesTableElement.innerHTML =
-              '<tr><td colspan="5" class="text-center">No sales yet. Share your affiliate link to start earning!</td></tr>';
+              '<tr><td colspan="5" class="text-center">No sales found for the selected period. Share your affiliate link to start earning!</td></tr>';
           } else {
-            salesTableElement.innerHTML = purchases
-              .slice(0, 10)
+            // Sort purchases by date (newest first) and show all
+            const sortedPurchases = purchases.sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt);
+              const dateB = new Date(b.createdAt);
+              return dateB.getTime() - dateA.getTime();
+            });
+
+            salesTableElement.innerHTML = sortedPurchases
               .map((purchase: any) => {
-                const date = new Date(
-                  purchase.attributes?.createdAt || purchase.createdAt,
-                ).toLocaleDateString();
-                const amount =
-                  purchase.attributes?.amount || purchase.amount || 0;
-                const commission =
-                  purchase.attributes?.commissionAmount ||
-                  purchase.commissionAmount ||
-                  0;
-                const status =
-                  purchase.attributes?.status || purchase.status || "completed";
-                const customerEmail =
-                  purchase.attributes?.customerEmail ||
-                  purchase.customerEmail ||
-                  "Anonymous";
+                const date = new Date(purchase.createdAt).toLocaleDateString();
+                const amount = purchase.amount || 0;
+                const commission = purchase.commissionAmount || 0;
+                const status = purchase.status || "completed";
+                const customerEmail = purchase.customerEmail || "Anonymous";
 
                 return `
               <tr>
@@ -346,7 +407,46 @@ import Layout from "../layouts/Layout.astro";
       }
     }
 
-    // Load data on page load
+    // Date filtering functionality
+    function setupDateFiltering() {
+      const dateFromInput = document.getElementById(
+        "date-from",
+      ) as HTMLInputElement;
+      const dateToInput = document.getElementById(
+        "date-to",
+      ) as HTMLInputElement;
+      const applyFilterBtn = document.getElementById("apply-date-filter");
+      const resetFilterBtn = document.getElementById("reset-date-filter");
+
+      // Leave date inputs empty by default to show all-time data
+      currentDateRange.from = null;
+      currentDateRange.to = null;
+
+      applyFilterBtn?.addEventListener("click", () => {
+        const fromDate = dateFromInput?.value || null;
+        const toDate = dateToInput?.value || null;
+
+        if (fromDate && toDate && fromDate > toDate) {
+          alert("From date must be before or equal to To date");
+          return;
+        }
+
+        currentDateRange.from = fromDate;
+        currentDateRange.to = toDate;
+        loadDashboardData(fromDate, toDate);
+      });
+
+      resetFilterBtn?.addEventListener("click", () => {
+        if (dateFromInput) dateFromInput.value = "";
+        if (dateToInput) dateToInput.value = "";
+        currentDateRange.from = null;
+        currentDateRange.to = null;
+        loadDashboardData();
+      });
+    }
+
+    // Setup date filtering and load initial data (all-time by default)
+    setupDateFiltering();
     loadDashboardData();
   } // End of else block
 </script>

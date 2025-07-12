@@ -959,6 +959,129 @@ module.exports = {
       ctx.body = { error: "Failed to reset licenses", details: error.message };
     }
   },
+
+  // Development-only endpoint to recalculate commission amounts
+  async devRecalculateCommissions(ctx) {
+    if (process.env.NODE_ENV !== "development") {
+      return ctx.forbidden("This endpoint is only available in development");
+    }
+
+    try {
+      console.log("🔄 Recalculating all commission amounts...");
+
+      // Get all purchases with their affiliates
+      const purchases = await strapi.entityService.findMany(
+        "api::purchase.purchase",
+        {
+          populate: ["affiliate"],
+        },
+      );
+
+      let updatedCount = 0;
+      let totalCommissionBefore = 0;
+      let totalCommissionAfter = 0;
+
+      for (const purchase of purchases) {
+        const oldCommission = purchase.commissionAmount || 0;
+        totalCommissionBefore += oldCommission;
+
+        if (purchase.affiliate) {
+          // Calculate new commission based on affiliate's current rate
+          const newCommission =
+            purchase.amount * purchase.affiliate.commissionRate;
+
+          if (Math.abs(oldCommission - newCommission) > 0.001) {
+            // Update the purchase record
+            await strapi.entityService.update(
+              "api::purchase.purchase",
+              purchase.id,
+              {
+                data: {
+                  commissionAmount: newCommission,
+                },
+              },
+            );
+
+            console.log(
+              `  ✓ Updated purchase ${purchase.id}: $${oldCommission.toFixed(2)} → $${newCommission.toFixed(2)} (rate: ${(purchase.affiliate.commissionRate * 100).toFixed(1)}%)`,
+            );
+            updatedCount++;
+          }
+
+          totalCommissionAfter += newCommission;
+        } else {
+          // No affiliate linked - commission should be 0
+          if (oldCommission !== 0) {
+            await strapi.entityService.update(
+              "api::purchase.purchase",
+              purchase.id,
+              {
+                data: {
+                  commissionAmount: 0,
+                },
+              },
+            );
+
+            console.log(
+              `  ✓ Updated purchase ${purchase.id}: $${oldCommission.toFixed(2)} → $0.00 (no affiliate)`,
+            );
+            updatedCount++;
+          }
+        }
+      }
+
+      // Update affiliate total earnings
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        {},
+      );
+
+      for (const affiliate of affiliates) {
+        const affiliatePurchases = purchases.filter(
+          (p) => p.affiliate?.id === affiliate.id,
+        );
+        const totalEarnings = affiliatePurchases.reduce(
+          (sum, p) =>
+            sum + (p.affiliate ? p.amount * affiliate.commissionRate : 0),
+          0,
+        );
+
+        await strapi.entityService.update(
+          "api::affiliate.affiliate",
+          affiliate.id,
+          {
+            data: {
+              totalEarnings: totalEarnings,
+            },
+          },
+        );
+
+        console.log(
+          `  ✓ Updated affiliate ${affiliate.name}: $${totalEarnings.toFixed(2)} total earnings`,
+        );
+      }
+
+      ctx.body = {
+        success: true,
+        message: "Commission amounts recalculated successfully",
+        summary: {
+          totalPurchases: purchases.length,
+          updatedPurchases: updatedCount,
+          totalCommissionBefore: totalCommissionBefore.toFixed(2),
+          totalCommissionAfter: totalCommissionAfter.toFixed(2),
+          difference: (totalCommissionAfter - totalCommissionBefore).toFixed(2),
+        },
+      };
+    } catch (error) {
+      console.error("❌ Error recalculating commissions:", error);
+      ctx.status = 500;
+      ctx.body = {
+        success: false,
+        error: "Failed to recalculate commissions",
+        details: process.env.NODE_ENV === "development" ? error.message : {},
+      };
+    }
+  },
 };
 
 // Helper function to generate license key

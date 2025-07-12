@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Affiliate Login</title>
+</head>
+<body>
+    <h1>Setting up test affiliate login...</h1>
+    <script>
+        // Set the JWT and user data
+        const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiaWF0IjoxNzUyMzE5NjUwLCJleHAiOjE3NTQ5MTE2NTB9.zZGH5hNWSPV0DUxKaS0TnPWIn0URi31AYSqlgnqE6F4";
+        const user = {"id":2,"username":"testaffiliate","email":"test@affiliate.com","provider":"local","confirmed":true,"blocked":false,"createdAt":"2025-07-12T11:27:30.960Z","updatedAt":"2025-07-12T11:27:30.960Z"};
+        
+        localStorage.setItem("jwt", jwt);
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        console.log("JWT set:", jwt);
+        console.log("User set:", user);
+        
+        // Redirect to dashboard
+        window.location.href = "http://localhost:4322/dashboard"\;
+    </script>
+</body>
+</html>
