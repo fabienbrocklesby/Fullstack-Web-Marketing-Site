@@ -60,6 +60,12 @@
     },
     "notes": {
       "type": "text"
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "conversionEvents": {
+      "type": "json"
     }
   }
 }

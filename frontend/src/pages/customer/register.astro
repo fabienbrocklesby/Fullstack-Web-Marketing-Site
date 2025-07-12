@@ -154,6 +154,22 @@ import Layout from "../../layouts/Layout.astro";
         const cmsUrl =
           document.documentElement.getAttribute("data-cms-url") ||
           "http://localhost:1337";
+
+        // Get affiliate code from storage for tracking
+        const affiliateCode =
+          document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("affiliate_code="))
+            ?.split("=")[1] || localStorage.getItem("affiliate_code");
+
+        // Track registration attempt if from affiliate
+        if (affiliateCode && (window as any).journeyTracker) {
+          await (window as any).journeyTracker.trackRegistrationAttempt(
+            emailInput.value,
+            !!localStorage.getItem("selectedProduct"),
+          );
+        }
+
         const response = await fetch(`${cmsUrl}/api/customers/register`, {
           method: "POST",
           headers: {
@@ -164,6 +180,7 @@ import Layout from "../../layouts/Layout.astro";
             lastName: lastNameInput.value,
             email: emailInput.value,
             password: passwordInput.value,
+            affiliateCode: affiliateCode || null,
           }),
         });
 
@@ -176,6 +193,14 @@ import Layout from "../../layouts/Layout.astro";
         // Store the customer token
         localStorage.setItem("customerToken", data.token);
         localStorage.setItem("customer", JSON.stringify(data.customer));
+
+        // Track successful registration if from affiliate
+        if (affiliateCode && (window as any).journeyTracker) {
+          await (window as any).journeyTracker.trackRegistrationComplete(
+            data.customer.id,
+            data.customer.email,
+          );
+        }
 
         // Check URL parameters for product selection and redirect
         const urlParams = new URLSearchParams(window.location.search);

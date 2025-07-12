@@ -483,9 +483,13 @@ module.exports = {
         console.log("🔗 Found affiliate:", affiliate ? affiliate.code : "None");
       }
 
-      // Calculate commission (10% default)
+      // Calculate commission using affiliate's actual rate
       const commissionRate = affiliate?.commissionRate || 0.1;
       const commissionAmount = affiliate ? (amount / 100) * commissionRate : 0;
+
+      console.log(
+        `💰 Commission calculation: ${affiliate ? affiliate.commissionRate * 100 : 0}% rate = $${commissionAmount.toFixed(2)}`,
+      );
 
       // Get product info
       const priceInfo = PRICE_MAPPINGS[priceId] || {
@@ -1082,6 +1086,612 @@ module.exports = {
       };
     }
   },
+
+  // Visitor tracking for affiliate conversions
+  async trackAffiliateVisit(ctx) {
+    try {
+      const { affiliateCode, referrer, userAgent } = ctx.request.body;
+      const ipAddress =
+        ctx.request.ip ||
+        ctx.request.headers["x-forwarded-for"] ||
+        ctx.request.connection.remoteAddress;
+
+      if (!affiliateCode) {
+        return ctx.badRequest("Affiliate code is required");
+      }
+
+      // Find affiliate
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        {
+          filters: { code: affiliateCode, isActive: true },
+        },
+      );
+
+      if (affiliates.length === 0) {
+        return ctx.notFound("Affiliate code not found");
+      }
+
+      const affiliate = affiliates[0];
+
+      // Create a unique visitor ID based on IP and userAgent to prevent duplicate counting
+      const visitorId = require("crypto")
+        .createHash("sha256")
+        .update(`${ipAddress}-${userAgent}-${affiliateCode}`)
+        .digest("hex");
+
+      // Check if we've already tracked this visitor today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const existingVisit = await strapi.entityService.findMany(
+        "api::purchase.purchase",
+        {
+          filters: {
+            metadata: {
+              $containsi: visitorId,
+            },
+            createdAt: {
+              $gte: today.toISOString(),
+              $lt: tomorrow.toISOString(),
+            },
+          },
+        },
+      );
+
+      // For simplicity, we'll store visit data in the affiliate's metadata
+      // In a production app, you'd want a separate visitor tracking table
+      let visitMetadata = affiliate.metadata || {};
+      if (!visitMetadata.visits) {
+        visitMetadata.visits = [];
+      }
+
+      // Only add if not already tracked today
+      if (existingVisit.length === 0) {
+        visitMetadata.visits.push({
+          visitorId,
+          timestamp: new Date().toISOString(),
+          ipAddress,
+          userAgent,
+          referrer,
+        });
+
+        // Keep only last 1000 visits to prevent metadata from growing too large
+        if (visitMetadata.visits.length > 1000) {
+          visitMetadata.visits = visitMetadata.visits.slice(-1000);
+        }
+
+        await strapi.entityService.update(
+          "api::affiliate.affiliate",
+          affiliate.id,
+          {
+            data: {
+              metadata: visitMetadata,
+            },
+          },
+        );
+      }
+
+      ctx.body = {
+        success: true,
+        message: "Visit tracked successfully",
+      };
+    } catch (error) {
+      console.error("Error tracking affiliate visit:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to track visit",
+        message: error.message,
+      };
+    }
+  },
+
+  // Enhanced conversion event tracking for detailed funnel analysis
+  async trackConversionEvent(ctx) {
+    try {
+      const { affiliateCode, eventType, eventData } = ctx.request.body;
+      const ipAddress =
+        ctx.request.ip ||
+        ctx.request.headers["x-forwarded-for"] ||
+        ctx.request.connection.remoteAddress;
+
+      if (!affiliateCode || !eventType) {
+        return ctx.badRequest("Affiliate code and event type are required");
+      }
+
+      // Find affiliate
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        {
+          filters: { code: affiliateCode, isActive: true },
+        },
+      );
+
+      if (affiliates.length === 0) {
+        return ctx.notFound("Affiliate code not found");
+      }
+
+      const affiliate = affiliates[0];
+
+      // Get or create conversion events metadata
+      let conversionMetadata = affiliate.conversionEvents || [];
+
+      // Add new conversion event
+      const conversionEvent = {
+        eventType: eventType,
+        timestamp: new Date().toISOString(),
+        ipAddress: ipAddress,
+        userAgent: ctx.request.headers["user-agent"],
+        ...eventData,
+      };
+
+      conversionMetadata.push(conversionEvent);
+
+      // Keep only last 5000 events to prevent metadata from growing too large
+      if (conversionMetadata.length > 5000) {
+        conversionMetadata = conversionMetadata.slice(-5000);
+      }
+
+      // Update affiliate with new conversion event
+      await strapi.entityService.update(
+        "api::affiliate.affiliate",
+        affiliate.id,
+        {
+          data: {
+            conversionEvents: conversionMetadata,
+          },
+        },
+      );
+
+      ctx.body = {
+        success: true,
+        message: "Conversion event tracked successfully",
+      };
+    } catch (error) {
+      console.error("Error tracking conversion event:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to track conversion event",
+        message: error.message,
+      };
+    }
+  },
+
+  // Get affiliate conversion stats
+  async getAffiliateStats(ctx) {
+    try {
+      // Manually handle authentication since this is a custom route
+      const authHeader = ctx.request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return ctx.unauthorized("Authorization header required");
+      }
+
+      const token = authHeader.split(" ")[1];
+      let user = null;
+
+      try {
+        // Verify JWT token manually
+        const jwt = require("jsonwebtoken");
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || "defaultSecret",
+        );
+        user = await strapi.query("plugin::users-permissions.user").findOne({
+          where: { id: decoded.id },
+        });
+      } catch (error) {
+        return ctx.unauthorized("Invalid token");
+      }
+
+      if (!user) {
+        return ctx.unauthorized("User not found");
+      }
+
+      // Find user's affiliate record
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        {
+          filters: {
+            $or: [{ user: user.id }, { email: user.email }],
+          },
+        },
+      );
+
+      if (affiliates.length === 0) {
+        return (ctx.body = {
+          visits: 0,
+          purchases: 0,
+          conversionRate: 0,
+          totalEarnings: 0,
+        });
+      }
+
+      const affiliate = affiliates[0];
+
+      // Get visit count from metadata
+      const visitMetadata = affiliate.metadata || {};
+      const visits = visitMetadata.visits || [];
+
+      // Filter visits by date range if provided
+      const { dateFrom, dateTo } = ctx.query;
+      let filteredVisits = visits;
+
+      if (dateFrom || dateTo) {
+        filteredVisits = visits.filter((visit) => {
+          const visitDate = new Date(visit.timestamp);
+          if (dateFrom && visitDate < new Date(dateFrom)) return false;
+          if (dateTo && visitDate > new Date(dateTo + "T23:59:59.999Z"))
+            return false;
+          return true;
+        });
+      }
+
+      // Get purchases for this affiliate
+      let purchaseFilters = {
+        affiliate: affiliate.id,
+      };
+
+      if (dateFrom || dateTo) {
+        purchaseFilters.createdAt = {};
+        if (dateFrom)
+          purchaseFilters.createdAt.$gte = dateFrom + "T00:00:00.000Z";
+        if (dateTo) purchaseFilters.createdAt.$lte = dateTo + "T23:59:59.999Z";
+      }
+
+      const purchases = await strapi.entityService.findMany(
+        "api::purchase.purchase",
+        {
+          filters: purchaseFilters,
+        },
+      );
+
+      // Calculate conversion rate and funnel analytics
+      const visitCount = filteredVisits.length;
+      const purchaseCount = purchases.length;
+      // Cap conversion rate at 100% (it's impossible to have more than 100% conversion)
+      const rawConversionRate =
+        visitCount > 0 ? (purchaseCount / visitCount) * 100 : 0;
+      const conversionRate = Math.min(rawConversionRate, 100);
+
+      // Calculate total earnings
+      const totalEarnings = purchases.reduce((sum, purchase) => {
+        return sum + (purchase.commissionAmount || 0);
+      }, 0);
+
+      // Get conversion events for funnel analysis
+      const conversionEvents = affiliate.conversionEvents || [];
+      const filteredEvents =
+        dateFrom || dateTo
+          ? conversionEvents.filter((event) => {
+              const eventDate = new Date(event.timestamp);
+              if (dateFrom && eventDate < new Date(dateFrom + "T00:00:00.000Z"))
+                return false;
+              if (dateTo && eventDate > new Date(dateTo + "T23:59:59.999Z"))
+                return false;
+              return true;
+            })
+          : conversionEvents;
+
+      // Calculate funnel metrics
+      const funnelMetrics = {
+        visits: visitCount,
+        buttonClicks: filteredEvents.filter(
+          (e) => e.eventType === "button_click",
+        ).length,
+        registrationAttempts: filteredEvents.filter(
+          (e) => e.eventType === "registration_attempt",
+        ).length,
+        registrations: filteredEvents.filter(
+          (e) => e.eventType === "registration_complete",
+        ).length,
+        checkoutInitiated: filteredEvents.filter(
+          (e) => e.eventType === "checkout_initiated",
+        ).length,
+        purchases: purchaseCount,
+        purchaseComplete: filteredEvents.filter(
+          (e) => e.eventType === "purchase_complete",
+        ).length,
+      };
+
+      ctx.body = {
+        visits: visitCount,
+        purchases: purchaseCount,
+        conversionRate: parseFloat(conversionRate.toFixed(2)),
+        totalEarnings: parseFloat(totalEarnings.toFixed(2)),
+        funnelMetrics: funnelMetrics,
+        conversionEvents: filteredEvents.slice(-100), // Last 100 events for analysis
+      };
+    } catch (error) {
+      console.error("Error getting affiliate stats:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to get affiliate stats",
+        message: error.message,
+      };
+    }
+  },
+
+  // Enhanced visitor tracking with unique user ID generation
+  async trackVisitorJourney(ctx) {
+    try {
+      const { affiliateCode, action, page, eventData } = ctx.request.body;
+      const ipAddress =
+        ctx.request.ip ||
+        ctx.request.headers["x-forwarded-for"] ||
+        ctx.request.connection.remoteAddress;
+      const userAgent = ctx.request.headers["user-agent"] || "";
+
+      if (!affiliateCode) {
+        return ctx.badRequest("Affiliate code is required");
+      }
+
+      // Find affiliate
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        {
+          filters: { code: affiliateCode, isActive: true },
+        },
+      );
+
+      if (affiliates.length === 0) {
+        return ctx.notFound("Affiliate code not found");
+      }
+
+      const affiliate = affiliates[0];
+
+      // Generate a unique visitor ID
+      const visitorId = require("crypto")
+        .createHash("sha256")
+        .update(`${ipAddress}-${userAgent}-${Date.now()}`)
+        .digest("hex");
+
+      // Get or create journey metadata
+      let journeyMetadata = affiliate.metadata || {};
+      if (!journeyMetadata.userJourneys) {
+        journeyMetadata.userJourneys = {};
+      }
+
+      // Get or create this visitor's journey
+      let visitorJourney = journeyMetadata.userJourneys[visitorId];
+      if (!visitorJourney) {
+        visitorJourney = {
+          visitorId: visitorId,
+          firstSeen: new Date().toISOString(),
+          ipAddress: ipAddress,
+          userAgent: userAgent,
+          events: [],
+          pages: [],
+          sessionStart: new Date().toISOString(),
+          lastActivity: new Date().toISOString(),
+        };
+        journeyMetadata.userJourneys[visitorId] = visitorJourney;
+      }
+
+      // Add the action to the journey
+      const journeyEvent = {
+        timestamp: new Date().toISOString(),
+        action: action,
+        page: page,
+        data: eventData || {},
+        ipAddress: ipAddress,
+        userAgent: userAgent,
+      };
+
+      visitorJourney.events.push(journeyEvent);
+      visitorJourney.lastActivity = new Date().toISOString();
+
+      // Track unique pages visited
+      if (page && !visitorJourney.pages.includes(page)) {
+        visitorJourney.pages.push(page);
+      }
+
+      // Keep only last 100 events per visitor to prevent excessive data growth
+      if (visitorJourney.events.length > 100) {
+        visitorJourney.events = visitorJourney.events.slice(-100);
+      }
+
+      // Keep only last 1000 visitor journeys to prevent excessive data growth
+      const journeyIds = Object.keys(journeyMetadata.userJourneys);
+      if (journeyIds.length > 1000) {
+        // Remove oldest journeys (based on firstSeen timestamp)
+        const sortedJourneys = journeyIds
+          .map((id) => ({
+            id,
+            firstSeen: journeyMetadata.userJourneys[id].firstSeen,
+          }))
+          .sort((a, b) => new Date(a.firstSeen) - new Date(b.firstSeen));
+
+        const toRemove = sortedJourneys.slice(0, sortedJourneys.length - 1000);
+        toRemove.forEach((journey) => {
+          delete journeyMetadata.userJourneys[journey.id];
+        });
+      }
+
+      // Update affiliate with new journey data
+      await strapi.entityService.update(
+        "api::affiliate.affiliate",
+        affiliate.id,
+        {
+          data: {
+            metadata: journeyMetadata,
+          },
+        },
+      );
+
+      ctx.body = {
+        success: true,
+        visitorId: visitorId,
+        message: "Journey tracked successfully",
+      };
+    } catch (error) {
+      console.error("Error tracking visitor journey:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to track visitor journey",
+        message: error.message,
+      };
+    }
+  },
+
+  // Get detailed visitor journeys and clickstreams for affiliate
+  async getVisitorJourneys(ctx) {
+    try {
+      // Manually handle authentication
+      const authHeader = ctx.request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return ctx.unauthorized("Authorization header required");
+      }
+
+      const token = authHeader.split(" ")[1];
+      let user = null;
+
+      try {
+        const jwt = require("jsonwebtoken");
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || "defaultSecret",
+        );
+        user = await strapi.query("plugin::users-permissions.user").findOne({
+          where: { id: decoded.id },
+        });
+      } catch (error) {
+        return ctx.unauthorized("Invalid token");
+      }
+
+      if (!user) {
+        return ctx.unauthorized("User not found");
+      }
+
+      // Find user's affiliate record
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        {
+          filters: {
+            $or: [{ user: user.id }, { email: user.email }],
+          },
+        },
+      );
+
+      if (affiliates.length === 0) {
+        return (ctx.body = {
+          journeys: [],
+          summary: {
+            totalVisitors: 0,
+            totalPageViews: 0,
+            averageSessionLength: 0,
+            topPages: [],
+            conversionFunnel: {},
+          },
+        });
+      }
+
+      const affiliate = affiliates[0];
+
+      // Get journey data
+      const journeyMetadata = affiliate.metadata || {};
+      const userJourneys = journeyMetadata.userJourneys || {};
+
+      // Filter by date range if provided
+      const { dateFrom, dateTo, page } = ctx.query;
+      let filteredJourneys = Object.values(userJourneys);
+
+      if (dateFrom || dateTo) {
+        filteredJourneys = filteredJourneys.filter((journey) => {
+          const journeyDate = new Date(journey.firstSeen);
+          if (dateFrom && journeyDate < new Date(dateFrom + "T00:00:00.000Z"))
+            return false;
+          if (dateTo && journeyDate > new Date(dateTo + "T23:59:59.999Z"))
+            return false;
+          return true;
+        });
+      }
+
+      if (page) {
+        filteredJourneys = filteredJourneys.filter((journey) =>
+          journey.pages.includes(page),
+        );
+      }
+
+      // Calculate summary statistics
+      const totalVisitors = filteredJourneys.length;
+      const totalPageViews = filteredJourneys.reduce(
+        (sum, journey) => sum + journey.events.length,
+        0,
+      );
+
+      const sessionLengths = filteredJourneys.map((journey) => {
+        if (journey.events.length < 2) return 0;
+        const first = new Date(journey.events[0].timestamp);
+        const last = new Date(
+          journey.events[journey.events.length - 1].timestamp,
+        );
+        return (last - first) / 1000 / 60; // minutes
+      });
+
+      const averageSessionLength =
+        sessionLengths.length > 0
+          ? sessionLengths.reduce((sum, length) => sum + length, 0) /
+            sessionLengths.length
+          : 0;
+
+      // Get top pages
+      const pageViews = {};
+      filteredJourneys.forEach((journey) => {
+        journey.pages.forEach((page) => {
+          pageViews[page] = (pageViews[page] || 0) + 1;
+        });
+      });
+
+      const topPages = Object.entries(pageViews)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([page, views]) => ({ page, views }));
+
+      // Analyze conversion funnel
+      const funnelActions = [
+        "page_view",
+        "button_click",
+        "registration_attempt",
+        "registration_complete",
+        "checkout_initiated",
+        "purchase_complete",
+      ];
+      const conversionFunnel = {};
+
+      funnelActions.forEach((action) => {
+        conversionFunnel[action] = filteredJourneys.filter((journey) =>
+          journey.events.some((event) => event.action === action),
+        ).length;
+      });
+
+      // Sort journeys by most recent activity
+      const sortedJourneys = filteredJourneys
+        .sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity))
+        .slice(0, 100); // Return only latest 100 journeys
+
+      ctx.body = {
+        journeys: sortedJourneys,
+        summary: {
+          totalVisitors,
+          totalPageViews,
+          averageSessionLength: Math.round(averageSessionLength * 100) / 100,
+          topPages,
+          conversionFunnel,
+        },
+      };
+    } catch (error) {
+      console.error("Error getting visitor journeys:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to get visitor journeys",
+        message: error.message,
+      };
+    }
+  },
+
+  // ...existing code...
 };
 
 // Helper function to generate license key
@@ -1172,11 +1782,15 @@ async function handleSuccessfulPayment(session) {
       affiliate = affiliates.length > 0 ? affiliates[0] : null;
     }
 
-    // Calculate commission (10% default)
+    // Calculate commission using affiliate's actual rate (not default)
     const commissionRate = affiliate?.commissionRate || 0.1;
     const commissionAmount = affiliate
       ? (amount_total / 100) * commissionRate
       : 0;
+
+    console.log(
+      `💰 Webhook commission calculation: ${affiliate ? affiliate.commissionRate * 100 : 0}% rate = $${commissionAmount.toFixed(2)} for affiliate ${affiliate?.code || "none"}`,
+    );
 
     // Get product info
     const priceInfo = PRICE_MAPPINGS[originalPriceId] || {

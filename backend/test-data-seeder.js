@@ -150,6 +150,20 @@ module.exports = {
           email: "inactive@example.com",
         },
       },
+      {
+        name: "Johns Test Affiliate",
+        email: "johns@test.com",
+        code: "johnscode",
+        commissionRate: 0.15,
+        totalEarnings: 0,
+        isActive: true,
+        joinedAt: new Date("2024-01-01"),
+        notes: "Test affiliate for journey tracking",
+        payoutDetails: {
+          method: "paypal",
+          email: "johns@test.com",
+        },
+      },
     ];
 
     const createdAffiliates = [];

@@ -30,12 +30,34 @@ const buttonId = `buy-button-${priceId}`;
   import Cookies from "js-cookie";
 
   document.addEventListener("DOMContentLoaded", () => {
-    // Capture affiliate code from URL and save to cookies
+    // Wait for journey tracker to be initialized
+    const waitForTracker = () => {
+      if ((window as any).journeyTracker) {
+        initializeBuyButton();
+      } else {
+        setTimeout(waitForTracker, 100);
+      }
+    };
+    waitForTracker();
+  });
+
+  function initializeBuyButton() {
+    // Enhanced affiliate code tracking from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const affiliateCode = urlParams.get("ref");
 
     if (affiliateCode) {
+      console.log(`🔗 Affiliate code captured: ${affiliateCode}`);
+
+      // Store in both cookies and localStorage for persistence
       Cookies.set("affiliate_code", affiliateCode, { expires: 30 });
+      localStorage.setItem("affiliate_code", affiliateCode);
+      localStorage.setItem(
+        "affiliate_visit_timestamp",
+        new Date().toISOString(),
+      );
+
+      // The journey tracker will automatically handle the visit tracking
     }
 
     // Handle buy button click - find all buy buttons
@@ -46,6 +68,22 @@ const buttonId = `buy-button-${priceId}`;
           e.preventDefault();
 
           const priceId = buyButton.getAttribute("data-price-id");
+          const affiliateCode =
+            Cookies.get("affiliate_code") ||
+            localStorage.getItem("affiliate_code");
+
+          // Track button click event for conversion analysis using journey tracker
+          if ((window as any).journeyTracker && affiliateCode) {
+            await (window as any).journeyTracker.trackAction(
+              "pricing_button_click",
+              window.location.pathname,
+              {
+                priceId: priceId,
+                buttonText: buyButton.textContent?.trim() || "",
+                timestamp: new Date().toISOString(),
+              },
+            );
+          }
 
           // Store selected product in localStorage for later purchase
           localStorage.setItem(
@@ -53,6 +91,7 @@ const buttonId = `buy-button-${priceId}`;
             JSON.stringify({
               priceId,
               timestamp: Date.now(),
+              affiliateCode: affiliateCode || null,
             }),
           );
 
@@ -61,16 +100,36 @@ const buttonId = `buy-button-${priceId}`;
           const customer = JSON.parse(localStorage.getItem("customer") || "{}");
 
           if (customerToken && customer.id) {
+            // Track checkout initiation using journey tracker
+            if ((window as any).journeyTracker && affiliateCode) {
+              await (window as any).journeyTracker.trackCheckoutInitiated(
+                priceId || "",
+                customer.id,
+              );
+            }
+
             // Customer is logged in, proceed to checkout
             await proceedToCheckout(priceId || "");
           } else {
+            // Track registration redirect for logged-out users
+            if ((window as any).journeyTracker && affiliateCode) {
+              await (window as any).journeyTracker.trackAction(
+                "registration_redirect",
+                window.location.pathname,
+                {
+                  priceId: priceId,
+                  timestamp: new Date().toISOString(),
+                },
+              );
+            }
+
             // Redirect to customer registration with product info
             window.location.href = `/customer/register?product=${encodeURIComponent(priceId ?? "")}&redirect=checkout`;
           }
         });
       }
     });
-  });
+  }
 
   async function proceedToCheckout(priceId: string) {
     const savedAffiliateCode = Cookies.get("affiliate_code");
@@ -120,4 +179,98 @@ const buttonId = `buy-button-${priceId}`;
 
   // Make proceedToCheckout available globally for use in other scripts
   (window as any).proceedToCheckout = proceedToCheckout;
+
+  // Track affiliate visit function
+  async function trackAffiliateVisit(affiliateCode: string) {
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+
+      await fetch(`${cmsUrl}/api/track-affiliate-visit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          affiliateCode: affiliateCode,
+          referrer: document.referrer,
+          userAgent: navigator.userAgent,
+          page: window.location.pathname,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      console.log(`📊 Tracked visit for affiliate: ${affiliateCode}`);
+    } catch (error) {
+      console.warn("Failed to track affiliate visit:", error);
+    }
+  }
+
+  // Track page views for conversion funnel analysis
+  async function trackPageView(affiliateCode: string, page: string) {
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+
+      await fetch(`${cmsUrl}/api/track-conversion-event`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          affiliateCode: affiliateCode,
+          eventType: "page_view",
+          eventData: {
+            page: page,
+            referrer: document.referrer,
+            timestamp: new Date().toISOString(),
+          },
+        }),
+      });
+
+      console.log(
+        `📄 Tracked page view for affiliate: ${affiliateCode} on ${page}`,
+      );
+    } catch (error) {
+      console.warn("Failed to track page view:", error);
+    }
+  }
+
+  // Track conversion events throughout the funnel
+  async function trackConversionEvent(
+    affiliateCode: string,
+    eventType: string,
+    eventData: any,
+  ) {
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+
+      await fetch(`${cmsUrl}/api/track-conversion-event`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          affiliateCode: affiliateCode,
+          eventType: eventType,
+          eventData: eventData,
+        }),
+      });
+
+      console.log(
+        `🎯 Tracked conversion event: ${eventType} for affiliate: ${affiliateCode}`,
+      );
+    } catch (error) {
+      console.warn("Failed to track conversion event:", error);
+    }
+  }
+
+  // Make functions available globally
+  (window as any).trackAffiliateVisit = trackAffiliateVisit;
+  (window as any).trackPageView = trackPageView;
+  (window as any).trackConversionEvent = trackConversionEvent;
 </script>

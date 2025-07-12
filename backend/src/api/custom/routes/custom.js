@@ -77,5 +77,50 @@ module.exports = {
         auth: false,
       },
     },
+    // Visitor tracking for affiliate conversions
+    {
+      method: "POST",
+      path: "/track-affiliate-visit",
+      handler: "custom.trackAffiliateVisit",
+      config: {
+        auth: false,
+      },
+    },
+    // Get affiliate conversion stats
+    {
+      method: "GET",
+      path: "/affiliate-stats",
+      handler: "custom.getAffiliateStats",
+      config: {
+        auth: false,
+      },
+    },
+    // Enhanced conversion event tracking for detailed funnel analysis
+    {
+      method: "POST",
+      path: "/track-conversion-event",
+      handler: "custom.trackConversionEvent",
+      config: {
+        auth: false,
+      },
+    },
+    // Enhanced user journey tracking
+    {
+      method: "POST",
+      path: "/track-visitor-journey",
+      handler: "custom.trackVisitorJourney",
+      config: {
+        auth: false,
+      },
+    },
+    // Get detailed visitor journeys and clickstreams
+    {
+      method: "GET",
+      path: "/visitor-journeys",
+      handler: "custom.getVisitorJourneys",
+      config: {
+        auth: false,
+      },
+    },
   ],
 };

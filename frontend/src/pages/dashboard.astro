@@ -138,6 +138,118 @@ import Layout from "../layouts/Layout.astro";
           </div>
         </div>
       </div>
+
+      <!-- Conversion Funnel Analytics (if available) -->
+      <div
+        class="card bg-base-100 shadow-lg mt-6"
+        id="funnel-analytics"
+        style="display: none;"
+      >
+        <div class="card-body">
+          <h2 class="card-title">Conversion Funnel</h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="stat">
+              <div class="stat-title">Visits</div>
+              <div class="stat-value text-primary" id="funnel-visits">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Button Clicks</div>
+              <div class="stat-value text-secondary" id="funnel-clicks">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Registrations</div>
+              <div class="stat-value text-accent" id="funnel-registrations">
+                0
+              </div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Purchases</div>
+              <div class="stat-value text-success" id="funnel-purchases">0</div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-sm opacity-70">
+              <span
+                >Visit → Click: <span id="visit-to-click-rate">0%</span></span
+              > |
+              <span
+                >Click → Register: <span id="click-to-register-rate">0%</span
+                ></span
+              > |
+              <span
+                >Register → Purchase: <span id="register-to-purchase-rate"
+                  >0%</span
+                ></span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Visitor Journeys -->
+      <div
+        class="card bg-base-100 shadow-lg mt-6"
+        id="visitor-journeys"
+        style="display: none;"
+      >
+        <div class="card-body">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="card-title">Visitor Journeys & Clickstreams</h2>
+            <div class="flex gap-2">
+              <button class="btn btn-sm btn-outline" id="refresh-journeys">
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  ></path>
+                </svg>
+                Refresh
+              </button>
+              <select class="select select-bordered select-sm" id="page-filter">
+                <option value="">All Pages</option>
+                <option value="/pricing">Pricing</option>
+                <option value="/customer/register">Registration</option>
+                <option value="/customer/login">Login</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Journey Summary Stats -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="stat bg-base-200 rounded-lg">
+              <div class="stat-title">Total Visitors</div>
+              <div class="stat-value text-sm" id="total-visitors">0</div>
+            </div>
+            <div class="stat bg-base-200 rounded-lg">
+              <div class="stat-title">Avg Session Time</div>
+              <div class="stat-value text-sm" id="avg-session-time">0 min</div>
+            </div>
+            <div class="stat bg-base-200 rounded-lg">
+              <div class="stat-title">Total Page Views</div>
+              <div class="stat-value text-sm" id="total-page-views">0</div>
+            </div>
+            <div class="stat bg-base-200 rounded-lg">
+              <div class="stat-title">Top Page</div>
+              <div class="stat-value text-sm" id="top-page">-</div>
+            </div>
+          </div>
+
+          <!-- Individual Journeys -->
+          <div class="space-y-4" id="journey-list">
+            <div class="text-center py-8 opacity-50">
+              <div class="loading loading-spinner loading-md"></div>
+              <p class="mt-2">Loading visitor journeys...</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </Layout>
@@ -155,8 +267,6 @@ import Layout from "../layouts/Layout.astro";
     if (userEmailElement) {
       userEmailElement.textContent = user.email || "User";
     }
-
-    // Rest of the initialization code will go here
 
     // Logout functionality
     document.getElementById("logout-btn")?.addEventListener("click", () => {
@@ -302,6 +412,36 @@ import Layout from "../layouts/Layout.astro";
           purchases = purchasesData.data || [];
         }
 
+        // Get real affiliate stats including conversion rate
+        let affiliateStatsUrl = `${cmsUrl}/api/affiliate-stats`;
+        if (dateFrom) {
+          affiliateStatsUrl += `?dateFrom=${dateFrom}`;
+        }
+        if (dateTo) {
+          affiliateStatsUrl += `${dateFrom ? "&" : "?"}dateTo=${dateTo}`;
+        }
+
+        const statsResponse = await fetch(affiliateStatsUrl, {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+        });
+
+        let affiliateStats: any = {
+          visits: 0,
+          purchases: 0,
+          conversionRate: 0,
+          totalEarnings: 0,
+          funnelMetrics: null,
+        };
+
+        if (statsResponse.ok) {
+          affiliateStats = await statsResponse.json();
+          console.log("📊 Affiliate stats loaded:", affiliateStats);
+        } else {
+          console.warn("Failed to load affiliate stats:", statsResponse.status);
+        }
+
         // Calculate stats for the filtered purchases
         const totalSales = purchases.reduce((sum: number, purchase: any) => {
           return sum + (purchase.amount || 0);
@@ -314,11 +454,59 @@ import Layout from "../layouts/Layout.astro";
           0,
         );
 
-        // Simple conversion rate calculation (could be improved with more data)
-        const conversionRate =
-          purchases.length > 0
-            ? ((purchases.length / (purchases.length + 10)) * 100).toFixed(1)
-            : "0";
+        // Use real conversion rate from affiliate stats - cap at 100%
+        const conversionRate = Math.min(
+          affiliateStats.conversionRate || 0,
+          100,
+        );
+
+        // Update funnel analytics if available
+        if (affiliateStats.funnelMetrics) {
+          const funnel = affiliateStats.funnelMetrics;
+          const funnelSection = document.getElementById("funnel-analytics");
+          if (funnelSection) {
+            funnelSection.style.display = "block";
+
+            document.getElementById("funnel-visits")!.textContent =
+              funnel.visits || 0;
+            document.getElementById("funnel-clicks")!.textContent =
+              funnel.buttonClicks || 0;
+            document.getElementById("funnel-registrations")!.textContent =
+              funnel.registrations || 0;
+            document.getElementById("funnel-purchases")!.textContent =
+              funnel.purchases || 0;
+
+            // Calculate funnel conversion rates - cap at 100%
+            const visitToClick =
+              funnel.visits > 0
+                ? Math.min(
+                    (funnel.buttonClicks / funnel.visits) * 100,
+                    100,
+                  ).toFixed(1)
+                : "0";
+            const clickToRegister =
+              funnel.buttonClicks > 0
+                ? Math.min(
+                    (funnel.registrations / funnel.buttonClicks) * 100,
+                    100,
+                  ).toFixed(1)
+                : "0";
+            const registerToPurchase =
+              funnel.registrations > 0
+                ? Math.min(
+                    (funnel.purchases / funnel.registrations) * 100,
+                    100,
+                  ).toFixed(1)
+                : "0";
+
+            document.getElementById("visit-to-click-rate")!.textContent =
+              visitToClick + "%";
+            document.getElementById("click-to-register-rate")!.textContent =
+              clickToRegister + "%";
+            document.getElementById("register-to-purchase-rate")!.textContent =
+              registerToPurchase + "%";
+          }
+        }
 
         // Update stats descriptions based on date range
         let dateRangeDesc = "All time";
@@ -398,6 +586,62 @@ import Layout from "../layouts/Layout.astro";
               .join("");
           }
         }
+
+        // Update funnel analytics
+        const funnelAnalyticsElement =
+          document.getElementById("funnel-analytics");
+        if (funnelAnalyticsElement) {
+          if (affiliateStats.visits > 0) {
+            funnelAnalyticsElement.style.display = "block";
+
+            // Update funnel metrics
+            document.getElementById("funnel-visits")!.textContent =
+              affiliateStats.visits.toString();
+            document.getElementById("funnel-clicks")!.textContent =
+              affiliateStats.clicks?.toString() || "0";
+            document.getElementById("funnel-registrations")!.textContent =
+              affiliateStats.registrations?.toString() || "0";
+            document.getElementById("funnel-purchases")!.textContent =
+              affiliateStats.purchases.toString();
+
+            // Calculate and display funnel conversion rates - cap at 100%
+            const visitToClickRate =
+              affiliateStats.visits > 0
+                ? Math.min(
+                    ((affiliateStats.clicks || 0) / affiliateStats.visits) *
+                      100,
+                    100,
+                  ).toFixed(2)
+                : "0.00";
+            const clickToRegisterRate =
+              (affiliateStats.clicks || 0) > 0
+                ? Math.min(
+                    ((affiliateStats.registrations || 0) /
+                      (affiliateStats.clicks || 0)) *
+                      100,
+                    100,
+                  ).toFixed(2)
+                : "0.00";
+            const registerToPurchaseRate =
+              (affiliateStats.registrations || 0) > 0
+                ? Math.min(
+                    ((affiliateStats.purchases || 0) /
+                      (affiliateStats.registrations || 0)) *
+                      100,
+                    100,
+                  ).toFixed(2)
+                : "0.00";
+
+            document.getElementById("visit-to-click-rate")!.textContent =
+              `${visitToClickRate}%`;
+            document.getElementById("click-to-register-rate")!.textContent =
+              `${clickToRegisterRate}%`;
+            document.getElementById("register-to-purchase-rate")!.textContent =
+              `${registerToPurchaseRate}%`;
+          } else {
+            funnelAnalyticsElement.style.display = "none";
+          }
+        }
       } catch (error) {
         console.error("Error loading dashboard data:", error);
         const errorDiv = document.createElement("div");
@@ -445,8 +689,193 @@ import Layout from "../layouts/Layout.astro";
       });
     }
 
+    // Load visitor journeys data
+    async function loadVisitorJourneys(
+      dateFrom: string | null = null,
+      dateTo: string | null = null,
+      page: string | null = null,
+    ) {
+      try {
+        let journeyUrl = `http://localhost:1337/api/visitor-journeys`;
+        const params = new URLSearchParams();
+
+        if (dateFrom) params.append("dateFrom", dateFrom);
+        if (dateTo) params.append("dateTo", dateTo);
+        if (page) params.append("page", page);
+
+        if (params.toString()) {
+          journeyUrl += `?${params.toString()}`;
+        }
+
+        const journeyResponse = await fetch(journeyUrl, {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+        });
+
+        if (journeyResponse.ok) {
+          const journeyData = await journeyResponse.json();
+          console.log("📊 Visitor journeys loaded:", journeyData);
+          displayVisitorJourneys(journeyData);
+
+          // Show the visitor journeys section
+          const visitorJourneysElement =
+            document.getElementById("visitor-journeys");
+          if (visitorJourneysElement) {
+            visitorJourneysElement.style.display = "block";
+          }
+        } else {
+          console.warn(
+            "Failed to load visitor journeys:",
+            journeyResponse.status,
+          );
+        }
+      } catch (error) {
+        console.error("Error loading visitor journeys:", error);
+      }
+    }
+
+    function displayVisitorJourneys(data) {
+      const { journeys, summary } = data;
+
+      // Update summary stats
+      document.getElementById("total-visitors")!.textContent =
+        summary.totalVisitors.toString();
+      document.getElementById("avg-session-time")!.textContent =
+        `${summary.averageSessionLength} min`;
+      document.getElementById("total-page-views")!.textContent =
+        summary.totalPageViews.toString();
+      document.getElementById("top-page")!.textContent =
+        summary.topPages[0]?.page || "-";
+
+      // Display individual journeys
+      const journeyListElement = document.getElementById("journey-list");
+      if (!journeyListElement) return;
+
+      if (journeys.length === 0) {
+        journeyListElement.innerHTML = `
+          <div class="text-center py-8 opacity-50">
+            <p>No visitor journeys found for the selected period.</p>
+          </div>
+        `;
+        return;
+      }
+
+      journeyListElement.innerHTML = journeys
+        .map((journey, index) => {
+          const duration =
+            journey.events.length > 1
+              ? Math.round(
+                  (new Date(journey.lastActivity).getTime() -
+                    new Date(journey.firstSeen).getTime()) /
+                    1000 /
+                    60,
+                )
+              : 0;
+
+          const eventsList = journey.events
+            .slice(-10)
+            .map((event) => {
+              const time = new Date(event.timestamp).toLocaleTimeString();
+              const actionText = event.action
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase());
+              return `
+            <div class="flex justify-between items-center py-1 text-sm">
+              <span class="badge badge-sm ${getActionBadgeColor(event.action)}">${actionText}</span>
+              <span class="opacity-70">${time}</span>
+            </div>
+          `;
+            })
+            .join("");
+
+          return `
+          <div class="collapse collapse-arrow bg-base-200">
+            <input type="checkbox" ${index === 0 ? "checked" : ""} />
+            <div class="collapse-title text-md font-medium">
+              <div class="flex justify-between items-center">
+                <div>
+                  <span class="font-semibold">Visitor ${journey.visitorId.slice(0, 8)}...</span>
+                  <span class="badge badge-outline ml-2">${journey.events.length} actions</span>
+                </div>
+                <div class="text-sm opacity-70">
+                  ${duration} min session • ${journey.pages.length} pages
+                </div>
+              </div>
+            </div>
+            <div class="collapse-content">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 class="font-semibold mb-2">Session Info</h4>
+                  <div class="space-y-1 text-sm">
+                    <div><strong>Started:</strong> ${new Date(journey.firstSeen).toLocaleString()}</div>
+                    <div><strong>Last Activity:</strong> ${new Date(journey.lastActivity).toLocaleString()}</div>
+                    <div><strong>Pages Visited:</strong> ${journey.pages.join(", ")}</div>
+                  </div>
+                </div>
+                <div>
+                  <h4 class="font-semibold mb-2">Recent Actions</h4>
+                  <div class="space-y-1 max-h-40 overflow-y-auto">
+                    ${eventsList}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        })
+        .join("");
+    }
+
+    function getActionBadgeColor(action) {
+      const colorMap = {
+        page_view: "badge-info",
+        button_click: "badge-secondary",
+        pricing_button_click: "badge-accent",
+        registration_attempt: "badge-warning",
+        registration_complete: "badge-success",
+        checkout_initiated: "badge-primary",
+        purchase_complete: "badge-success",
+        form_submit: "badge-info",
+        link_click: "badge-neutral",
+      };
+      return colorMap[action] || "badge-ghost";
+    }
+
+    // Setup visitor journey event handlers
+    function setupVisitorJourneyHandlers() {
+      const refreshButton = document.getElementById("refresh-journeys");
+      const pageFilter = document.getElementById(
+        "page-filter",
+      ) as HTMLSelectElement;
+
+      refreshButton?.addEventListener("click", () => {
+        const selectedPage = pageFilter?.value || null;
+        loadVisitorJourneys(
+          currentDateRange.from,
+          currentDateRange.to,
+          selectedPage,
+        );
+      });
+
+      pageFilter?.addEventListener("change", () => {
+        const selectedPage = pageFilter.value || null;
+        loadVisitorJourneys(
+          currentDateRange.from,
+          currentDateRange.to,
+          selectedPage,
+        );
+      });
+    }
+
     // Setup date filtering and load initial data (all-time by default)
     setupDateFiltering();
+    setupVisitorJourneyHandlers();
     loadDashboardData();
-  } // End of else block
+
+    // Load visitor journeys after a short delay to avoid overwhelming the backend
+    setTimeout(() => {
+      loadVisitorJourneys();
+    }, 1000);
+  }
 </script>

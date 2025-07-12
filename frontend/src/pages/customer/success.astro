@@ -96,6 +96,18 @@ import Layout from "../../layouts/Layout.astro";
           const result = await response.json();
           console.log("✅ Purchase processed:", result);
 
+          // Track successful purchase completion if from affiliate
+          if (affiliateCode && (window as any).journeyTracker) {
+            const customer = JSON.parse(
+              localStorage.getItem("customer") || "{}",
+            );
+            await (window as any).journeyTracker.trackPurchaseComplete(
+              result.purchase?.id || sessionId,
+              parseInt(amount),
+              priceId,
+            );
+          }
+
           // Display purchase details
           const detailsContent = document.getElementById("details-content");
           if (detailsContent) {

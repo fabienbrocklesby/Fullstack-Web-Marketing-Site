@@ -834,6 +834,8 @@ export interface ApiAffiliateAffiliate extends Schema.CollectionType {
     >;
     joinedAt: Attribute.DateTime;
     notes: Attribute.Text;
+    metadata: Attribute.JSON;
+    conversionEvents: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

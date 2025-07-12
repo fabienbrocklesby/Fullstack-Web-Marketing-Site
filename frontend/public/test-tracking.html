@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Tracker Test</title>
+</head>
+<body>
+    <h1>Journey Tracker Test</h1>
+    <p>Open browser console to see tracking logs.</p>
+    <button id="test-button" class="btn">Test Button</button>
+    <a href="#" id="test-link">Test Link</a>
+    
+    <script>
+        console.log('Test page loaded, checking for affiliate code...');
+        console.log('URL:', window.location.href);
+        console.log('Search params:', window.location.search);
+        
+        // Check if affiliate code is in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const affiliateCode = urlParams.get('ref');
+        console.log('Affiliate code from URL:', affiliateCode);
+        
+        // Check storage
+        console.log('Cookie affiliate_code:', document.cookie.split('; ').find(row => row.startsWith('affiliate_code=')));
+        console.log('LocalStorage affiliate_code:', localStorage.getItem('affiliate_code'));
+    </script>
+    
+    <script src="/journey-tracker.js"></script>
+    
+    <script>
+        setTimeout(() => {
+            console.log('Checking if journey tracker loaded...');
+            console.log('window.journeyTracker:', window.journeyTracker);
+            
+            if (window.journeyTracker) {
+                console.log('Journey tracker found! Affiliate code:', window.journeyTracker.affiliateCode);
+            } else {
+                console.log('Journey tracker NOT found!');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

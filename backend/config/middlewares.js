@@ -1,26 +1,28 @@
 module.exports = [
-  'strapi::logger',
-  'strapi::errors',
-  'strapi::security',
+  "strapi::logger",
+  "strapi::errors",
+  "strapi::security",
   {
-    name: 'strapi::cors',
+    name: "strapi::cors",
     config: {
-      headers: '*',
+      headers: "*",
       origin: [
-        'http://localhost:4321',
-        'https://*.pages.dev',
-        process.env.FRONTEND_URL || 'http://localhost:4321',
+        "http://localhost:4321",
+        "http://localhost:4322",
+        "https://*.pages.dev",
+        process.env.FRONTEND_URL || "http://localhost:4321",
       ],
     },
   },
-  'strapi::poweredBy',
-  'strapi::query',
-  'strapi::body',
-  'strapi::session',
-  'strapi::favicon',
-  'strapi::public',
-  {
-    name: 'global::auth-debug',
-    config: {},
-  },
+  "strapi::poweredBy",
+  "strapi::query",
+  "strapi::body",
+  "strapi::session",
+  "strapi::favicon",
+  "strapi::public",
+  // Debug middleware disabled to prevent console spam
+  // {
+  //   name: 'global::auth-debug',
+  //   config: {},
+  // },
 ];
