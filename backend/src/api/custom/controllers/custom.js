@@ -1413,7 +1413,7 @@ module.exports = {
     }
   },
 
-  // Enhanced visitor tracking with unique user ID generation
+  // FIXED: Enhanced visitor tracking with proper session management
   async trackVisitorJourney(ctx) {
     try {
       const { affiliateCode, action, page, eventData } = ctx.request.body;
@@ -1441,11 +1441,18 @@ module.exports = {
 
       const affiliate = affiliates[0];
 
-      // Generate a unique visitor ID
-      const visitorId = require("crypto")
-        .createHash("sha256")
-        .update(`${ipAddress}-${userAgent}-${Date.now()}`)
-        .digest("hex");
+      // Use the visitor ID from frontend (consistent across session)
+      const visitorId =
+        eventData.visitorId ||
+        require("crypto")
+          .createHash("sha256")
+          .update(`${ipAddress}-${userAgent}`)
+          .digest("hex");
+
+      const sessionId = eventData.sessionId || "session_unknown";
+      const sessionStart = eventData.sessionStart
+        ? new Date(eventData.sessionStart).toISOString()
+        : new Date().toISOString();
 
       // Get or create journey metadata
       let journeyMetadata = affiliate.metadata || {};
@@ -1458,22 +1465,24 @@ module.exports = {
       if (!visitorJourney) {
         visitorJourney = {
           visitorId: visitorId,
-          firstSeen: new Date().toISOString(),
+          firstSeen: sessionStart,
           ipAddress: ipAddress,
           userAgent: userAgent,
           events: [],
           pages: [],
-          sessionStart: new Date().toISOString(),
-          lastActivity: new Date().toISOString(),
+          sessionStart: sessionStart,
+          lastActivity: sessionStart,
         };
         journeyMetadata.userJourneys[visitorId] = visitorJourney;
       }
 
-      // Add the action to the journey
+      // Add the action to the journey (preserve original timestamp if provided)
+      const originalTimestamp = eventData.timestamp || new Date().toISOString();
       const journeyEvent = {
-        timestamp: new Date().toISOString(),
+        timestamp: originalTimestamp,
         action: action,
         page: page,
+        sessionId: sessionId,
         data: eventData || {},
         ipAddress: ipAddress,
         userAgent: userAgent,
@@ -1530,6 +1539,80 @@ module.exports = {
       ctx.status = 500;
       ctx.body = {
         error: "Failed to track visitor journey",
+        message: error.message,
+      };
+    }
+  },
+
+  // Clear visitor journey data
+  async clearVisitorData(ctx) {
+    try {
+      // Manually handle authentication
+      const authHeader = ctx.request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return ctx.unauthorized("Authorization header required");
+      }
+
+      const token = authHeader.split(" ")[1];
+      let user = null;
+
+      try {
+        const jwt = require("jsonwebtoken");
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || "defaultSecret",
+        );
+        user = await strapi.query("plugin::users-permissions.user").findOne({
+          where: { id: decoded.id },
+        });
+      } catch (error) {
+        return ctx.unauthorized("Invalid token");
+      }
+
+      if (!user) {
+        return ctx.unauthorized("User not found");
+      }
+
+      // Find user's affiliate record
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        {
+          filters: {
+            $or: [{ user: user.id }, { email: user.email }],
+          },
+        },
+      );
+
+      if (affiliates.length === 0) {
+        return ctx.notFound("Affiliate not found");
+      }
+
+      const affiliate = affiliates[0];
+
+      // Clear journey data
+      let journeyMetadata = affiliate.metadata || {};
+      journeyMetadata.userJourneys = {};
+
+      // Update affiliate with cleared journey data
+      await strapi.entityService.update(
+        "api::affiliate.affiliate",
+        affiliate.id,
+        {
+          data: {
+            metadata: journeyMetadata,
+          },
+        },
+      );
+
+      ctx.body = {
+        success: true,
+        message: "Visitor journey data cleared successfully",
+      };
+    } catch (error) {
+      console.error("Error clearing visitor data:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to clear visitor journey data",
         message: error.message,
       };
     }
@@ -1621,19 +1704,49 @@ module.exports = {
         0,
       );
 
-      const sessionLengths = filteredJourneys.map((journey) => {
-        if (journey.events.length < 2) return 0;
-        const first = new Date(journey.events[0].timestamp);
-        const last = new Date(
-          journey.events[journey.events.length - 1].timestamp,
-        );
-        return (last - first) / 1000 / 60; // minutes
-      });
+      // Calculate accurate visit durations using timestamps
+      const sessionDurations = filteredJourneys
+        .map((journey) => {
+          if (journey.events.length < 2) return 0;
 
+          // Extract all valid timestamps from events only (ignore sessionStart which might be wrong)
+          const timestamps = journey.events
+            .map((e) => {
+              if (!e.timestamp) return null;
+              const time = new Date(e.timestamp).getTime();
+              return isNaN(time) ? null : time;
+            })
+            .filter((time) => time !== null)
+            .sort((a, b) => a - b); // Sort to ensure we get correct earliest/latest
+
+          if (timestamps.length < 2) return 0;
+
+          // Find earliest and latest event timestamps
+          const earliestTime = timestamps[0];
+          const latestTime = timestamps[timestamps.length - 1];
+
+          // Calculate duration in seconds
+          const durationSeconds = (latestTime - earliestTime) / 1000;
+
+          // Only count realistic durations (between 1 second and 24 hours)
+          if (durationSeconds < 1 || durationSeconds > 86400) {
+            return 0;
+          }
+
+          console.log(
+            `🕒 Journey ${journey.visitorId.substring(0, 8)} duration: ${durationSeconds}s (${Math.round((durationSeconds / 60) * 10) / 10}min) from ${new Date(earliestTime).toISOString()} to ${new Date(latestTime).toISOString()}`,
+          );
+
+          return durationSeconds;
+        })
+        .filter((duration) => duration > 0);
+
+      // Calculate average duration in minutes for display
       const averageSessionLength =
-        sessionLengths.length > 0
-          ? sessionLengths.reduce((sum, length) => sum + length, 0) /
-            sessionLengths.length
+        sessionDurations.length > 0
+          ? sessionDurations.reduce((sum, length) => sum + length, 0) /
+            sessionDurations.length /
+            60
           : 0;
 
       // Get top pages
@@ -1676,7 +1789,7 @@ module.exports = {
         summary: {
           totalVisitors,
           totalPageViews,
-          averageSessionLength: Math.round(averageSessionLength * 100) / 100,
+          averageSessionLength: Math.round(averageSessionLength * 10) / 10, // Round to 1 decimal place
           topPages,
           conversionFunnel,
         },

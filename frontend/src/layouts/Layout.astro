@@ -65,7 +65,10 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
   <body>
     <slot />
 
+    <!-- Authentication Guard -->
+    <script src="/auth-guard.js" is:inline></script>
+
     <!-- Journey Tracking System -->
-    <script src="/journey-tracker.js"></script>
+    <script src="/journey-tracker.js" is:inline></script>
   </body>
 </html>

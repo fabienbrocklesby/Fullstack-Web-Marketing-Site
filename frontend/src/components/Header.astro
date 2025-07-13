@@ -20,19 +20,48 @@
             d="M4 6h16M4 12h8m-8 6h16"></path>
         </svg>
       </div>
+      <!-- Mobile Menu -->
       <ul
         tabindex="0"
         class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+        id="mobile-menu"
       >
         <li><a href="/" class="text-base">Home</a></li>
         <li><a href="/pricing" class="text-base">Pricing</a></li>
         <li><a href="/blog" class="text-base">Blog</a></li>
         <li><a href="/contact" class="text-base">Contact</a></li>
-        <li class="border-t border-base-200 mt-2 pt-2">
+
+        <!-- Default Mobile Menu (shown when not authenticated) -->
+        <li class="border-t border-base-200 mt-2 pt-2 auth-default">
           <a href="/customer/login" class="text-base">Account</a>
         </li>
-        <li>
+        <li class="auth-default">
           <a href="/pricing" class="btn btn-primary btn-sm mt-2">Get Started</a>
+        </li>
+
+        <!-- Customer Mobile Menu (shown when customer is authenticated) -->
+        <li
+          class="border-t border-base-200 mt-2 pt-2 auth-customer"
+          style="display: none;"
+        >
+          <a href="/customer/dashboard" class="text-base">Dashboard</a>
+        </li>
+        <li class="auth-customer" style="display: none;">
+          <a href="/customer/profile" class="text-base">Profile</a>
+        </li>
+        <li class="auth-customer" style="display: none;">
+          <button class="btn btn-ghost btn-sm mt-2 logout-btn">Logout</button>
+        </li>
+
+        <!-- Affiliate Mobile Menu (shown when affiliate is authenticated) -->
+        <li
+          class="border-t border-base-200 mt-2 pt-2 auth-affiliate"
+          style="display: none;"
+        >
+          <a href="/dashboard" class="text-base">Dashboard</a>
+        </li>
+        <li class="auth-affiliate" style="display: none;">
+          <button class="btn btn-ghost btn-sm mt-2 logout-btn">Logout</button>
         </li>
       </ul>
     </div>
@@ -54,20 +83,215 @@
     </ul>
   </div>
 
-  <div class="navbar-end hidden lg:flex gap-2">
-    <div class="dropdown dropdown-end">
-      <div tabindex="0" role="button" class="btn btn-ghost btn-sm">Account</div>
-      <ul
-        tabindex="0"
-        class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
-      >
-        <li><a href="/customer/login">Customer Login</a></li>
-        <li><a href="/customer/register">Create Account</a></li>
-        <li class="border-t border-base-200 mt-1 pt-1">
-          <a href="/login" class="text-xs opacity-70">Team Portal</a>
-        </li>
-      </ul>
+  <!-- Desktop Menu -->
+  <div class="navbar-end hidden lg:flex gap-2" id="desktop-menu">
+    <!-- Default Desktop Menu (shown when not authenticated) -->
+    <div class="auth-default">
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+          Account
+        </div>
+        <ul
+          tabindex="0"
+          class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+        >
+          <li><a href="/customer/login">Customer Login</a></li>
+          <li><a href="/customer/register">Create Account</a></li>
+          <li class="border-t border-base-200 mt-1 pt-1">
+            <a href="/login" class="text-xs opacity-70">Team Portal</a>
+          </li>
+        </ul>
+      </div>
+      <a href="/pricing" class="btn btn-primary btn-sm">Get Started</a>
     </div>
-    <a href="/pricing" class="btn btn-primary btn-sm">Get Started</a>
+
+    <!-- Customer Desktop Menu (shown when customer is authenticated) -->
+    <div class="auth-customer gap-2" style="display: none;">
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+          <span id="customer-name">Customer</span>
+          <svg
+            class="w-4 h-4 ml-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </div>
+        <ul
+          tabindex="0"
+          class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+        >
+          <li><a href="/customer/dashboard">Dashboard</a></li>
+          <li><a href="/customer/profile">Profile</a></li>
+          <li class="border-t border-base-200 mt-1 pt-1">
+            <button class="logout-btn">Logout</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Affiliate Desktop Menu (shown when affiliate is authenticated) -->
+    <div class="auth-affiliate gap-2" style="display: none;">
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+          <span id="affiliate-name">Affiliate</span>
+          <svg
+            class="w-4 h-4 ml-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </div>
+        <ul
+          tabindex="0"
+          class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+        >
+          <li><a href="/dashboard">Dashboard</a></li>
+          <li class="border-t border-base-200 mt-1 pt-1">
+            <button class="logout-btn">Logout</button>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 </header>
+
+<script>
+  // Authentication state manager for the header
+  class HeaderAuthManager {
+    constructor() {
+      this.init();
+    }
+
+    init() {
+      this.updateNavbarBasedOnAuth();
+      this.setupLogoutHandlers();
+    }
+
+    updateNavbarBasedOnAuth() {
+      const customerToken = localStorage.getItem("customerToken");
+      const affiliateJWT = localStorage.getItem("jwt");
+      const customer = this.parseJSONSafely(localStorage.getItem("customer"));
+      const user = this.parseJSONSafely(localStorage.getItem("user"));
+
+      // Hide all auth sections first
+      this.hideAllAuthSections();
+
+      if (customerToken && customer) {
+        // Customer is authenticated
+        this.showCustomerUI(customer);
+        console.log("🔐 Customer authenticated:", customer.email);
+      } else if (affiliateJWT && user) {
+        // Affiliate is authenticated
+        this.showAffiliateUI(user);
+        console.log("🔐 Affiliate authenticated:", user.email);
+      } else {
+        // No authentication - show default
+        this.showDefaultUI();
+        console.log("🔓 No authentication found");
+      }
+    }
+
+    hideAllAuthSections() {
+      const sections = [".auth-default", ".auth-customer", ".auth-affiliate"];
+      sections.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((el) => {
+          (el as HTMLElement).style.display = "none";
+        });
+      });
+    }
+
+    showDefaultUI() {
+      document.querySelectorAll(".auth-default").forEach((el) => {
+        (el as HTMLElement).style.display = "flex";
+      });
+    }
+
+    showCustomerUI(customer) {
+      document.querySelectorAll(".auth-customer").forEach((el) => {
+        (el as HTMLElement).style.display = "flex";
+      });
+
+      // Update customer name display
+      const customerNameEl = document.getElementById("customer-name");
+      if (customerNameEl && customer) {
+        const displayName = customer.firstName
+          ? `${customer.firstName} ${customer.lastName || ""}`.trim()
+          : customer.email;
+        customerNameEl.textContent = displayName;
+      }
+    }
+
+    showAffiliateUI(user) {
+      document.querySelectorAll(".auth-affiliate").forEach((el) => {
+        (el as HTMLElement).style.display = "flex";
+      });
+
+      // Update affiliate name display
+      const affiliateNameEl = document.getElementById("affiliate-name");
+      if (affiliateNameEl && user) {
+        const displayName = user.username || user.email;
+        affiliateNameEl.textContent = displayName;
+      }
+    }
+
+    setupLogoutHandlers() {
+      document.querySelectorAll(".logout-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          this.handleLogout();
+        });
+      });
+    }
+
+    handleLogout() {
+      // Clear all authentication data
+      localStorage.removeItem("customerToken");
+      localStorage.removeItem("customer");
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("user");
+
+      console.log("🚪 User logged out");
+
+      // Redirect to home page
+      window.location.href = "/";
+    }
+
+    parseJSONSafely(str) {
+      try {
+        return str ? JSON.parse(str) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+
+  // Initialize when DOM is loaded
+  document.addEventListener("DOMContentLoaded", () => {
+    new HeaderAuthManager();
+  });
+
+  // Re-check auth state when localStorage changes (for cross-tab sync)
+  window.addEventListener("storage", () => {
+    new HeaderAuthManager();
+  });
+
+  // Re-check auth state when page becomes visible (for tab switching)
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      new HeaderAuthManager();
+    }
+  });
+</script>

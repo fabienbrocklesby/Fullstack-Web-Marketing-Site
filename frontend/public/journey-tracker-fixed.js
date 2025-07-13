@@ -1,32 +1,71 @@
-// Enhanced tracking system for complete user journey analysis
+// FIXED: Complete visitor journey tracking system
 class JourneyTracker {
   constructor() {
     this.visitorId = this.getOrCreateVisitorId();
+    this.sessionId = this.getOrCreateSessionId();
     this.affiliateCode = this.getAffiliateCode();
-    this.sessionStart = Date.now();
+    this.sessionStart = this.getSessionStartTime();
     this.lastActivity = Date.now();
-    this.pageViews = [];
-    this.clickStream = [];
+    this.currentPage = window.location.pathname;
+
+    console.log(`🔗 Journey tracker initialized:`, {
+      visitorId: this.visitorId,
+      sessionId: this.sessionId,
+      affiliateCode: this.affiliateCode,
+      sessionStart: new Date(this.sessionStart).toISOString(),
+    });
 
     if (this.affiliateCode) {
       this.initializeTracking();
+    } else {
+      console.log("📊 No affiliate code found - tracking disabled");
     }
   }
 
   getOrCreateVisitorId() {
     let visitorId = sessionStorage.getItem("tab_visitor_id");
     if (!visitorId) {
+      // Create a persistent visitor ID that won't change
       visitorId =
-        "v_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
+        "visitor_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
       sessionStorage.setItem("tab_visitor_id", visitorId);
+      sessionStorage.setItem("visitor_created", new Date().toISOString());
     }
     return visitorId;
   }
 
+  getOrCreateSessionId() {
+    const sessionKey = "session_id";
+    const sessionTimeKey = "session_start_time";
+
+    let sessionId = sessionStorage.getItem(sessionKey);
+    let sessionStartTime = sessionStorage.getItem(sessionTimeKey);
+
+    // Create new session if none exists or session is older than 30 minutes
+    if (
+      !sessionId ||
+      !sessionStartTime ||
+      Date.now() - parseInt(sessionStartTime) > 30 * 60 * 1000
+    ) {
+      sessionId =
+        "session_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
+      sessionStartTime = Date.now().toString();
+      sessionStorage.setItem(sessionKey, sessionId);
+      sessionStorage.setItem(sessionTimeKey, sessionStartTime);
+    }
+
+    return sessionId;
+  }
+
+  getSessionStartTime() {
+    const sessionStartTime = sessionStorage.getItem("session_start_time");
+    return sessionStartTime ? parseInt(sessionStartTime) : Date.now();
+  }
+
   getAffiliateCode() {
-    // Check URL parameters first
+    // Check URL parameters first (support both 'ref' and 'affiliate' parameters)
     const urlParams = new URLSearchParams(window.location.search);
-    const urlAffiliateCode = urlParams.get("ref");
+    const urlAffiliateCode = urlParams.get("ref") || urlParams.get("affiliate");
 
     if (urlAffiliateCode) {
       // Store in both cookies and localStorage
@@ -66,15 +105,10 @@ class JourneyTracker {
     this.setupPageViewTracking();
     this.setupClickTracking();
     this.setupFormTracking();
-    this.setupScrollTracking();
-    this.setupTimeTracking();
   }
 
   setupPageViewTracking() {
     // Track page changes (for SPAs)
-    let currentPage = window.location.pathname;
-
-    // Override pushState and replaceState to track navigation
     const originalPushState = history.pushState;
     const originalReplaceState = history.replaceState;
 
@@ -160,123 +194,9 @@ class JourneyTracker {
     // Track form interactions
     document.addEventListener("submit", async (event) => {
       const form = event.target;
-      const formData = new FormData(form);
-      const formFields = Object.fromEntries(formData.entries());
-
-      // Remove sensitive data
-      const sanitizedFields = {};
-      Object.keys(formFields).forEach((key) => {
-        if (
-          !key.toLowerCase().includes("password") &&
-          !key.toLowerCase().includes("credit")
-        ) {
-          sanitizedFields[key] = formFields[key] ? "[filled]" : "[empty]";
-        }
-      });
-
       await this.trackAction("form_submit", window.location.pathname, {
         formId: form.id,
         formClass: form.className,
-        formFields: sanitizedFields,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    // Track form field focus (indicates user engagement)
-    document.addEventListener(
-      "focus",
-      async (event) => {
-        const target = event.target;
-        if (
-          target.tagName.toLowerCase() === "input" ||
-          target.tagName.toLowerCase() === "textarea"
-        ) {
-          await this.trackAction("form_field_focus", window.location.pathname, {
-            fieldName: target.name,
-            fieldType: target.type,
-            fieldId: target.id,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      },
-      true,
-    );
-  }
-
-  setupScrollTracking() {
-    let hasScrolled25 = false;
-    let hasScrolled50 = false;
-    let hasScrolled75 = false;
-    let hasScrolled100 = false;
-
-    window.addEventListener("scroll", async () => {
-      const scrollPercent =
-        (window.scrollY / (document.body.scrollHeight - window.innerHeight)) *
-        100;
-
-      if (scrollPercent >= 25 && !hasScrolled25) {
-        hasScrolled25 = true;
-        await this.trackAction("scroll_25", window.location.pathname, {
-          scrollPercent: 25,
-          timestamp: new Date().toISOString(),
-        });
-      }
-      if (scrollPercent >= 50 && !hasScrolled50) {
-        hasScrolled50 = true;
-        await this.trackAction("scroll_50", window.location.pathname, {
-          scrollPercent: 50,
-          timestamp: new Date().toISOString(),
-        });
-      }
-      if (scrollPercent >= 75 && !hasScrolled75) {
-        hasScrolled75 = true;
-        await this.trackAction("scroll_75", window.location.pathname, {
-          scrollPercent: 75,
-          timestamp: new Date().toISOString(),
-        });
-      }
-      if (scrollPercent >= 100 && !hasScrolled100) {
-        hasScrolled100 = true;
-        await this.trackAction("scroll_100", window.location.pathname, {
-          scrollPercent: 100,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    });
-  }
-
-  setupTimeTracking() {
-    // Track time spent on page
-    const startTime = Date.now();
-
-    // Track time milestones
-    setTimeout(
-      () =>
-        this.trackAction("time_30s", window.location.pathname, {
-          timeSpent: 30,
-        }),
-      30000,
-    );
-    setTimeout(
-      () =>
-        this.trackAction("time_60s", window.location.pathname, {
-          timeSpent: 60,
-        }),
-      60000,
-    );
-    setTimeout(
-      () =>
-        this.trackAction("time_120s", window.location.pathname, {
-          timeSpent: 120,
-        }),
-      120000,
-    );
-
-    // Track when user leaves the page
-    window.addEventListener("beforeunload", async () => {
-      const timeSpent = Math.round((Date.now() - startTime) / 1000);
-      await this.trackAction("page_exit", window.location.pathname, {
-        timeSpent: timeSpent,
         timestamp: new Date().toISOString(),
       });
     });
@@ -290,12 +210,7 @@ class JourneyTracker {
         document.documentElement.getAttribute("data-cms-url") ||
         "http://localhost:1337";
 
-      // Also track with the original conversion event system for backward compatibility
-      if (["button_click", "pricing_button_click"].includes(action)) {
-        await this.trackConversionEvent("button_click", eventData);
-      }
-
-      // Track with the new journey system
+      // Track with the new journey system using consistent visitor ID
       await fetch(`${cmsUrl}/api/track-visitor-journey`, {
         method: "POST",
         headers: {
@@ -307,11 +222,17 @@ class JourneyTracker {
           page: page,
           eventData: {
             visitorId: this.visitorId,
+            sessionId: this.sessionId,
             sessionStart: this.sessionStart,
             ...eventData,
           },
         }),
       });
+
+      // Also track with the original conversion event system for backward compatibility
+      if (["button_click", "pricing_button_click"].includes(action)) {
+        await this.trackConversionEvent("button_click", eventData);
+      }
 
       this.lastActivity = Date.now();
       console.log(
@@ -340,6 +261,7 @@ class JourneyTracker {
           eventType: eventType,
           eventData: {
             visitorId: this.visitorId,
+            sessionId: this.sessionId,
             ...eventData,
           },
         }),
@@ -451,6 +373,39 @@ document.addEventListener("DOMContentLoaded", () => {
       await journeyTracker.trackConversionEvent(eventType, eventData);
     }
   };
-});
 
-export { JourneyTracker };
+  // Registration tracking methods
+  window.journeyTracker.trackRegistrationAttempt = async (
+    email,
+    hasSelectedProduct = false,
+  ) => {
+    if (journeyTracker) {
+      await journeyTracker.trackAction(
+        "registration_attempt",
+        window.location.pathname,
+        {
+          email: email,
+          hasSelectedProduct: hasSelectedProduct,
+          timestamp: new Date().toISOString(),
+        },
+      );
+    }
+  };
+
+  window.journeyTracker.trackRegistrationComplete = async (
+    customerId,
+    customerData = {},
+  ) => {
+    if (journeyTracker) {
+      await journeyTracker.trackAction(
+        "registration_complete",
+        window.location.pathname,
+        {
+          customerId: customerId,
+          customerData: customerData,
+          timestamp: new Date().toISOString(),
+        },
+      );
+    }
+  };
+});

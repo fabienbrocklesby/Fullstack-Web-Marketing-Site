@@ -196,6 +196,9 @@ import Layout from "../layouts/Layout.astro";
           <div class="flex justify-between items-center mb-4">
             <h2 class="card-title">Visitor Journeys & Clickstreams</h2>
             <div class="flex gap-2">
+              <button class="btn btn-sm btn-error" id="clear-journeys">
+                Clear Data
+              </button>
               <button class="btn btn-sm btn-outline" id="refresh-journeys">
                 <svg
                   class="w-4 h-4"
@@ -228,7 +231,7 @@ import Layout from "../layouts/Layout.astro";
               <div class="stat-value text-sm" id="total-visitors">0</div>
             </div>
             <div class="stat bg-base-200 rounded-lg">
-              <div class="stat-title">Avg Session Time</div>
+              <div class="stat-title">Avg Visit Time</div>
               <div class="stat-value text-sm" id="avg-session-time">0 min</div>
             </div>
             <div class="stat bg-base-200 rounded-lg">
@@ -742,7 +745,9 @@ import Layout from "../layouts/Layout.astro";
       document.getElementById("total-visitors")!.textContent =
         summary.totalVisitors.toString();
       document.getElementById("avg-session-time")!.textContent =
-        `${summary.averageSessionLength} min`;
+        summary.averageSessionLength < 1
+          ? `${Math.round(summary.averageSessionLength * 60)} sec`
+          : `${summary.averageSessionLength.toFixed(1)} min`;
       document.getElementById("total-page-views")!.textContent =
         summary.totalPageViews.toString();
       document.getElementById("top-page")!.textContent =
@@ -763,27 +768,218 @@ import Layout from "../layouts/Layout.astro";
 
       journeyListElement.innerHTML = journeys
         .map((journey, index) => {
-          const duration =
-            journey.events.length > 1
-              ? Math.round(
-                  (new Date(journey.lastActivity).getTime() -
-                    new Date(journey.firstSeen).getTime()) /
-                    1000 /
-                    60,
-                )
-              : 0;
+          // Group events by session if available
+          const sessions = {};
+          journey.events.forEach((event) => {
+            const sessionId = event.sessionId || "unknown_session";
+            if (!sessions[sessionId]) {
+              sessions[sessionId] = [];
+            }
+            sessions[sessionId].push(event);
+          });
 
-          const eventsList = journey.events
-            .slice(-10)
+          const sessionCount = Object.keys(sessions).length;
+
+          // Calculate accurate journey duration from timestamps
+          let durationText = "Brief visit";
+          if (journey.events.length > 1) {
+            // Extract valid timestamps from events only and sort them
+            const timestamps = journey.events
+              .map((e) => {
+                if (!e.timestamp) return null;
+                const time = new Date(e.timestamp).getTime();
+                return isNaN(time) ? null : time;
+              })
+              .filter((time) => time !== null)
+              .sort((a, b) => a - b); // Sort to ensure correct order
+
+            if (timestamps.length >= 2) {
+              // Use first and last timestamps (now correctly sorted)
+              const earliestTime = timestamps[0];
+              const latestTime = timestamps[timestamps.length - 1];
+
+              // Calculate duration in seconds
+              const durationSeconds = Math.round(
+                (latestTime - earliestTime) / 1000,
+              );
+
+              // Only show realistic durations
+              if (durationSeconds >= 1 && durationSeconds < 86400) {
+                // Between 1 second and 24 hours
+                if (durationSeconds < 60) {
+                  // Show seconds for short visits
+                  durationText = `${durationSeconds} sec`;
+                } else {
+                  // Convert to minutes for longer visits, round to 1 decimal place
+                  const durationMinutes =
+                    Math.round((durationSeconds / 60) * 10) / 10;
+                  durationText = `${durationMinutes} min`;
+                }
+              }
+            }
+          }
+
+          // Sort events in reverse chronological order (newest first) - SHOW ALL EVENTS
+          const eventsList = [...journey.events]
+            .sort(
+              (a, b) =>
+                new Date(b.timestamp).getTime() -
+                new Date(a.timestamp).getTime(),
+            )
             .map((event) => {
               const time = new Date(event.timestamp).toLocaleTimeString();
-              const actionText = event.action
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (l) => l.toUpperCase());
+
+              // Create friendly action names
+              let actionText = "";
+              switch (event.action) {
+                case "page_view":
+                  actionText = "Page View";
+                  break;
+                case "button_click":
+                  actionText = "Button Click";
+                  break;
+                case "link_click":
+                  actionText = "Link Click";
+                  break;
+                case "form_submit":
+                  actionText = "Form Submitted";
+                  break;
+                case "form_field_focus":
+                  actionText = "Field Focus";
+                  break;
+                case "form_field_change":
+                  actionText = "Field Changed";
+                  break;
+                case "scroll_25":
+                  actionText = "¼ Scrolled";
+                  break;
+                case "scroll_50":
+                  actionText = "½ Scrolled";
+                  break;
+                case "scroll_75":
+                  actionText = "¾ Scrolled";
+                  break;
+                case "pricing_button_click":
+                  actionText = "Pricing Button";
+                  break;
+                case "registration_attempt":
+                  actionText = "Registration Try";
+                  break;
+                case "registration_complete":
+                  actionText = "Registered";
+                  break;
+                case "checkout_initiated":
+                  actionText = "Checkout Start";
+                  break;
+                case "purchase_complete":
+                  actionText = "Purchase Done";
+                  break;
+                default:
+                  actionText = event.action
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (l) => l.toUpperCase());
+              }
+
+              // Create detailed event description based on action type
+              let detailText = "";
+              if (event.action === "page_view") {
+                const pageTitle = event.data?.title || "Unknown Page";
+                const pagePath =
+                  event.page || event.data?.pagePath || "unknown";
+                const pageType = event.data?.pageType
+                  ? ` (${event.data.pageType})`
+                  : "";
+                detailText = `<span class="text-xs opacity-70">Page: <strong>${pagePath}</strong>${pageType}</span>`;
+                if (event.data?.referrer) {
+                  detailText += `<br><span class="text-xs opacity-70">From: ${event.data.referrer.substring(0, 40)}</span>`;
+                }
+              } else if (event.action === "button_click") {
+                const buttonId = event.data?.buttonId || "unnamed";
+                const buttonText = event.data?.buttonText || "unknown";
+                const pagePath = event.page || "unknown page";
+                detailText = `<span class="text-xs opacity-70">Button: <strong>${buttonId}</strong> "${buttonText.substring(0, 20)}"</span>`;
+                detailText += `<br><span class="text-xs opacity-70">On page: ${pagePath}</span>`;
+                if (event.data?.elementPath) {
+                  detailText += `<br><span class="text-xs opacity-50">Path: ${event.data.elementPath}</span>`;
+                }
+              } else if (event.action === "link_click") {
+                const linkText = event.data?.linkText || "unnamed";
+                const linkHref = event.data?.linkHref || "#";
+                const pagePath = event.page || "unknown page";
+                detailText = `<span class="text-xs opacity-70">Link: "${linkText.substring(0, 20)}"</span>`;
+                detailText += `<br><span class="text-xs opacity-70">To: ${linkHref.substring(0, 30)}</span>`;
+                detailText += `<br><span class="text-xs opacity-70">On page: ${pagePath}</span>`;
+              } else if (event.action === "form_submit") {
+                const formId = event.data?.formId || "unnamed form";
+                const formAction = event.data?.formAction || "no-action";
+                const formMethod = event.data?.formMethod || "unknown";
+                const actualPage =
+                  event.data?.actualPagePath || event.page || "unknown page";
+                const fieldsCount = event.data?.formFields?.length || 0;
+
+                detailText = `<span class="text-xs opacity-70">Form: <strong>${formId}</strong></span>`;
+                detailText += `<br><span class="text-xs opacity-70">Method: ${formMethod.toUpperCase()} to ${formAction.substring(0, 30)}</span>`;
+                detailText += `<br><span class="text-xs opacity-70">Fields: ${fieldsCount} field(s) completed</span>`;
+                detailText += `<br><span class="text-xs opacity-70">On page: ${actualPage}</span>`;
+              } else if (event.action === "form_field_focus") {
+                const fieldName = event.data?.fieldName || "unknown-field";
+                const fieldType = event.data?.fieldType || "unknown";
+                const fieldLabel = event.data?.fieldLabel || "";
+                const formId = event.data?.formId || "no-form-context";
+                const actualPage =
+                  event.data?.actualPagePath || event.page || "unknown page";
+
+                // Build a descriptive field name
+                let fieldDisplay = fieldName;
+                if (
+                  fieldLabel &&
+                  fieldLabel !== "unlabeled-field" &&
+                  fieldLabel !== fieldName
+                ) {
+                  fieldDisplay = `"${fieldLabel}" (${fieldName})`;
+                } else if (fieldLabel && fieldLabel !== "unlabeled-field") {
+                  fieldDisplay = `"${fieldLabel}"`;
+                }
+
+                detailText = `<span class="text-xs opacity-70">Focused on: <strong>${fieldDisplay}</strong></span>`;
+                detailText += `<br><span class="text-xs opacity-70">Field type: ${fieldType}</span>`;
+                if (formId !== "no-form-context") {
+                  detailText += `<br><span class="text-xs opacity-70">In form: ${formId}</span>`;
+                }
+                detailText += `<br><span class="text-xs opacity-70">On page: ${actualPage}</span>`;
+              } else if (event.action === "form_field_change") {
+                const fieldName = event.data?.fieldName || "unknown-field";
+                const fieldType = event.data?.fieldType || "unknown";
+                const formId = event.data?.formId || "no-form-context";
+                const actualPage =
+                  event.data?.actualPagePath || event.page || "unknown page";
+
+                let valueText = "";
+                if (event.data?.selectedText) {
+                  valueText = `Selected "${event.data.selectedText}"`;
+                } else if (event.data?.checked !== undefined) {
+                  valueText = event.data.checked ? "Checked" : "Unchecked";
+                } else if (event.data?.selectedValue) {
+                  valueText = `Selected value: ${event.data.selectedValue}`;
+                }
+
+                detailText = `<span class="text-xs opacity-70">Changed: <strong>${fieldName}</strong> (${fieldType})</span>`;
+                if (valueText) {
+                  detailText += `<br><span class="text-xs opacity-70">${valueText}</span>`;
+                }
+                if (formId !== "no-form-context") {
+                  detailText += `<br><span class="text-xs opacity-70">In form: ${formId}</span>`;
+                }
+                detailText += `<br><span class="text-xs opacity-70">On page: ${actualPage}</span>`;
+              }
+
               return `
-            <div class="flex justify-between items-center py-1 text-sm">
-              <span class="badge badge-sm ${getActionBadgeColor(event.action)}">${actionText}</span>
-              <span class="opacity-70">${time}</span>
+            <div class="py-2 border-b border-base-300">
+              <div class="flex justify-between items-center text-sm">
+                <span class="badge badge-sm ${getActionBadgeColor(event.action)}">${actionText}</span>
+                <span class="opacity-70">${time}</span>
+              </div>
+              ${detailText ? `<div class="mt-1">${detailText}</div>` : ""}
             </div>
           `;
             })
@@ -799,23 +995,23 @@ import Layout from "../layouts/Layout.astro";
                   <span class="badge badge-outline ml-2">${journey.events.length} actions</span>
                 </div>
                 <div class="text-sm opacity-70">
-                  ${duration} min session • ${journey.pages.length} pages
+                  ${durationText} • ${journey.pages.length} pages
                 </div>
               </div>
             </div>
             <div class="collapse-content">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 class="font-semibold mb-2">Session Info</h4>
+                  <h4 class="font-semibold mb-2">Visitor Info</h4>
                   <div class="space-y-1 text-sm">
-                    <div><strong>Started:</strong> ${new Date(journey.firstSeen).toLocaleString()}</div>
+                    <div><strong>First Seen:</strong> ${new Date(journey.firstSeen).toLocaleString()}</div>
                     <div><strong>Last Activity:</strong> ${new Date(journey.lastActivity).toLocaleString()}</div>
                     <div><strong>Pages Visited:</strong> ${journey.pages.join(", ")}</div>
                   </div>
                 </div>
                 <div>
-                  <h4 class="font-semibold mb-2">Recent Actions</h4>
-                  <div class="space-y-1 max-h-40 overflow-y-auto">
+                  <h4 class="font-semibold mb-2">All Actions (${journey.events.length})</h4>
+                  <div class="space-y-1 max-h-96 overflow-y-auto">
                     ${eventsList}
                   </div>
                 </div>
@@ -836,8 +1032,13 @@ import Layout from "../layouts/Layout.astro";
         registration_complete: "badge-success",
         checkout_initiated: "badge-primary",
         purchase_complete: "badge-success",
-        form_submit: "badge-info",
+        form_submit: "badge-success",
+        form_field_focus: "badge-neutral",
+        form_field_change: "badge-info",
         link_click: "badge-neutral",
+        scroll_25: "badge-ghost",
+        scroll_50: "badge-ghost",
+        scroll_75: "badge-ghost",
       };
       return colorMap[action] || "badge-ghost";
     }
@@ -845,6 +1046,7 @@ import Layout from "../layouts/Layout.astro";
     // Setup visitor journey event handlers
     function setupVisitorJourneyHandlers() {
       const refreshButton = document.getElementById("refresh-journeys");
+      const clearButton = document.getElementById("clear-journeys");
       const pageFilter = document.getElementById(
         "page-filter",
       ) as HTMLSelectElement;
@@ -856,6 +1058,37 @@ import Layout from "../layouts/Layout.astro";
           currentDateRange.to,
           selectedPage,
         );
+      });
+
+      clearButton?.addEventListener("click", async () => {
+        if (
+          confirm(
+            "Are you sure you want to clear all visitor data? This cannot be undone.",
+          )
+        ) {
+          try {
+            const cmsUrl =
+              document.documentElement.getAttribute("data-cms-url") ||
+              "http://localhost:1337";
+            const response = await fetch(`${cmsUrl}/api/clear-visitor-data`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${jwt}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (response.ok) {
+              alert("Visitor data cleared successfully!");
+              loadVisitorJourneys(); // Reload the empty data
+            } else {
+              alert("Failed to clear visitor data. Please try again.");
+            }
+          } catch (error) {
+            console.error("Error clearing visitor data:", error);
+            alert("An error occurred while clearing visitor data.");
+          }
+        }
       });
 
       pageFilter?.addEventListener("change", () => {

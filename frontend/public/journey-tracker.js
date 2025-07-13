@@ -1,37 +1,88 @@
-// Enhanced tracking system for complete user journey analysis
+// COMPLETELY REBUILT: Proper visitor tracking system
 class JourneyTracker {
   constructor() {
     this.visitorId = this.getOrCreateVisitorId();
+    this.sessionId = this.getOrCreateSessionId();
     this.affiliateCode = this.getAffiliateCode();
-    this.sessionStart = Date.now();
+    this.sessionStart = this.getSessionStartTime();
     this.lastActivity = Date.now();
     this.currentPage = window.location.pathname;
 
+    console.log(`🔗 Journey tracker initialized:`, {
+      visitorId: this.visitorId,
+      sessionId: this.sessionId,
+      affiliateCode: this.affiliateCode,
+      sessionStart: new Date(this.sessionStart).toISOString(),
+      currentPage: this.currentPage,
+    });
+
+    // Don't track anything on dashboard pages (team portal)
+    if (this.currentPage.includes("/dashboard")) {
+      console.log("📊 Dashboard detected - tracking completely disabled");
+      return;
+    }
+
     if (this.affiliateCode) {
-      console.log(
-        `🔗 Journey tracker initialized for affiliate: ${this.affiliateCode}`,
-      );
       this.initializeTracking();
     } else {
-      console.log("📊 Journey tracker initialized (no affiliate code found)");
-      // Check if there's an affiliate code in the URL or storage
-      console.log("URL search params:", window.location.search);
-      console.log("Cookie affiliate_code:", this.getCookie("affiliate_code"));
-      console.log(
-        "LocalStorage affiliate_code:",
-        localStorage.getItem("affiliate_code"),
-      );
+      console.log("📊 No affiliate code found - tracking disabled");
     }
   }
 
+  // FIXED: Create persistent visitor ID using localStorage - same visitor across tabs
   getOrCreateVisitorId() {
-    let visitorId = localStorage.getItem("visitor_id");
+    let visitorId = localStorage.getItem("persistent_visitor_id");
     if (!visitorId) {
+      // Create a new visitor ID that persists across browser tabs
       visitorId =
-        "v_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
-      localStorage.setItem("visitor_id", visitorId);
+        "visitor_" +
+        Math.random().toString(36).substr(2, 12) +
+        "_" +
+        Date.now();
+      localStorage.setItem("persistent_visitor_id", visitorId);
+      localStorage.setItem("visitor_created", new Date().toISOString());
+      console.log(
+        `🆕 New visitor created (persistent across tabs): ${visitorId}`,
+      );
+    } else {
+      console.log(`🔄 Existing visitor loaded: ${visitorId}`);
     }
     return visitorId;
+  }
+
+  // SIMPLIFIED: Each tab gets a new session, reset after 30 minutes of inactivity
+  getOrCreateSessionId() {
+    const sessionKey = "current_session_id";
+    const sessionTimeKey = "last_activity_time";
+    const sessionStartKey = "session_start_time";
+
+    let sessionId = sessionStorage.getItem(sessionKey);
+    let lastActivityTime = sessionStorage.getItem(sessionTimeKey);
+
+    // Create new session if none exists or last activity was more than 30 minutes ago
+    const thirtyMinutesInMs = 30 * 60 * 1000;
+    if (
+      !sessionId ||
+      !lastActivityTime ||
+      Date.now() - parseInt(lastActivityTime) > thirtyMinutesInMs
+    ) {
+      sessionId =
+        "session_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
+      const currentTime = Date.now();
+      sessionStorage.setItem(sessionKey, sessionId);
+      sessionStorage.setItem(sessionStartKey, currentTime.toString());
+      console.log(`🆕 New session started for this tab: ${sessionId}`);
+    }
+
+    // Always update the last activity time
+    sessionStorage.setItem(sessionTimeKey, Date.now().toString());
+
+    return sessionId;
+  }
+
+  getSessionStartTime() {
+    const sessionStartTime = sessionStorage.getItem("session_start_time");
+    return sessionStartTime ? parseInt(sessionStartTime) : Date.now();
   }
 
   getAffiliateCode() {
@@ -40,22 +91,28 @@ class JourneyTracker {
     const urlAffiliateCode = urlParams.get("ref") || urlParams.get("affiliate");
 
     if (urlAffiliateCode) {
-      // Store in both cookies and localStorage
+      // Store in both sessionStorage (for this tab) and localStorage (for persistence)
       this.setAffiliateCode(urlAffiliateCode);
       return urlAffiliateCode;
     }
 
-    // Check stored affiliate code
+    // Check session storage first (tab-specific), then localStorage (persistent)
     return (
-      this.getCookie("affiliate_code") || localStorage.getItem("affiliate_code")
+      sessionStorage.getItem("affiliate_code") ||
+      this.getCookie("affiliate_code") ||
+      localStorage.getItem("affiliate_code")
     );
   }
 
   setAffiliateCode(code) {
-    // Store in cookie (30 days) and localStorage
+    // Store in sessionStorage (for this tab), cookie (persistent), and localStorage (fallback)
+    sessionStorage.setItem("affiliate_code", code);
     document.cookie = `affiliate_code=${code}; path=/; max-age=${30 * 24 * 60 * 60}`;
     localStorage.setItem("affiliate_code", code);
-    localStorage.setItem("affiliate_visit_timestamp", new Date().toISOString());
+    sessionStorage.setItem(
+      "affiliate_visit_timestamp",
+      new Date().toISOString(),
+    );
   }
 
   getCookie(name) {
@@ -66,10 +123,18 @@ class JourneyTracker {
   }
 
   async initializeTracking() {
-    // Track initial page view
-    await this.trackAction("page_view", window.location.pathname, {
-      title: document.title,
-      referrer: document.referrer,
+    // Track initial page view with enhanced details
+    const currentPage = window.location.pathname;
+    const pageTitle = document.title;
+    const referrer = document.referrer;
+
+    await this.trackAction("page_view", currentPage, {
+      title: pageTitle,
+      referrer: referrer,
+      url: window.location.href,
+      queryParams: window.location.search,
+      pagePath: currentPage,
+      pageType: this.getPageType(currentPage),
       timestamp: new Date().toISOString(),
     });
 
@@ -78,6 +143,17 @@ class JourneyTracker {
     this.setupClickTracking();
     this.setupFormTracking();
     this.setupScrollTracking();
+  }
+
+  // Helper to categorize pages
+  getPageType(path) {
+    if (path === "/" || path === "/index.html") return "home";
+    if (path.includes("/pricing")) return "pricing";
+    if (path.includes("/blog")) return "blog";
+    if (path.includes("/customer/register")) return "registration";
+    if (path.includes("/customer/login")) return "login";
+    if (path.includes("/dashboard")) return "dashboard";
+    return "other";
   }
 
   setupPageViewTracking() {
@@ -104,9 +180,15 @@ class JourneyTracker {
   async handlePageChange() {
     const newPage = window.location.pathname;
     if (newPage !== this.currentPage) {
+      console.log(`📍 Page changed from ${this.currentPage} to ${newPage}`);
       this.currentPage = newPage;
       await this.trackAction("page_view", newPage, {
         title: document.title,
+        url: window.location.href,
+        queryParams: window.location.search,
+        pagePath: newPage,
+        pageType: this.getPageType(newPage),
+        fromNavigation: true,
         timestamp: new Date().toISOString(),
       });
     }
@@ -117,79 +199,331 @@ class JourneyTracker {
     document.addEventListener("click", async (event) => {
       const target = event.target;
       const tagName = target.tagName.toLowerCase();
+      const currentPage = window.location.pathname; // Use actual current page
 
-      // Track button clicks
+      // Don't track clicks on dashboard pages
+      if (currentPage.includes("/dashboard")) {
+        return;
+      }
+
+      // Track button clicks with enhanced details
       if (tagName === "button" || target.classList.contains("btn")) {
-        await this.trackAction("button_click", window.location.pathname, {
+        await this.trackAction("button_click", currentPage, {
+          buttonText: target.textContent.trim(),
+          buttonId: target.id || "unnamed-button",
+          buttonClass: target.className,
+          buttonType: target.getAttribute("type") || "unknown",
+          elementPath: this.getElementPath(target),
+        });
+      }
+
+      // Track link clicks with enhanced details
+      if (tagName === "a") {
+        await this.trackAction("link_click", currentPage, {
+          linkText: target.textContent.trim(),
+          linkHref: target.href || "no-href",
+          linkId: target.id || "unnamed-link",
+          linkTarget: target.target,
+          elementPath: this.getElementPath(target),
+        });
+      }
+
+      // Track specific pricing buttons with enhanced details
+      if (target.id && target.id.startsWith("buy-button-")) {
+        const priceId = target.getAttribute("data-price-id") || "unknown-price";
+        await this.trackAction("pricing_button_click", currentPage, {
+          priceId: priceId,
           buttonText: target.textContent.trim(),
           buttonId: target.id,
-          buttonClass: target.className,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      // Track link clicks
-      if (tagName === "a") {
-        await this.trackAction("link_click", window.location.pathname, {
-          linkText: target.textContent.trim(),
-          linkHref: target.href,
-          linkId: target.id,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      // Track specific pricing buttons
-      if (target.id && target.id.startsWith("buy-button-")) {
-        const priceId = target.getAttribute("data-price-id");
-        await this.trackAction(
-          "pricing_button_click",
-          window.location.pathname,
-          {
-            priceId: priceId,
-            buttonText: target.textContent.trim(),
-            timestamp: new Date().toISOString(),
-          },
-        );
-      }
-
-      // Track navigation clicks
-      if (target.closest("nav") || target.closest(".navbar")) {
-        await this.trackAction("navigation_click", window.location.pathname, {
-          linkText: target.textContent.trim(),
-          linkHref: target.href || "",
-          timestamp: new Date().toISOString(),
+          elementPath: this.getElementPath(target),
         });
       }
     });
   }
 
+  // Helper to get element selector path for better identification
+  getElementPath(element, maxLength = 3) {
+    const path = [];
+    let currentElement = element;
+
+    while (currentElement && path.length < maxLength) {
+      let selector = currentElement.tagName.toLowerCase();
+
+      if (currentElement.id) {
+        selector += `#${currentElement.id}`;
+        // ID is unique, so we can stop here
+        path.unshift(selector);
+        break;
+      } else if (
+        currentElement.className &&
+        typeof currentElement.className === "string"
+      ) {
+        const classes = currentElement.className.trim().split(/\s+/);
+        if (classes.length) {
+          selector += `.${classes[0]}`;
+        }
+      }
+
+      path.unshift(selector);
+      currentElement = currentElement.parentElement;
+    }
+
+    return path.join(" > ");
+  }
+
+  // Helper to get a better field label
+  getFieldLabel(element) {
+    // Try to find associated label
+    if (element.labels && element.labels.length > 0) {
+      return element.labels[0].textContent.trim();
+    }
+
+    // Try to find label by for attribute
+    if (element.id) {
+      const label = document.querySelector(`label[for="${element.id}"]`);
+      if (label) {
+        return label.textContent.trim();
+      }
+    }
+
+    // Try to find placeholder
+    if (element.placeholder) {
+      return element.placeholder;
+    }
+
+    // Try to find parent label
+    const parentLabel = element.closest("label");
+    if (parentLabel) {
+      // Get text content but exclude the input itself
+      const labelText = Array.from(parentLabel.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent.trim())
+        .join(" ");
+      if (labelText) {
+        return labelText;
+      }
+    }
+
+    // Try to find nearby text (previous sibling)
+    const prevSibling = element.previousElementSibling;
+    if (
+      prevSibling &&
+      (prevSibling.tagName.toLowerCase() === "label" ||
+        prevSibling.tagName.toLowerCase() === "span" ||
+        prevSibling.tagName.toLowerCase() === "div")
+    ) {
+      const text = prevSibling.textContent.trim();
+      if (text && text.length < 50) {
+        // Reasonable label length
+        return text;
+      }
+    }
+
+    // Try to get aria-label
+    if (element.getAttribute("aria-label")) {
+      return element.getAttribute("aria-label");
+    }
+
+    return "unlabeled-field";
+  }
+
   setupFormTracking() {
-    // Track form interactions
+    // Track form submissions with enhanced details
     document.addEventListener("submit", async (event) => {
       const form = event.target;
-      await this.trackAction("form_submit", window.location.pathname, {
-        formId: form.id,
+
+      // Always use current page location for accuracy
+      const actualPage = window.location.pathname;
+
+      // Don't track dashboard form submissions (to avoid confusion)
+      if (actualPage.includes("/dashboard")) {
+        return;
+      }
+
+      // Gather form field data (without sensitive values)
+      const formFields = Array.from(form.elements)
+        .filter(
+          (el) =>
+            el.name &&
+            !["password", "credit-card", "cc-number", "card-number"].includes(
+              el.name.toLowerCase(),
+            ),
+        )
+        .map((el) => ({
+          name: el.name,
+          type: el.type,
+          id: el.id || "unnamed",
+          hasValue: !!el.value,
+          required: el.required || false,
+        }));
+
+      console.log(`📝 Form submitted on page: ${actualPage}`, {
+        formId:
+          form.id || form.getAttribute("data-form-name") || "unnamed-form",
+        fieldCount: formFields.length,
+      });
+
+      await this.trackAction("form_submit", actualPage, {
+        formId:
+          form.id || form.getAttribute("data-form-name") || "unnamed-form",
+        formAction: form.action || "no-action",
+        formMethod: form.method || "unknown",
         formClass: form.className,
+        formFields: formFields,
+        pageTitle: document.title,
+        formElementPath: this.getElementPath(form),
+        actualPagePath: actualPage,
         timestamp: new Date().toISOString(),
       });
     });
 
-    // Track form field focus (indicates user engagement)
+    // Track form field focus and blur events for better engagement tracking
     document.addEventListener(
       "focus",
       async (event) => {
         const target = event.target;
+
+        // Only track form elements
         if (
-          target.tagName.toLowerCase() === "input" ||
-          target.tagName.toLowerCase() === "textarea"
+          !(
+            target.tagName.toLowerCase() === "input" ||
+            target.tagName.toLowerCase() === "textarea" ||
+            target.tagName.toLowerCase() === "select"
+          )
         ) {
-          await this.trackAction("form_field_focus", window.location.pathname, {
-            fieldName: target.name,
-            fieldType: target.type,
-            fieldId: target.id,
-            timestamp: new Date().toISOString(),
-          });
+          return;
         }
+
+        // Always use current page location for accuracy
+        const actualPage = window.location.pathname;
+
+        // Don't track dashboard interactions (to avoid confusion)
+        if (actualPage.includes("/dashboard")) {
+          return;
+        }
+
+        // Avoid tracking password and sensitive fields
+        if (
+          ["password", "credit-card", "cc-number", "card-number"].includes(
+            target.type || target.name?.toLowerCase() || "",
+          )
+        ) {
+          return;
+        }
+
+        // Get parent form information if available
+        const parentForm = target.closest("form");
+        const formId = parentForm
+          ? parentForm.id ||
+            parentForm.getAttribute("data-form-name") ||
+            "form-" + Math.random().toString(36).substr(2, 5)
+          : "no-form-context";
+
+        // Get better field identification
+        const fieldLabel = this.getFieldLabel(target);
+        const fieldName =
+          target.name ||
+          target.id ||
+          target.getAttribute("data-field-name") ||
+          target.placeholder ||
+          "unknown-field";
+
+        console.log(`🎯 Form field focus tracked on ${actualPage}:`, {
+          fieldName,
+          fieldLabel,
+          formId,
+          elementPath: this.getElementPath(target),
+        });
+
+        await this.trackAction("form_field_focus", actualPage, {
+          fieldName: fieldName,
+          fieldType: target.type || "text",
+          fieldId: target.id || "no-id",
+          fieldLabel: fieldLabel,
+          formId: formId,
+          pageTitle: document.title,
+          elementPath: this.getElementPath(target),
+          required: target.required || false,
+          actualPagePath: actualPage,
+          timestamp: new Date().toISOString(),
+        });
+      },
+      true,
+    );
+
+    // Track select/dropdown changes
+    document.addEventListener(
+      "change",
+      async (event) => {
+        const target = event.target;
+
+        // Only track form elements
+        if (
+          !(
+            target.tagName.toLowerCase() === "select" ||
+            (target.tagName.toLowerCase() === "input" &&
+              (target.type === "checkbox" || target.type === "radio"))
+          )
+        ) {
+          return;
+        }
+
+        // Always use current page location for accuracy
+        const actualPage = window.location.pathname;
+
+        // Don't track dashboard interactions (to avoid confusion)
+        if (actualPage.includes("/dashboard")) {
+          return;
+        }
+
+        // Get parent form information if available
+        const parentForm = target.closest("form");
+        const formId = parentForm
+          ? parentForm.id ||
+            parentForm.getAttribute("data-form-name") ||
+            "form-" + Math.random().toString(36).substr(2, 5)
+          : "no-form-context";
+
+        let valueData = {};
+        if (target.type === "checkbox") {
+          valueData.checked = target.checked;
+        } else if (target.type === "radio") {
+          valueData.selected = true;
+          valueData.value = target.value;
+        } else if (target.tagName.toLowerCase() === "select") {
+          valueData.selectedIndex = target.selectedIndex;
+          valueData.selectedValue = target.value;
+          if (
+            target.selectedIndex >= 0 &&
+            target.options[target.selectedIndex]
+          ) {
+            valueData.selectedText = target.options[target.selectedIndex].text;
+          }
+        }
+
+        const fieldName =
+          target.name ||
+          target.id ||
+          target.getAttribute("data-field-name") ||
+          target.placeholder ||
+          "unknown-field";
+
+        console.log(`📝 Form field changed on ${actualPage}:`, {
+          fieldName,
+          formId,
+          valueData,
+        });
+
+        await this.trackAction("form_field_change", actualPage, {
+          fieldName: fieldName,
+          fieldType: target.type || "select",
+          fieldId: target.id || "no-id",
+          formId: formId,
+          ...valueData,
+          pageTitle: document.title,
+          actualPagePath: actualPage,
+          timestamp: new Date().toISOString(),
+        });
       },
       true,
     );
@@ -232,12 +566,26 @@ class JourneyTracker {
   async trackAction(action, page, eventData = {}) {
     if (!this.affiliateCode) return;
 
+    // Don't track anything on dashboard pages
+    const actualPage = window.location.pathname;
+    if (actualPage.includes("/dashboard")) {
+      console.log("📊 Skipping tracking on dashboard page");
+      return;
+    }
+
     try {
       const cmsUrl =
         document.documentElement.getAttribute("data-cms-url") ||
         "http://localhost:1337";
 
-      // Track with the new journey system
+      // Create a single timestamp for this action
+      const actionTimestamp = new Date().toISOString();
+
+      console.log(
+        `🛤️ Tracking ${action} on actual page: ${actualPage} (stored: ${page})`,
+      );
+
+      // FIXED: Send both visitor ID and session ID for proper tracking
       await fetch(`${cmsUrl}/api/track-visitor-journey`, {
         method: "POST",
         headers: {
@@ -246,10 +594,14 @@ class JourneyTracker {
         body: JSON.stringify({
           affiliateCode: this.affiliateCode,
           action: action,
-          page: page,
+          page: actualPage, // Use actual page, not the stored page
           eventData: {
             visitorId: this.visitorId,
+            sessionId: this.sessionId,
             sessionStart: this.sessionStart,
+            timestamp: actionTimestamp, // Use single consistent timestamp
+            originalPage: page, // Store the original page for reference
+            actualPage: actualPage, // Store the actual page where the event occurred
             ...eventData,
           },
         }),
@@ -262,7 +614,7 @@ class JourneyTracker {
 
       this.lastActivity = Date.now();
       console.log(
-        `🛤️ Tracked ${action} on ${page} for affiliate ${this.affiliateCode}`,
+        `🛤️ Tracked ${action} on ${page} for visitor ${this.visitorId} session ${this.sessionId}`,
       );
     } catch (error) {
       console.warn("Failed to track action:", error);
@@ -343,6 +695,18 @@ class JourneyTracker {
     });
   }
 
+  // Development helper function to reset tracking data
+  resetTrackingData() {
+    sessionStorage.removeItem("tab_visitor_id");
+    sessionStorage.removeItem("visitor_created");
+    sessionStorage.removeItem("current_session_id");
+    sessionStorage.removeItem("last_activity_time");
+    sessionStorage.removeItem("session_start_time");
+    sessionStorage.removeItem("affiliate_code");
+    sessionStorage.removeItem("affiliate_visit_timestamp");
+    console.log("🧹 Tracking data reset for this tab");
+  }
+
   async trackPurchaseComplete(purchaseId, amount, priceId) {
     await this.trackAction("purchase_complete", window.location.pathname, {
       purchaseId: purchaseId,
@@ -368,6 +732,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Make it globally available
   window.journeyTracker = journeyTracker;
+
+  // Development helper functions
+  window.resetTracking = () => {
+    if (journeyTracker) {
+      journeyTracker.resetTrackingData();
+      // Reload to reinitialize
+      window.location.reload();
+    }
+  };
 
   // Backward compatibility functions
   window.trackAffiliateVisit = async (affiliateCode) => {

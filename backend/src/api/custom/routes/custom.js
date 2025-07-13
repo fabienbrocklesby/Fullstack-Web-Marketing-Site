@@ -122,5 +122,14 @@ module.exports = {
         auth: false,
       },
     },
+    // Clear visitor journey data
+    {
+      method: "POST",
+      path: "/clear-visitor-data",
+      handler: "custom.clearVisitorData",
+      config: {
+        auth: false,
+      },
+    },
   ],
 };
