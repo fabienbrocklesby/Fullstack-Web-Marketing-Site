@@ -1,0 +1,38 @@
+{
+  "collectionName": "components_blocks_heroes",
+  "info": {
+    "displayName": "Hero",
+    "description": "Hero section with title, subtitle and call-to-action"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "default": "Build Your SaaS Faster"
+    },
+    "subtitle": {
+      "type": "text",
+      "default": "A production-ready SaaS marketing site boilerplate with modern tools, affiliate tracking, and seamless payments integration."
+    },
+    "buttonText": {
+      "type": "string",
+      "default": "Get Started Now"
+    },
+    "buttonLink": {
+      "type": "string",
+      "default": "/pricing"
+    },
+    "buttonVariant": {
+      "type": "enumeration",
+      "enum": ["primary", "secondary", "accent", "ghost"],
+      "default": "primary"
+    },
+    "backgroundImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    }
+  }
+}

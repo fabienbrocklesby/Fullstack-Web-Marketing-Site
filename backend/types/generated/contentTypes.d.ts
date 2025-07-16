@@ -1018,7 +1018,17 @@ export interface ApiPagePage extends Schema.CollectionType {
   attributes: {
     title: Attribute.String & Attribute.Required;
     slug: Attribute.UID<"api::page.page", "title"> & Attribute.Required;
-    content: Attribute.RichText & Attribute.Required;
+    sections: Attribute.DynamicZone<
+      [
+        "blocks.hero",
+        "blocks.feature-grid",
+        "blocks.testimonial",
+        "blocks.cta",
+        "blocks.content",
+        "blocks.pricing"
+      ]
+    >;
+    content: Attribute.RichText;
     seoTitle: Attribute.String &
       Attribute.SetMinMaxLength<{
         maxLength: 60;

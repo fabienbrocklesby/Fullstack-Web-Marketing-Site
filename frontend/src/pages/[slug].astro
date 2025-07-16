@@ -1,0 +1,103 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import PageRenderer from "../components/site-builder/PageRenderer.astro";
+
+// Enable server-side rendering for this page
+export const prerender = false;
+
+export async function getStaticPaths() {
+  // Return empty array to allow server-side rendering for all requests
+  return [];
+}
+
+// Server-side rendering - fetch page data
+const { slug } = Astro.params;
+let page: any = null;
+let notFound = false;
+
+console.log(`[${slug}] Attempting to fetch page data...`);
+
+try {
+  const CMS_URL = "http://localhost:1337";
+  const url = `${CMS_URL}/api/pages?filters[slug][$eq]=${slug}&populate=sections`;
+
+  console.log(`[${slug}] Fetching from: ${url}`);
+
+  const response = await fetch(url);
+
+  console.log(`[${slug}] Response status: ${response.status}`);
+
+  if (response.ok) {
+    const data = await response.json();
+    const pages = data.data || [];
+
+    console.log(`[${slug}] Found ${pages.length} pages`);
+
+    if (pages.length > 0) {
+      page = pages[0];
+      console.log(
+        `[${slug}] Successfully loaded page: ${page.attributes.title}`,
+      );
+    } else {
+      console.log(`[${slug}] No pages found for slug`);
+      notFound = true;
+    }
+  } else {
+    console.error(
+      `[${slug}] API response not ok: ${response.status} ${response.statusText}`,
+    );
+    notFound = true;
+  }
+} catch (error) {
+  console.error(`[${slug}] Error fetching page:`, error);
+  notFound = true;
+}
+
+// Handle 404 case
+if (notFound || !page) {
+  console.log(`[${slug}] Page not found, returning 404`);
+  Astro.response.status = 404;
+  return Astro.redirect("/404");
+}
+
+// Extract SEO data
+const pageAttributes = page.attributes || page;
+const {
+  title: pageTitle = pageAttributes.title,
+  seoTitle = pageAttributes.seoTitle || pageAttributes.title,
+  seoDescription = pageAttributes.seoDescription ||
+    `${pageAttributes.title} - Built with our Site Editor`,
+  seoKeywords = pageAttributes.seoKeywords || "",
+  sections = pageAttributes.sections || [],
+} = pageAttributes;
+
+console.log(`[${slug}] Rendering page with ${sections.length} sections`);
+---
+
+<Layout title={seoTitle} description={seoDescription}>
+  <Header />
+
+  <main>
+    <PageRenderer sections={sections} isEditor={false} />
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* Ensure proper spacing and styling for the rendered page */
+  main {
+    min-height: calc(100vh - 64px); /* Account for header height */
+  }
+
+  /* Override any editor-specific styles when viewing the live page */
+  :global(.site-editor-section) {
+    cursor: default !important;
+  }
+
+  :global(.site-editor-section:hover) {
+    outline: none !important;
+  }
+</style>

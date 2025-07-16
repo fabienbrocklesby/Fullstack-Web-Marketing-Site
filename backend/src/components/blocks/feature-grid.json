@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_blocks_feature_grids",
+  "info": {
+    "displayName": "Feature Grid",
+    "description": "Grid layout showing multiple features"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "default": "Features"
+    },
+    "subtitle": {
+      "type": "text"
+    },
+    "features": {
+      "type": "component",
+      "repeatable": true,
+      "component": "elements.feature-item"
+    }
+  }
+}

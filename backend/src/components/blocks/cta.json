@@ -1,0 +1,37 @@
+{
+  "collectionName": "components_blocks_ctas",
+  "info": {
+    "displayName": "Call to Action",
+    "description": "Call-to-action section"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "default": "Ready to Get Started?"
+    },
+    "subtitle": {
+      "type": "text",
+      "default": "Start building your SaaS today"
+    },
+    "buttonText": {
+      "type": "string",
+      "default": "Get Started Today"
+    },
+    "buttonLink": {
+      "type": "string",
+      "default": "/pricing"
+    },
+    "buttonVariant": {
+      "type": "enumeration",
+      "enum": ["primary", "secondary", "accent", "ghost"],
+      "default": "accent"
+    },
+    "backgroundColor": {
+      "type": "enumeration",
+      "enum": ["primary", "secondary", "accent", "base-100", "base-200"],
+      "default": "primary"
+    }
+  }
+}

@@ -21,9 +21,19 @@
       "targetField": "title",
       "required": true
     },
+    "sections": {
+      "type": "dynamiczone",
+      "components": [
+        "blocks.hero",
+        "blocks.feature-grid",
+        "blocks.testimonial",
+        "blocks.cta",
+        "blocks.content",
+        "blocks.pricing"
+      ]
+    },
     "content": {
-      "type": "richtext",
-      "required": true
+      "type": "richtext"
     },
     "seoTitle": {
       "type": "string",

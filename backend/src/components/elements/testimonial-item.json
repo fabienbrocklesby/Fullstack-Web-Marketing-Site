@@ -1,0 +1,30 @@
+{
+  "collectionName": "components_elements_testimonial_items",
+  "info": {
+    "displayName": "Testimonial Item",
+    "description": "Individual testimonial with quote, author and role"
+  },
+  "options": {},
+  "attributes": {
+    "quote": {
+      "type": "text",
+      "required": true
+    },
+    "author": {
+      "type": "string",
+      "required": true
+    },
+    "role": {
+      "type": "string"
+    },
+    "company": {
+      "type": "string"
+    },
+    "avatar": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    }
+  }
+}

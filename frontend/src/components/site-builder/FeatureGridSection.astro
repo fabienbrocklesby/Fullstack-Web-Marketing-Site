@@ -1,0 +1,41 @@
+---
+interface FeatureItem {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+export interface Props {
+  title: string;
+  subtitle?: string;
+  features: FeatureItem[];
+}
+
+const { title, subtitle, features = [] } = Astro.props;
+---
+
+<section class="py-20 bg-base-100">
+  <div class="container mx-auto px-4">
+    <h2 class="text-4xl font-bold text-center mb-4">{title}</h2>
+    {
+      subtitle && (
+        <p class="text-xl text-center text-base-content/70 mb-12">{subtitle}</p>
+      )
+    }
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {
+        features.map((feature) => (
+          <div class="card bg-base-200 shadow-lg">
+            <div class="card-body">
+              <h3 class="card-title">
+                <span class="text-2xl mr-2">{feature.icon}</span>
+                {feature.title}
+              </h3>
+              <p>{feature.description}</p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

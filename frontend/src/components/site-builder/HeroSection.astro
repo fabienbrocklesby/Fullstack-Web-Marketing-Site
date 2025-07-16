@@ -1,0 +1,36 @@
+---
+export interface Props {
+  title: string;
+  subtitle?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  buttonVariant?: "primary" | "secondary" | "accent" | "ghost";
+  backgroundImage?: any;
+}
+
+const {
+  title,
+  subtitle,
+  buttonText = "Get Started",
+  buttonLink = "/pricing",
+  buttonVariant = "primary",
+} = Astro.props;
+---
+
+<section
+  class="hero min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10"
+>
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold">{title}</h1>
+      {subtitle && <p class="py-6">{subtitle}</p>}
+      {
+        buttonText && buttonLink && (
+          <a href={buttonLink} class={`btn btn-${buttonVariant} btn-lg`}>
+            {buttonText}
+          </a>
+        )
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_elements_feature_items",
+  "info": {
+    "displayName": "Feature Item",
+    "description": "Individual feature with icon, title and description"
+  },
+  "options": {},
+  "attributes": {
+    "icon": {
+      "type": "string",
+      "required": true,
+      "default": "🚀"
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text",
+      "required": true
+    }
+  }
+}

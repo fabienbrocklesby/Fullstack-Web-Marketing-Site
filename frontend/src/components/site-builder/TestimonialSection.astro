@@ -1,0 +1,57 @@
+---
+interface TestimonialItem {
+  quote: string;
+  author: string;
+  role?: string;
+  company?: string;
+  avatar?: any;
+}
+
+export interface Props {
+  title: string;
+  subtitle?: string;
+  testimonials: TestimonialItem[];
+}
+
+const { title, subtitle, testimonials = [] } = Astro.props;
+---
+
+<section class="py-20 bg-base-200">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-12">
+      <h2 class="text-4xl font-bold mb-4">{title}</h2>
+      {subtitle && <p class="text-xl text-base-content/70">{subtitle}</p>}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {
+        testimonials.map((testimonial) => (
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <blockquote class="text-lg italic mb-4">
+                "{testimonial.quote}"
+              </blockquote>
+              <div class="flex items-center gap-3">
+                <div class="avatar placeholder">
+                  <div class="bg-neutral-focus text-neutral-content rounded-full w-12">
+                    <span class="text-xl">
+                      {testimonial.author.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div class="font-semibold">{testimonial.author}</div>
+                  {testimonial.role && (
+                    <div class="text-sm text-base-content/70">
+                      {testimonial.role}
+                      {testimonial.company && ` at ${testimonial.company}`}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

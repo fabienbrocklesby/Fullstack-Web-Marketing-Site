@@ -45,6 +45,12 @@ module.exports = {
           "api::affiliate.affiliate.delete",
           "api::purchase.purchase.find",
           "api::purchase.purchase.findOne",
+          // Add Page permissions for Site Editor
+          "api::page.page.find",
+          "api::page.page.findOne",
+          "api::page.page.create",
+          "api::page.page.update",
+          "api::page.page.delete",
         ];
 
         for (const action of actionsToEnable) {
@@ -83,6 +89,52 @@ module.exports = {
         );
       } else {
         console.log("❌ Could not find authenticated role");
+      }
+
+      // Enable public access to pages for frontend rendering
+      const publicRole = await strapi
+        .query("plugin::users-permissions.role")
+        .findOne({ where: { type: "public" } });
+
+      if (publicRole) {
+        console.log("Found public role:", publicRole.id);
+
+        const publicActions = ["api::page.page.find", "api::page.page.findOne"];
+
+        for (const action of publicActions) {
+          const existingPermission = await strapi
+            .query("plugin::users-permissions.permission")
+            .findOne({
+              where: {
+                role: publicRole.id,
+                action: action,
+              },
+            });
+
+          if (existingPermission) {
+            await strapi.query("plugin::users-permissions.permission").update({
+              where: { id: existingPermission.id },
+              data: { enabled: true },
+            });
+            console.log(`✅ Updated public permission: ${action}`);
+          } else {
+            await strapi.query("plugin::users-permissions.permission").create({
+              data: {
+                action,
+                subject: null,
+                properties: {},
+                conditions: [],
+                role: publicRole.id,
+                enabled: true,
+              },
+            });
+            console.log(`✅ Created public permission: ${action}`);
+          }
+        }
+
+        console.log("✅ Public page access enabled for frontend rendering");
+      } else {
+        console.log("❌ Could not find public role");
       }
     } catch (error) {
       console.error("❌ Error setting up permissions:", error);

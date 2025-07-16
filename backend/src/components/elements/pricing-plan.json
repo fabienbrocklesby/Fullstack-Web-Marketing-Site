@@ -1,0 +1,50 @@
+{
+  "collectionName": "components_elements_pricing_plans",
+  "info": {
+    "displayName": "Pricing Plan",
+    "description": "Individual pricing plan with features and call-to-action"
+  },
+  "options": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "default": "Starter Plan"
+    },
+    "price": {
+      "type": "decimal",
+      "required": true,
+      "default": 99.0
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "interval": {
+      "type": "enumeration",
+      "enum": ["one-time", "month", "year"],
+      "default": "one-time"
+    },
+    "features": {
+      "type": "json",
+      "required": true,
+      "default": [
+        "Complete source code",
+        "Basic documentation",
+        "Email support"
+      ]
+    },
+    "buttonText": {
+      "type": "string",
+      "default": "Get Started"
+    },
+    "buttonLink": {
+      "type": "string",
+      "default": "/pricing"
+    },
+    "popular": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

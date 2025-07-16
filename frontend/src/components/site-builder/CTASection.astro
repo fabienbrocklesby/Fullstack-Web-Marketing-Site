@@ -1,0 +1,49 @@
+---
+export interface Props {
+  title: string;
+  subtitle?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  buttonVariant?: "primary" | "secondary" | "accent" | "ghost";
+  backgroundColor?:
+    | "primary"
+    | "secondary"
+    | "accent"
+    | "base-100"
+    | "base-200";
+}
+
+const {
+  title,
+  subtitle,
+  buttonText = "Get Started",
+  buttonLink = "/pricing",
+  buttonVariant = "accent",
+  backgroundColor = "primary",
+} = Astro.props;
+
+const bgClass =
+  backgroundColor === "primary"
+    ? "bg-primary text-primary-content"
+    : backgroundColor === "secondary"
+      ? "bg-secondary text-secondary-content"
+      : backgroundColor === "accent"
+        ? "bg-accent text-accent-content"
+        : backgroundColor === "base-100"
+          ? "bg-base-100"
+          : "bg-base-200";
+---
+
+<section class={`py-20 ${bgClass}`}>
+  <div class="container mx-auto px-4 text-center">
+    <h2 class="text-4xl font-bold mb-4">{title}</h2>
+    {subtitle && <p class="text-xl mb-8 opacity-90">{subtitle}</p>}
+    {
+      buttonText && buttonLink && (
+        <a href={buttonLink} class={`btn btn-${buttonVariant} btn-lg`}>
+          {buttonText}
+        </a>
+      )
+    }
+  </div>
+</section>

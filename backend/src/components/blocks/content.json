@@ -1,0 +1,22 @@
+{
+  "collectionName": "components_blocks_contents",
+  "info": {
+    "displayName": "Content",
+    "description": "Rich text content section"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "richtext",
+      "required": true
+    },
+    "layout": {
+      "type": "enumeration",
+      "enum": ["full-width", "centered", "two-column"],
+      "default": "centered"
+    }
+  }
+}

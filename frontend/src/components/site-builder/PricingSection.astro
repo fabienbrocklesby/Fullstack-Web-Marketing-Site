@@ -1,0 +1,84 @@
+---
+interface PricingPlan {
+  name: string;
+  price: number;
+  currency?: string;
+  interval?: string;
+  features: string[];
+  buttonText?: string;
+  buttonLink?: string;
+  popular?: boolean;
+}
+
+export interface Props {
+  title: string;
+  subtitle?: string;
+  plans: PricingPlan[];
+}
+
+const { title, subtitle, plans = [] } = Astro.props;
+---
+
+<section class="py-20 bg-base-200">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-12">
+      <h2 class="text-4xl font-bold mb-4">{title}</h2>
+      {subtitle && <p class="text-xl text-base-content/70">{subtitle}</p>}
+    </div>
+    <div
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto"
+    >
+      {
+        plans.map((plan) => (
+          <div
+            class={`card shadow-xl ${plan.popular ? "bg-primary text-primary-content scale-105" : "bg-base-100"}`}
+          >
+            <div class="card-body">
+              {plan.popular && (
+                <div class="badge badge-secondary mb-2">Most Popular</div>
+              )}
+              <h3 class="card-title text-2xl">{plan.name}</h3>
+              <div class="py-4">
+                <span class="text-4xl font-bold">
+                  {plan.currency || "$"}
+                  {plan.price}
+                </span>
+                {plan.interval && (
+                  <span
+                    class={
+                      plan.popular
+                        ? "text-primary-content/70"
+                        : "text-base-content/70"
+                    }
+                  >
+                    {plan.interval === "one-time"
+                      ? " one-time"
+                      : `/${plan.interval}`}
+                  </span>
+                )}
+              </div>
+              <ul class="space-y-2 mb-6">
+                {plan.features.map((feature) => (
+                  <li class="flex items-center gap-2">
+                    <span class="text-success">✓</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              {plan.buttonText && plan.buttonLink && (
+                <div class="card-actions justify-end">
+                  <a
+                    href={plan.buttonLink}
+                    class={`btn w-full ${plan.popular ? "btn-accent" : "btn-primary"}`}
+                  >
+                    {plan.buttonText}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

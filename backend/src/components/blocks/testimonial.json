@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_blocks_testimonials",
+  "info": {
+    "displayName": "Testimonial",
+    "description": "Customer testimonials section"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "default": "What Our Customers Say"
+    },
+    "subtitle": {
+      "type": "text"
+    },
+    "testimonials": {
+      "type": "component",
+      "repeatable": true,
+      "component": "elements.testimonial-item"
+    }
+  }
+}

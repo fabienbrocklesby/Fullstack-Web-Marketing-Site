@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_blocks_pricings",
+  "info": {
+    "displayName": "Pricing",
+    "description": "Pricing plans section"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "default": "Choose Your Plan"
+    },
+    "subtitle": {
+      "type": "text"
+    },
+    "plans": {
+      "type": "component",
+      "repeatable": true,
+      "component": "elements.pricing-plan"
+    }
+  }
+}

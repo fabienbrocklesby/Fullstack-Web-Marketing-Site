@@ -1,0 +1,66 @@
+---
+import HeroSection from "./HeroSection.astro";
+import FeatureGridSection from "./FeatureGridSection.astro";
+import TestimonialSection from "./TestimonialSection.astro";
+import CTASection from "./CTASection.astro";
+import ContentSection from "./ContentSection.astro";
+import PricingSection from "./PricingSection.astro";
+
+export interface Props {
+  sections: any[];
+  isEditor?: boolean;
+}
+
+const { sections = [], isEditor = false } = Astro.props;
+
+// Component mapping
+const componentMap = {
+  "blocks.hero": HeroSection,
+  "blocks.feature-grid": FeatureGridSection,
+  "blocks.testimonial": TestimonialSection,
+  "blocks.cta": CTASection,
+  "blocks.content": ContentSection,
+  "blocks.pricing": PricingSection,
+};
+---
+
+<div class={isEditor ? "site-editor-preview" : ""}>
+  {
+    sections.map((section) => {
+      const Component = componentMap[section.__component];
+
+      if (!Component) {
+        return (
+          <div class="alert alert-error">
+            <span>Unknown component: {section.__component}</span>
+          </div>
+        );
+      }
+
+      return (
+        <div
+          class={isEditor ? "site-editor-section" : ""}
+          data-section-id={section.id}
+          data-component={section.__component}
+        >
+          <Component {...section} />
+        </div>
+      );
+    })
+  }
+</div>
+
+<style>
+  .site-editor-preview {
+    position: relative;
+  }
+
+  .site-editor-section {
+    position: relative;
+  }
+
+  .site-editor-section:hover {
+    outline: 2px dashed rgb(59 130 246 / 0.5);
+    outline-offset: 4px;
+  }
+</style>

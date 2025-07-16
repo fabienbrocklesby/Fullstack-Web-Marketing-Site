@@ -1,0 +1,25 @@
+---
+export interface Props {
+  title?: string;
+  content: string;
+  layout?: "full-width" | "centered" | "two-column";
+}
+
+const { title, content, layout = "centered" } = Astro.props;
+
+const containerClass =
+  layout === "full-width"
+    ? "w-full"
+    : layout === "centered"
+      ? "max-w-4xl mx-auto"
+      : "max-w-6xl mx-auto";
+---
+
+<section class="py-20 bg-base-100">
+  <div class="container mx-auto px-4">
+    <div class={containerClass}>
+      {title && <h2 class="text-3xl font-bold mb-8 text-center">{title}</h2>}
+      <div class="prose prose-lg max-w-none" set:html={content} />
+    </div>
+  </div>
+</section>

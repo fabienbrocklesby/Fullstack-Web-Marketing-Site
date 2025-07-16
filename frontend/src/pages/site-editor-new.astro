@@ -1,0 +1,875 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Site Editor - Team Portal">
+  <main class="min-h-screen bg-base-200">
+    <!-- Header -->
+    <div class="navbar bg-base-100 shadow-lg border-b border-base-200">
+      <div class="navbar-start">
+        <a href="/dashboard" class="btn btn-ghost text-xl">← Dashboard</a>
+      </div>
+      <div class="navbar-center">
+        <h1 class="text-xl font-semibold">Site Editor</h1>
+      </div>
+      <div class="navbar-end">
+        <div class="flex gap-2">
+          <button id="save-page" class="btn btn-primary" disabled>
+            <span
+              class="loading loading-spinner loading-sm hidden"
+              id="save-spinner"></span>
+            Save Changes
+          </button>
+          <button id="preview-mode" class="btn btn-outline">Preview</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page Selection -->
+    <div class="container mx-auto px-4 py-6">
+      <div class="card bg-base-100 shadow-lg mb-6">
+        <div class="card-body">
+          <div
+            class="flex flex-col sm:flex-row gap-4 items-center justify-between"
+          >
+            <div class="form-control w-full max-w-xs">
+              <label class="label">
+                <span class="label-text">Select Page to Edit:</span>
+              </label>
+              <select id="page-selector" class="select select-bordered w-full">
+                <option value="">Loading pages...</option>
+              </select>
+            </div>
+            <div class="flex gap-2">
+              <button id="create-page" class="btn btn-outline">
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                New Page
+              </button>
+              <button
+                id="delete-page"
+                class="btn btn-error btn-outline"
+                disabled
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Editor Area -->
+      <div
+        class="grid grid-cols-1 xl:grid-cols-4 gap-6"
+        id="editor-area"
+        style="display: none;"
+      >
+        <!-- Preview Area -->
+        <div class="xl:col-span-3">
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-header border-b border-base-200 p-4">
+              <h2 class="card-title">Live Preview</h2>
+            </div>
+            <div class="card-body p-0">
+              <div id="page-preview" class="min-h-96">
+                <!-- Page content will be rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editor Panel -->
+        <div class="xl:col-span-1">
+          <div class="card bg-base-100 shadow-lg sticky top-6">
+            <div class="card-header border-b border-base-200 p-4">
+              <h2 class="card-title">Sections</h2>
+              <button id="add-section" class="btn btn-primary btn-sm">
+                <svg
+                  class="w-4 h-4 mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Section
+              </button>
+            </div>
+            <div class="card-body p-4">
+              <div id="sections-panel" class="space-y-4">
+                <!-- Section editors will be rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alert-container" class="toast toast-top toast-end"></div>
+
+    <!-- Add Section Modal -->
+    <dialog id="add-section-modal" class="modal">
+      <div class="modal-box w-11/12 max-w-2xl">
+        <h3 class="font-bold text-lg mb-4">Add New Section</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="component-grid">
+          <!-- Component options will be rendered here -->
+        </div>
+        <div class="modal-action">
+          <form method="dialog">
+            <button class="btn">Cancel</button>
+          </form>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Create Page Modal -->
+    <dialog id="create-page-modal" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">Create New Page</h3>
+        <form id="create-page-form" class="space-y-4 mt-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Page Title</span>
+            </label>
+            <input
+              type="text"
+              id="page-title-input"
+              class="input input-bordered"
+              placeholder="About Us"
+              required
+            />
+          </div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Page Slug</span>
+            </label>
+            <input
+              type="text"
+              id="page-slug-input"
+              class="input input-bordered"
+              placeholder="about-us"
+              required
+            />
+          </div>
+          <div class="modal-action">
+            <button
+              type="button"
+              class="btn"
+              onclick="document.getElementById('create-page-modal').close()"
+              >Cancel</button
+            >
+            <button type="submit" class="btn btn-primary">Create Page</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+  </main>
+</Layout>
+
+<!-- Load SortableJS for drag and drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"
+></script>
+
+<script>
+  // Dynamic imports for client-side modules
+  let apiHelpers, componentRegistry;
+
+  const loadModules = async () => {
+    try {
+      const api = await import("../utils/api-helpers.js");
+      const comp = await import("../utils/component-registry.js");
+
+      apiHelpers = {
+        fetchPages: api.fetchPages,
+        fetchPage: api.fetchPage,
+        updatePage: api.updatePage,
+        createPage: api.createPage,
+        deletePage: api.deletePage,
+      };
+
+      componentRegistry = {
+        getAllComponentTypes: comp.getAllComponentTypes,
+        createNewSection: comp.createNewSection,
+        getComponentMeta: comp.getComponentMeta,
+      };
+
+      return true;
+    } catch (error) {
+      console.error("Failed to load modules:", error);
+      return false;
+    }
+  };
+
+  class SiteEditor {
+    constructor() {
+      this.currentPage = null;
+      this.isDirty = false;
+      this.isSaving = false;
+      this.sections = [];
+      this.sortable = null;
+
+      this.init();
+    }
+
+    async init() {
+      try {
+        const modulesLoaded = await loadModules();
+        if (!modulesLoaded) {
+          this.showAlert("Failed to load required modules", "error");
+          return;
+        }
+
+        this.checkAuth();
+        await this.loadPages();
+        this.setupEventListeners();
+        this.setupComponentModal();
+
+        console.log("Site Editor initialized successfully");
+      } catch (error) {
+        this.showAlert("Failed to initialize editor", "error");
+        console.error("Editor initialization error:", error);
+      }
+    }
+
+    checkAuth() {
+      const jwt = localStorage.getItem("jwt");
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+      if (!jwt || !user.id) {
+        window.location.href = "/login";
+        return;
+      }
+
+      console.log(
+        "User authenticated for site editor:",
+        user.email || user.username,
+      );
+    }
+
+    async loadPages() {
+      try {
+        const pages = await apiHelpers.fetchPages();
+        const selector = document.getElementById("page-selector");
+
+        selector.innerHTML = '<option value="">Select a page...</option>';
+
+        pages.forEach((page) => {
+          const option = document.createElement("option");
+          option.value = page.id.toString();
+          option.textContent = page.title;
+          selector.appendChild(option);
+        });
+
+        console.log(`Loaded ${pages.length} pages`);
+      } catch (error) {
+        this.showAlert("Failed to load pages", "error");
+        console.error("Error loading pages:", error);
+      }
+    }
+
+    async loadPage(pageId) {
+      try {
+        const page = await apiHelpers.fetchPage(pageId);
+        this.currentPage = page;
+        this.sections = page.sections || [];
+
+        const deleteBtn = document.getElementById("delete-page");
+        deleteBtn.disabled = false;
+
+        const editorArea = document.getElementById("editor-area");
+        if (editorArea) editorArea.style.display = "grid";
+
+        this.renderPagePreview();
+        this.renderSectionsPanel();
+        this.setDirty(false);
+
+        console.log("Loaded page:", page.title);
+      } catch (error) {
+        this.showAlert("Failed to load page", "error");
+        console.error("Error loading page:", error);
+      }
+    }
+
+    renderPagePreview() {
+      const preview = document.getElementById("page-preview");
+      if (!preview) return;
+
+      let html = "";
+      this.sections.forEach((section, index) => {
+        html += this.renderSectionHTML(section, index);
+      });
+
+      preview.innerHTML = html;
+      this.setupSortable();
+    }
+
+    renderSectionHTML(section, index) {
+      const meta = componentRegistry.getComponentMeta(section.__component);
+      if (!meta)
+        return `<div class="alert alert-error">Unknown component: ${section.__component}</div>`;
+
+      switch (section.__component) {
+        case "blocks.hero":
+          return `
+            <section class="hero min-h-96 bg-gradient-to-br from-primary/10 to-secondary/10 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+              <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
+                ⋮⋮
+              </div>
+              <div class="hero-content text-center">
+                <div class="max-w-md">
+                  <h1 class="text-5xl font-bold">${section.title || "Hero Title"}</h1>
+                  ${section.subtitle ? `<p class="py-6">${section.subtitle}</p>` : ""}
+                  ${section.buttonText ? `<button class="btn btn-${section.buttonVariant || "primary"} btn-lg">${section.buttonText}</button>` : ""}
+                </div>
+              </div>
+            </section>
+          `;
+
+        case "blocks.feature-grid":
+          const features = section.features || [];
+          return `
+            <section class="py-20 bg-base-100 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+              <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
+                ⋮⋮
+              </div>
+              <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold text-center mb-4">${section.title || "Features"}</h2>
+                ${section.subtitle ? `<p class="text-xl text-center text-base-content/70 mb-12">${section.subtitle}</p>` : ""}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  ${features
+                    .map(
+                      (f) => `
+                    <div class="card bg-base-200 shadow-lg">
+                      <div class="card-body">
+                        <h3 class="card-title">${f.icon || "🚀"} ${f.title || "Feature"}</h3>
+                        <p>${f.description || "Feature description"}</p>
+                      </div>
+                    </div>
+                  `,
+                    )
+                    .join("")}
+                </div>
+              </div>
+            </section>
+          `;
+
+        case "blocks.cta":
+          return `
+            <section class="py-20 bg-${section.backgroundColor || "primary"} site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+              <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
+                ⋮⋮
+              </div>
+              <div class="container mx-auto px-4 text-center">
+                <h2 class="text-4xl font-bold mb-4">${section.title || "Call to Action"}</h2>
+                ${section.subtitle ? `<p class="text-xl mb-8 opacity-90">${section.subtitle}</p>` : ""}
+                ${section.buttonText ? `<button class="btn btn-${section.buttonVariant || "accent"} btn-lg">${section.buttonText}</button>` : ""}
+              </div>
+            </section>
+          `;
+
+        default:
+          return `
+            <section class="py-20 bg-base-100 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+              <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
+                ⋮⋮
+              </div>
+              <div class="container mx-auto px-4">
+                <div class="card bg-base-200 shadow-lg">
+                  <div class="card-body">
+                    <h3 class="card-title">${meta.name}</h3>
+                    <p>${meta.description}</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          `;
+      }
+    }
+
+    renderSectionsPanel() {
+      const panel = document.getElementById("sections-panel");
+      if (!panel) return;
+
+      panel.innerHTML = "";
+
+      this.sections.forEach((section, index) => {
+        const meta = componentRegistry.getComponentMeta(section.__component);
+        if (!meta) return;
+
+        const sectionCard = document.createElement("div");
+        sectionCard.className = "card bg-base-200 shadow-sm";
+        sectionCard.setAttribute("data-section-index", index.toString());
+        sectionCard.innerHTML = `
+          <div class="card-body p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="drag-handle cursor-move text-lg">⋮⋮</span>
+                <span class="text-lg">${meta.icon}</span>
+                <span class="font-semibold">${meta.name}</span>
+              </div>
+              <button class="btn btn-error btn-xs delete-section">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="space-y-3">
+              ${this.renderSectionFields(section, index)}
+            </div>
+          </div>
+        `;
+
+        panel.appendChild(sectionCard);
+      });
+
+      this.setupFieldListeners();
+    }
+
+    renderSectionFields(section, index) {
+      switch (section.__component) {
+        case "blocks.hero":
+          return `
+            <div class="form-control">
+              <label class="label"><span class="label-text">Title</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${section.title || ""}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Subtitle</span></label>
+              <textarea class="textarea textarea-bordered textarea-sm" data-field="subtitle" data-section="${index}">${section.subtitle || ""}</textarea>
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Button Text</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="buttonText" data-section="${index}" value="${section.buttonText || ""}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Button Link</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="buttonLink" data-section="${index}" value="${section.buttonLink || ""}">
+            </div>
+          `;
+
+        case "blocks.feature-grid":
+          return `
+            <div class="form-control">
+              <label class="label"><span class="label-text">Title</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${section.title || ""}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Subtitle</span></label>
+              <textarea class="textarea textarea-bordered textarea-sm" data-field="subtitle" data-section="${index}">${section.subtitle || ""}</textarea>
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Features (JSON)</span></label>
+              <textarea class="textarea textarea-bordered textarea-sm" data-field="features" data-section="${index}" rows="4">${JSON.stringify(section.features || [], null, 2)}</textarea>
+            </div>
+          `;
+
+        case "blocks.cta":
+          return `
+            <div class="form-control">
+              <label class="label"><span class="label-text">Title</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${section.title || ""}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Subtitle</span></label>
+              <textarea class="textarea textarea-bordered textarea-sm" data-field="subtitle" data-section="${index}">${section.subtitle || ""}</textarea>
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Button Text</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="buttonText" data-section="${index}" value="${section.buttonText || ""}">
+            </div>
+          `;
+
+        default:
+          return `<p class="text-sm text-base-content/70">Component editor not implemented yet</p>`;
+      }
+    }
+
+    setupSortable() {
+      const preview = document.getElementById("page-preview");
+      if (!preview) return;
+
+      if (this.sortable) {
+        this.sortable.destroy();
+      }
+
+      if (typeof window.Sortable !== "undefined") {
+        this.sortable = new window.Sortable(preview, {
+          animation: 150,
+          ghostClass: "sortable-ghost",
+          handle: ".drag-handle",
+          draggable: ".site-editor-section",
+          onEnd: (evt) => {
+            console.log(
+              "Sortable onEnd triggered:",
+              evt.oldIndex,
+              "->",
+              evt.newIndex,
+            );
+            if (evt.oldIndex !== evt.newIndex) {
+              const item = this.sections.splice(evt.oldIndex, 1)[0];
+              this.sections.splice(evt.newIndex, 0, item);
+
+              this.setDirty(true);
+              this.renderPagePreview();
+              this.renderSectionsPanel();
+            }
+          },
+        });
+        console.log("Sortable initialized:", this.sortable);
+      } else {
+        setTimeout(() => this.setupSortable(), 100);
+      }
+    }
+
+    setupEventListeners() {
+      const pageSelector = document.getElementById("page-selector");
+      pageSelector.addEventListener("change", (e) => {
+        const pageId = parseInt(e.target.value);
+        if (pageId) {
+          this.loadPage(pageId);
+        }
+      });
+
+      const saveBtn = document.getElementById("save-page");
+      saveBtn?.addEventListener("click", () => this.savePage());
+
+      const addBtn = document.getElementById("add-section");
+      addBtn?.addEventListener("click", () => {
+        const modal = document.getElementById("add-section-modal");
+        modal.showModal();
+      });
+
+      const createBtn = document.getElementById("create-page");
+      createBtn?.addEventListener("click", () => {
+        const modal = document.getElementById("create-page-modal");
+        modal.showModal();
+      });
+
+      const deleteBtn = document.getElementById("delete-page");
+      deleteBtn?.addEventListener("click", () => this.deletePage());
+
+      const createForm = document.getElementById("create-page-form");
+      createForm?.addEventListener("submit", (e) => this.handleCreatePage(e));
+
+      const titleInput = document.getElementById("page-title-input");
+      const slugInput = document.getElementById("page-slug-input");
+      titleInput?.addEventListener("input", (e) => {
+        const title = e.target.value;
+        const slug = title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+        if (slugInput) slugInput.value = slug;
+      });
+    }
+
+    setupComponentModal() {
+      const grid = document.getElementById("component-grid");
+      if (!grid) return;
+
+      const components = componentRegistry.getAllComponentTypes();
+
+      components.forEach((component) => {
+        const card = document.createElement("div");
+        card.className =
+          "card bg-base-200 shadow-sm cursor-pointer hover:bg-base-300 transition-colors";
+        card.innerHTML = `
+          <div class="card-body p-4 text-center">
+            <div class="text-3xl mb-2">${component.icon}</div>
+            <h3 class="font-semibold">${component.name}</h3>
+            <p class="text-sm text-base-content/70">${component.description}</p>
+          </div>
+        `;
+
+        card.addEventListener("click", () => {
+          this.addSection(component.uid);
+          const modal = document.getElementById("add-section-modal");
+          modal.close();
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    setupFieldListeners() {
+      const inputs = document.querySelectorAll("[data-field]");
+      inputs.forEach((input) => {
+        input.addEventListener("input", (e) => this.handleFieldChange(e));
+        input.addEventListener("change", (e) => this.handleFieldChange(e));
+      });
+
+      const deleteButtons = document.querySelectorAll(".delete-section");
+      deleteButtons.forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = e.target
+            .closest("[data-section-index]")
+            ?.getAttribute("data-section-index");
+          if (sectionIndex) {
+            this.deleteSection(sectionIndex);
+          }
+        });
+      });
+    }
+
+    handleFieldChange(e) {
+      const target = e.target;
+      const field = target.getAttribute("data-field");
+      const sectionIndex = parseInt(target.getAttribute("data-section") || "0");
+
+      if (!field || isNaN(sectionIndex)) return;
+
+      let value = target.value;
+
+      if (field === "features" && target.tagName === "TEXTAREA") {
+        try {
+          value = JSON.parse(target.value);
+        } catch (error) {
+          console.warn("Invalid JSON in features field");
+          return;
+        }
+      }
+
+      if (this.sections[sectionIndex]) {
+        this.sections[sectionIndex][field] = value;
+        this.setDirty(true);
+        this.renderPagePreview();
+      }
+    }
+
+    addSection(componentUid) {
+      try {
+        const newSection = componentRegistry.createNewSection(componentUid);
+        this.sections.push(newSection);
+
+        this.setDirty(true);
+        this.renderPagePreview();
+        this.renderSectionsPanel();
+
+        this.showAlert("Section added successfully", "success");
+      } catch (error) {
+        this.showAlert("Failed to add section", "error");
+        console.error("Error adding section:", error);
+      }
+    }
+
+    deleteSection(sectionIndex) {
+      const index = parseInt(sectionIndex);
+      if (index >= 0 && index < this.sections.length) {
+        this.sections.splice(index, 1);
+        this.setDirty(true);
+        this.renderPagePreview();
+        this.renderSectionsPanel();
+        this.showAlert("Section deleted", "success");
+      }
+    }
+
+    async savePage() {
+      if (!this.currentPage || this.isSaving) return;
+
+      this.setSaving(true);
+
+      try {
+        const cleanSections = this.sections.map((section) => {
+          const cleanSection = {
+            __component: section.__component,
+          };
+
+          Object.keys(section).forEach((key) => {
+            if (
+              key !== "id" &&
+              key !== "__component" &&
+              key !== "createdAt" &&
+              key !== "updatedAt" &&
+              key !== "__temp_id__"
+            ) {
+              cleanSection[key] = section[key];
+            }
+          });
+
+          return cleanSection;
+        });
+
+        console.log("Saving sections:", cleanSections);
+        await apiHelpers.updatePage(this.currentPage.id, cleanSections);
+        this.setDirty(false);
+        this.showAlert("Page saved successfully", "success");
+      } catch (error) {
+        this.showAlert("Failed to save page", "error");
+        console.error("Error saving page:", error);
+      } finally {
+        this.setSaving(false);
+      }
+    }
+
+    async handleCreatePage(e) {
+      e.preventDefault();
+
+      const titleInput = document.getElementById("page-title-input");
+      const slugInput = document.getElementById("page-slug-input");
+
+      const title = titleInput.value.trim();
+      const slug = slugInput.value.trim();
+
+      if (!title || !slug) {
+        this.showAlert("Please fill in all fields", "error");
+        return;
+      }
+
+      try {
+        const newPage = await apiHelpers.createPage(title, slug);
+
+        const modal = document.getElementById("create-page-modal");
+        modal.close();
+        titleInput.value = "";
+        slugInput.value = "";
+
+        await this.loadPages();
+        const selector = document.getElementById("page-selector");
+        selector.value = newPage.id.toString();
+        await this.loadPage(newPage.id);
+
+        this.showAlert("Page created successfully", "success");
+      } catch (error) {
+        this.showAlert("Failed to create page", "error");
+        console.error("Error creating page:", error);
+      }
+    }
+
+    async deletePage() {
+      if (!this.currentPage) return;
+
+      if (
+        !confirm(
+          `Are you sure you want to delete "${this.currentPage.title}"? This action cannot be undone.`,
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await apiHelpers.deletePage(this.currentPage.id);
+
+        this.currentPage = null;
+        this.sections = [];
+
+        const editorArea = document.getElementById("editor-area");
+        if (editorArea) editorArea.style.display = "none";
+
+        await this.loadPages();
+
+        this.showAlert("Page deleted successfully", "success");
+      } catch (error) {
+        this.showAlert("Failed to delete page", "error");
+        console.error("Error deleting page:", error);
+      }
+    }
+
+    setDirty(dirty) {
+      this.isDirty = dirty;
+      const saveBtn = document.getElementById("save-page");
+      if (saveBtn) {
+        saveBtn.disabled = !dirty || this.isSaving;
+        saveBtn.textContent = dirty ? "Save Changes" : "Saved";
+      }
+    }
+
+    setSaving(saving) {
+      this.isSaving = saving;
+      const saveBtn = document.getElementById("save-page");
+      const spinner = document.getElementById("save-spinner");
+
+      if (saveBtn && spinner) {
+        saveBtn.disabled = saving || !this.isDirty;
+        if (saving) {
+          spinner.classList.remove("hidden");
+          saveBtn.textContent = "Saving...";
+        } else {
+          spinner.classList.add("hidden");
+          saveBtn.textContent = this.isDirty ? "Save Changes" : "Saved";
+        }
+      }
+    }
+
+    showAlert(message, type = "success") {
+      const container = document.getElementById("alert-container");
+      if (!container) return;
+
+      const alert = document.createElement("div");
+      alert.className = `alert alert-${type} shadow-lg`;
+      alert.innerHTML = `
+        <div>
+          <span>${message}</span>
+        </div>
+      `;
+
+      container.appendChild(alert);
+
+      setTimeout(() => {
+        alert.remove();
+      }, 5000);
+    }
+  }
+
+  // Initialize when DOM is ready
+  document.addEventListener("DOMContentLoaded", () => {
+    new SiteEditor();
+  });
+</script>
+
+<style>
+  .site-editor-section {
+    position: relative;
+    cursor: grab;
+  }
+
+  .site-editor-section:active {
+    cursor: grabbing;
+  }
+
+  .site-editor-section:hover {
+    outline: 2px dashed rgb(59 130 246 / 0.5);
+    outline-offset: 4px;
+  }
+
+  .sortable-ghost {
+    opacity: 0.5;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .drag-handle {
+    cursor: grab;
+    user-select: none;
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+</style>

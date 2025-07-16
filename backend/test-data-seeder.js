@@ -13,8 +13,12 @@ module.exports = {
       // Create test affiliates
       const testAffiliates = await this.createTestAffiliates();
 
-      // Create test pages
+      // Create Strapi users and link to affiliates
+      await this.createStrapiUsers(testAffiliates);
+
+      // Create test pages with site editor components
       await this.createTestPages();
+      await this.createSiteEditorPages();
 
       // Create test purchases with license keys
       await this.createTestPurchases(testCustomers, testAffiliates);
@@ -190,7 +194,102 @@ module.exports = {
       }
     }
 
+    console.log(`📊 Total affiliates: ${createdAffiliates.length}`);
     return createdAffiliates;
+  },
+
+  async createStrapiUsers(testAffiliates) {
+    console.log("👥 Creating Strapi users and linking to affiliates...");
+
+    try {
+      // Find the Authenticated role
+      const authenticatedRole = await strapi
+        .query("plugin::users-permissions.role")
+        .findOne({ where: { type: "authenticated" } });
+
+      if (!authenticatedRole) {
+        throw new Error("Authenticated role not found");
+      }
+
+      // Create user for John Marketing
+      const johnAffiliate = testAffiliates.find(
+        (a) => a.email === "john@marketingpro.com",
+      );
+
+      if (johnAffiliate) {
+        const existingUser = await strapi
+          .query("plugin::users-permissions.user")
+          .findOne({ where: { email: "john@marketingpro.com" } });
+
+        if (!existingUser) {
+          const hashedPassword = await bcrypt.hash("password123", 12);
+
+          const user = await strapi.entityService.create(
+            "plugin::users-permissions.user",
+            {
+              data: {
+                username: "john_marketing",
+                email: "john@marketingpro.com",
+                password: hashedPassword,
+                confirmed: true,
+                blocked: false,
+                role: authenticatedRole.id,
+              },
+            },
+          );
+
+          console.log(
+            `   ✓ Created Strapi user: john@marketingpro.com (password: password123)`,
+          );
+        } else {
+          console.log(`   ⚠ User already exists: john@marketingpro.com`);
+        }
+      }
+
+      // Create additional demo users
+      const demoUsers = [
+        {
+          username: "sarah_influence",
+          email: "sarah@socialinfluence.com",
+          password: "password123",
+        },
+        {
+          username: "demo_affiliate",
+          email: "demo@affiliate.com",
+          password: "password123",
+        },
+      ];
+
+      for (const userData of demoUsers) {
+        const existing = await strapi
+          .query("plugin::users-permissions.user")
+          .findOne({ where: { email: userData.email } });
+
+        if (!existing) {
+          const hashedPassword = await bcrypt.hash(userData.password, 12);
+
+          await strapi.entityService.create("plugin::users-permissions.user", {
+            data: {
+              username: userData.username,
+              email: userData.email,
+              password: hashedPassword,
+              confirmed: true,
+              blocked: false,
+              role: authenticatedRole.id,
+            },
+          });
+
+          console.log(
+            `   ✓ Created Strapi user: ${userData.email} (password: password123)`,
+          );
+        } else {
+          console.log(`   ⚠ User already exists: ${userData.email}`);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error creating Strapi users:", error);
+      throw error;
+    }
   },
 
   async createTestPages() {
@@ -275,6 +374,167 @@ We implement appropriate technical and organizational measures to protect your p
         console.log(`   ✓ Created page: ${pageData.title}`);
       } else {
         console.log(`   ⚠ Page already exists: ${pageData.title}`);
+      }
+    }
+  },
+
+  async createSiteEditorPages() {
+    console.log("🎨 Creating Site Editor demo pages with components...");
+
+    const demoPages = [
+      {
+        title: "Landing Page Demo",
+        slug: "landing-demo",
+        seoTitle: "Marketing Landing Page - Built with Site Editor",
+        seoDescription:
+          "A demo marketing landing page showcasing the power of our visual site editor",
+        seoKeywords: "landing page, marketing, site editor, demo",
+        publishedAt: new Date(),
+        sections: [
+          {
+            __component: "blocks.hero",
+            title: "Transform Your Business Today",
+            subtitle:
+              "Our revolutionary SaaS platform helps you grow faster, work smarter, and achieve more than ever before.",
+            buttonText: "Start Free Trial",
+            buttonLink: "/signup",
+            buttonVariant: "primary",
+          },
+          {
+            __component: "blocks.feature-grid",
+            title: "Why Choose Our Platform?",
+            subtitle: "Everything you need to scale your business efficiently",
+            features: [
+              {
+                title: "Lightning Fast",
+                description: "Optimized for speed with cutting-edge technology",
+                icon: "⚡",
+              },
+              {
+                title: "Secure & Reliable",
+                description: "Enterprise-grade security with 99.9% uptime",
+                icon: "🔒",
+              },
+              {
+                title: "Easy Integration",
+                description: "Connect with your existing tools seamlessly",
+                icon: "🔗",
+              },
+              {
+                title: "24/7 Support",
+                description:
+                  "Get help whenever you need it from our expert team",
+                icon: "💬",
+              },
+              {
+                title: "Analytics Dashboard",
+                description: "Track performance with detailed insights",
+                icon: "📊",
+              },
+              {
+                title: "Mobile Ready",
+                description: "Works perfectly on all devices and platforms",
+                icon: "📱",
+              },
+            ],
+          },
+          {
+            __component: "blocks.cta",
+            title: "Ready to Get Started?",
+            subtitle:
+              "Join thousands of satisfied customers who trust our platform",
+            buttonText: "Start Your Free Trial",
+            buttonLink: "/signup",
+            buttonVariant: "accent",
+            backgroundColor: "primary",
+          },
+        ],
+      },
+      {
+        title: "About Our Company",
+        slug: "about-company",
+        seoTitle: "About Us - Leading SaaS Innovation",
+        seoDescription:
+          "Learn about our mission, values, and the team behind our innovative SaaS solutions",
+        seoKeywords: "about us, company, team, mission, values",
+        publishedAt: new Date(),
+        sections: [
+          {
+            __component: "blocks.hero",
+            title: "Building the Future of Business",
+            subtitle:
+              "We're passionate about creating tools that empower businesses to reach their full potential.",
+            buttonText: "Meet Our Team",
+            buttonLink: "#team",
+            buttonVariant: "ghost",
+          },
+          {
+            __component: "blocks.content",
+            title: "Our Story",
+            content: `Founded in 2020, we started with a simple mission: make powerful business tools accessible to everyone. 
+
+What began as a small team of developers has grown into a thriving company serving thousands of businesses worldwide.
+
+We believe that great software should be intuitive, reliable, and designed with the user in mind. Every feature we build is crafted with care and tested rigorously to ensure it meets the highest standards.`,
+            layout: "centered",
+          },
+          {
+            __component: "blocks.testimonial",
+            title: "What Our Customers Say",
+            subtitle: "Don't just take our word for it",
+            testimonials: [
+              {
+                quote:
+                  "This platform has completely transformed how we operate. The ease of use and powerful features have made our team more productive than ever.",
+                author: "Sarah Johnson",
+                position: "CEO, TechStart Inc.",
+                company: "TechStart Inc.",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Pricing Plans",
+        slug: "pricing-demo",
+        seoTitle: "Pricing Plans - Choose Your Perfect Plan",
+        seoDescription:
+          "Flexible pricing plans designed to grow with your business needs",
+        seoKeywords: "pricing, plans, subscription, business plans",
+        publishedAt: new Date(),
+        sections: [
+          {
+            __component: "blocks.hero",
+            title: "Simple, Transparent Pricing",
+            subtitle:
+              "Choose the plan that's right for your business. No hidden fees, no surprises.",
+          },
+          {
+            __component: "blocks.cta",
+            title: "Questions About Pricing?",
+            subtitle:
+              "Our sales team is ready to help you find the perfect plan for your needs",
+            buttonText: "Contact Sales",
+            buttonLink: "/contact",
+            buttonVariant: "ghost",
+            backgroundColor: "base-200",
+          },
+        ],
+      },
+    ];
+
+    for (const pageData of demoPages) {
+      const existing = await strapi.entityService.findMany("api::page.page", {
+        filters: { slug: pageData.slug },
+      });
+
+      if (existing.length === 0) {
+        await strapi.entityService.create("api::page.page", {
+          data: pageData,
+        });
+        console.log(`   ✓ Created site editor page: ${pageData.title}`);
+      } else {
+        console.log(`   ⚠ Site editor page already exists: ${pageData.title}`);
       }
     }
   },
