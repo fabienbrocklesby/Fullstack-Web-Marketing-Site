@@ -157,50 +157,10 @@ import BuyButton from "../components/BuyButton.astro";
   <Footer />
 
   <script>
-    // Import the tracking functions from BuyButton
-    import Cookies from "js-cookie";
-
     document.addEventListener("DOMContentLoaded", () => {
-      // Enhanced affiliate code tracking for the pricing page
-      const urlParams = new URLSearchParams(window.location.search);
-      const affiliateCode = urlParams.get("ref");
-
-      if (affiliateCode) {
-        // Store in both cookies and localStorage for better persistence
-        Cookies.set("affiliate_code", affiliateCode, { expires: 30 });
-        localStorage.setItem("affiliate_code", affiliateCode);
-        localStorage.setItem(
-          "affiliate_visit_timestamp",
-          new Date().toISOString(),
-        );
-
-        console.log(`🔗 Affiliate code captured: ${affiliateCode}`);
-      }
-
-      // Wait for journey tracker to be available and then track page view
-      const waitForJourneyTracker = () => {
-        if (window.journeyTracker) {
-          console.log("📊 Journey tracker found, tracking page view");
-          // The journey tracker already tracks page views automatically, so we don't need to call it manually
-        } else if (window.trackPageView) {
-          // Fallback to old tracking method
-          const existingAffiliateCode =
-            Cookies.get("affiliate_code") ||
-            localStorage.getItem("affiliate_code");
-          if (existingAffiliateCode) {
-            window.trackPageView(
-              existingAffiliateCode,
-              window.location.pathname,
-            );
-          }
-        } else {
-          // Try again in 100ms
-          setTimeout(waitForJourneyTracker, 100);
-        }
-      };
-
-      // Start checking for journey tracker
-      setTimeout(waitForJourneyTracker, 100);
+      console.log(
+        "📊 Pricing page loaded - journey tracker will handle all affiliate tracking automatically",
+      );
     });
   </script>
 </Layout>

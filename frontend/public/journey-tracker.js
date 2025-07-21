@@ -24,10 +24,17 @@ class JourneyTracker {
       return;
     }
 
+    // Always initialize tracking - we want to track all user journeys
+    // If there's an affiliate code, it will be used for attribution
+    // If not, we still track for general analytics
+    this.initializeTracking();
+
     if (this.affiliateCode) {
-      this.initializeTracking();
+      console.log(
+        `📊 Affiliate tracking active with code: ${this.affiliateCode}`,
+      );
     } else {
-      console.log("📊 No affiliate code found - tracking disabled");
+      console.log("📊 General tracking active (no affiliate code)");
     }
   }
 
@@ -582,8 +589,6 @@ class JourneyTracker {
   }
 
   async trackAction(action, page, eventData = {}) {
-    if (!this.affiliateCode) return;
-
     // Don't track anything on team authentication pages
     const actualPage = window.location.pathname;
     if (this.isTeamAuthPage(actualPage)) {
@@ -599,48 +604,59 @@ class JourneyTracker {
       // Create a single timestamp for this action
       const actionTimestamp = new Date().toISOString();
 
-      console.log(
-        `🛤️ Tracking ${action} on actual page: ${actualPage} (stored: ${page})`,
-      );
+      // If there's an affiliate code, track for affiliate attribution
+      if (this.affiliateCode) {
+        console.log(
+          `🛤️ Tracking ${action} on actual page: ${actualPage} (stored: ${page}) for affiliate: ${this.affiliateCode}`,
+        );
 
-      // FIXED: Send both visitor ID and session ID for proper tracking
-      await fetch(`${cmsUrl}/api/track-visitor-journey`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          affiliateCode: this.affiliateCode,
-          action: action,
-          page: actualPage, // Use actual page, not the stored page
-          eventData: {
-            visitorId: this.visitorId,
-            sessionId: this.sessionId,
-            sessionStart: this.sessionStart,
-            timestamp: actionTimestamp, // Use single consistent timestamp
-            originalPage: page, // Store the original page for reference
-            actualPage: actualPage, // Store the actual page where the event occurred
-            ...eventData,
+        // FIXED: Send both visitor ID and session ID for proper tracking
+        await fetch(`${cmsUrl}/api/track-visitor-journey`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        }),
-      });
+          body: JSON.stringify({
+            affiliateCode: this.affiliateCode,
+            action: action,
+            page: actualPage, // Use actual page, not the stored page
+            eventData: {
+              visitorId: this.visitorId,
+              sessionId: this.sessionId,
+              sessionStart: this.sessionStart,
+              timestamp: actionTimestamp, // Use single consistent timestamp
+              originalPage: page, // Store the original page for reference
+              actualPage: actualPage, // Store the actual page where the event occurred
+              ...eventData,
+            },
+          }),
+        });
 
-      // Also track with the original conversion event system for backward compatibility
-      if (["button_click", "pricing_button_click"].includes(action)) {
-        await this.trackConversionEvent("button_click", eventData);
+        // Also track with the original conversion event system for backward compatibility
+        if (["button_click", "pricing_button_click"].includes(action)) {
+          await this.trackConversionEvent("button_click", eventData);
+        }
+      } else {
+        // No affiliate code - just log for general analytics
+        console.log(
+          `� General tracking ${action} on actual page: ${actualPage} (stored: ${page}) - no affiliate code`,
+        );
       }
 
       this.lastActivity = Date.now();
-      console.log(
-        `🛤️ Tracked ${action} on ${page} for visitor ${this.visitorId} session ${this.sessionId}`,
-      );
     } catch (error) {
       console.warn("Failed to track action:", error);
     }
   }
 
   async trackConversionEvent(eventType, eventData = {}) {
-    if (!this.affiliateCode) return;
+    // Only track conversion events if there's an affiliate code (these are for affiliate attribution)
+    if (!this.affiliateCode) {
+      console.log(
+        `🎯 Skipping conversion event ${eventType} - no affiliate code for attribution`,
+      );
+      return;
+    }
 
     try {
       const cmsUrl =

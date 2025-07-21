@@ -42,24 +42,6 @@ const buttonId = `buy-button-${priceId}`;
   });
 
   function initializeBuyButton() {
-    // Enhanced affiliate code tracking from URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const affiliateCode = urlParams.get("ref");
-
-    if (affiliateCode) {
-      console.log(`🔗 Affiliate code captured: ${affiliateCode}`);
-
-      // Store in both cookies and localStorage for persistence
-      Cookies.set("affiliate_code", affiliateCode, { expires: 30 });
-      localStorage.setItem("affiliate_code", affiliateCode);
-      localStorage.setItem(
-        "affiliate_visit_timestamp",
-        new Date().toISOString(),
-      );
-
-      // The journey tracker will automatically handle the visit tracking
-    }
-
     // Handle buy button click - find all buy buttons
     const buyButtons = document.querySelectorAll('[id^="buy-button-"]');
     buyButtons.forEach((buyButton) => {
@@ -73,7 +55,7 @@ const buttonId = `buy-button-${priceId}`;
             localStorage.getItem("affiliate_code");
 
           // Track button click event for conversion analysis using journey tracker
-          if ((window as any).journeyTracker && affiliateCode) {
+          if ((window as any).journeyTracker) {
             await (window as any).journeyTracker.trackAction(
               "pricing_button_click",
               window.location.pathname,
