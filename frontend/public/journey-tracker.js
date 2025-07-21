@@ -16,9 +16,11 @@ class JourneyTracker {
       currentPage: this.currentPage,
     });
 
-    // Don't track anything on dashboard pages (team portal)
-    if (this.currentPage.includes("/dashboard")) {
-      console.log("📊 Dashboard detected - tracking completely disabled");
+    // Don't track anything on team authentication pages (but allow customer pages)
+    if (this.isTeamAuthPage(this.currentPage)) {
+      console.log(
+        "📊 Team authentication page detected - tracking completely disabled",
+      );
       return;
     }
 
@@ -27,6 +29,22 @@ class JourneyTracker {
     } else {
       console.log("📊 No affiliate code found - tracking disabled");
     }
+  }
+
+  isTeamAuthPage(path = window.location.pathname) {
+    const teamAuthPaths = [
+      "/dashboard", // Marketing Dashboard (team only)
+      "/login", // Team Login - Staff Portal
+      "/register", // Team Registration - Staff Portal
+      "/site-editor", // Site Editor - Team Portal
+    ];
+
+    // Important: Only block team authentication pages, NOT customer pages
+    // Customer pages like /customer/login and /customer/register should continue tracking
+    return (
+      teamAuthPaths.some((teamPath) => path.startsWith(teamPath)) &&
+      !path.startsWith("/customer/")
+    );
   }
 
   // FIXED: Create persistent visitor ID using localStorage - same visitor across tabs
@@ -201,8 +219,8 @@ class JourneyTracker {
       const tagName = target.tagName.toLowerCase();
       const currentPage = window.location.pathname; // Use actual current page
 
-      // Don't track clicks on dashboard pages
-      if (currentPage.includes("/dashboard")) {
+      // Don't track clicks on team authentication pages
+      if (this.isTeamAuthPage(currentPage)) {
         return;
       }
 
@@ -335,8 +353,8 @@ class JourneyTracker {
       // Always use current page location for accuracy
       const actualPage = window.location.pathname;
 
-      // Don't track dashboard form submissions (to avoid confusion)
-      if (actualPage.includes("/dashboard")) {
+      // Don't track team authentication page form submissions
+      if (this.isTeamAuthPage(actualPage)) {
         return;
       }
 
@@ -397,8 +415,8 @@ class JourneyTracker {
         // Always use current page location for accuracy
         const actualPage = window.location.pathname;
 
-        // Don't track dashboard interactions (to avoid confusion)
-        if (actualPage.includes("/dashboard")) {
+        // Don't track team authentication page interactions
+        if (this.isTeamAuthPage(actualPage)) {
           return;
         }
 
@@ -471,8 +489,8 @@ class JourneyTracker {
         // Always use current page location for accuracy
         const actualPage = window.location.pathname;
 
-        // Don't track dashboard interactions (to avoid confusion)
-        if (actualPage.includes("/dashboard")) {
+        // Don't track team authentication page interactions
+        if (this.isTeamAuthPage(actualPage)) {
           return;
         }
 
@@ -566,10 +584,10 @@ class JourneyTracker {
   async trackAction(action, page, eventData = {}) {
     if (!this.affiliateCode) return;
 
-    // Don't track anything on dashboard pages
+    // Don't track anything on team authentication pages
     const actualPage = window.location.pathname;
-    if (actualPage.includes("/dashboard")) {
-      console.log("📊 Skipping tracking on dashboard page");
+    if (this.isTeamAuthPage(actualPage)) {
+      console.log("📊 Skipping tracking on team authentication page");
       return;
     }
 

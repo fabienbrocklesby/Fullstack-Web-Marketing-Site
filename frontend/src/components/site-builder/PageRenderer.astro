@@ -26,10 +26,11 @@ const componentMap = {
 
 <div class={isEditor ? "site-editor-preview" : ""}>
   {
-    sections.map((section) => {
+    sections.map((section, index) => {
       const Component = componentMap[section.__component];
 
       if (!Component) {
+        console.log(`[PageRenderer] Unknown component: ${section.__component}`);
         return (
           <div class="alert alert-error">
             <span>Unknown component: {section.__component}</span>

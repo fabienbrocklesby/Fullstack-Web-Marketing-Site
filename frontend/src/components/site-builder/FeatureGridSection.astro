@@ -3,15 +3,44 @@ interface FeatureItem {
   icon: string;
   title: string;
   description: string;
+  badge?: string;
+  badgeStyle?: string;
+  link?: string;
+  iconStyle?: string;
+  size?: string;
 }
 
 export interface Props {
   title: string;
   subtitle?: string;
-  features: FeatureItem[];
+  features: FeatureItem[] | any[]; // Support both simple arrays and Strapi components
 }
 
 const { title, subtitle, features = [] } = Astro.props;
+
+// Transform features to handle both formats (simple arrays and Strapi components)
+const transformedFeatures = features.map((feature) => {
+  // If it's a Strapi component, extract the actual data
+  if (feature.__component === "elements.feature-item") {
+    return {
+      icon: feature.icon,
+      title: feature.title,
+      description: feature.description,
+      badge: feature.badge,
+      badgeStyle: feature.badgeStyle || "primary",
+      link: feature.link,
+      iconStyle: feature.iconStyle || "emoji",
+      size: feature.size || "md",
+    };
+  }
+  // Otherwise, use it as-is (simple object format)
+  return {
+    ...feature,
+    badgeStyle: feature.badgeStyle || "primary",
+    iconStyle: feature.iconStyle || "emoji",
+    size: feature.size || "md",
+  };
+});
 ---
 
 <section class="py-20 bg-base-100">
@@ -24,17 +53,68 @@ const { title, subtitle, features = [] } = Astro.props;
     }
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       {
-        features.map((feature) => (
-          <div class="card bg-base-200 shadow-lg">
-            <div class="card-body">
-              <h3 class="card-title">
-                <span class="text-2xl mr-2">{feature.icon}</span>
-                {feature.title}
-              </h3>
-              <p>{feature.description}</p>
-            </div>
-          </div>
-        ))
+        transformedFeatures.map((feature) => {
+          const CardTag = feature.link ? "a" : "div";
+          const cardProps = feature.link ? { href: feature.link } : {};
+
+          const iconSizeClass =
+            feature.size === "sm"
+              ? "text-xl"
+              : feature.size === "lg"
+                ? "text-4xl"
+                : "text-2xl";
+          const cardSizeClass =
+            feature.size === "sm"
+              ? "p-4"
+              : feature.size === "lg"
+                ? "p-8"
+                : "p-6";
+
+          return (
+            <CardTag
+              class={`card bg-base-200 shadow-lg ${feature.link ? "hover:shadow-xl transition-shadow cursor-pointer" : ""}`}
+              {...cardProps}
+            >
+              <div class={`card-body ${cardSizeClass}`}>
+                <div class="flex items-start gap-3 mb-3">
+                  {feature.iconStyle === "circle" ? (
+                    <div class="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center flex-shrink-0">
+                      <span class={iconSizeClass}>{feature.icon}</span>
+                    </div>
+                  ) : feature.iconStyle === "square" ? (
+                    <div class="w-12 h-12 rounded-lg bg-primary text-primary-content flex items-center justify-center">
+                      <span class={iconSizeClass}>{feature.icon}</span>
+                    </div>
+                  ) : (
+                    <span class={`${iconSizeClass} flex-shrink-0`}>
+                      {feature.icon}
+                    </span>
+                  )}
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="card-title text-lg">{feature.title}</h3>
+                      {feature.badge && (
+                        <span
+                          class={`badge badge-${feature.badgeStyle} badge-sm`}
+                        >
+                          {feature.badge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <p class="text-base-content/80">{feature.description}</p>
+                {feature.link && (
+                  <div class="card-actions justify-end mt-4">
+                    <span class="text-primary text-sm font-medium">
+                      Learn more →
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardTag>
+          );
+        })
       }
     </div>
   </div>

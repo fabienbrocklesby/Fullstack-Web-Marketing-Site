@@ -8,9 +8,27 @@ class JourneyTracker {
     this.pageViews = [];
     this.clickStream = [];
 
-    if (this.affiliateCode) {
+    // Don't track on team authentication pages
+    if (this.affiliateCode && !this.isTeamAuthPage()) {
       this.initializeTracking();
     }
+  }
+
+  isTeamAuthPage() {
+    const path = window.location.pathname;
+    const teamAuthPaths = [
+      "/dashboard", // Marketing Dashboard (team only)
+      "/login", // Team Login - Staff Portal
+      "/register", // Team Registration - Staff Portal (NOT customer registration)
+      "/site-editor", // Site Editor - Team Portal
+    ];
+
+    // Important: Only block team authentication pages, NOT customer pages
+    // Customer pages like /customer/login and /customer/register should continue tracking
+    return (
+      teamAuthPaths.some((teamPath) => path.startsWith(teamPath)) &&
+      !path.startsWith("/customer/")
+    );
   }
 
   getOrCreateVisitorId() {
@@ -285,6 +303,9 @@ class JourneyTracker {
   async trackAction(action, page, eventData = {}) {
     if (!this.affiliateCode) return;
 
+    // Don't track on team authentication pages
+    if (this.isTeamAuthPage()) return;
+
     try {
       const cmsUrl =
         document.documentElement.getAttribute("data-cms-url") ||
@@ -325,6 +346,9 @@ class JourneyTracker {
   async trackConversionEvent(eventType, eventData = {}) {
     if (!this.affiliateCode) return;
 
+    // Don't track on team authentication pages
+    if (this.isTeamAuthPage()) return;
+
     try {
       const cmsUrl =
         document.documentElement.getAttribute("data-cms-url") ||
@@ -355,6 +379,9 @@ class JourneyTracker {
 
   // Public methods for manual tracking
   async trackRegistrationAttempt(email, hasSelectedProduct = false) {
+    // Don't track on team authentication pages
+    if (this.isTeamAuthPage()) return;
+
     await this.trackAction("registration_attempt", window.location.pathname, {
       email: email,
       hasSelectedProduct: hasSelectedProduct,
@@ -369,6 +396,9 @@ class JourneyTracker {
   }
 
   async trackRegistrationComplete(customerId, email) {
+    // Don't track on team authentication pages
+    if (this.isTeamAuthPage()) return;
+
     await this.trackAction("registration_complete", window.location.pathname, {
       customerId: customerId,
       email: email,
@@ -383,6 +413,9 @@ class JourneyTracker {
   }
 
   async trackCheckoutInitiated(priceId, customerId) {
+    // Don't track on team authentication pages
+    if (this.isTeamAuthPage()) return;
+
     await this.trackAction("checkout_initiated", window.location.pathname, {
       priceId: priceId,
       customerId: customerId,
@@ -397,6 +430,9 @@ class JourneyTracker {
   }
 
   async trackPurchaseComplete(purchaseId, amount, priceId) {
+    // Don't track on team authentication pages
+    if (this.isTeamAuthPage()) return;
+
     await this.trackAction("purchase_complete", window.location.pathname, {
       purchaseId: purchaseId,
       amount: amount,

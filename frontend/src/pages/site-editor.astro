@@ -20,7 +20,29 @@ import Layout from "../layouts/Layout.astro";
               id="save-spinner"></span>
             Save Changes
           </button>
-          <button id="preview-mode" class="btn btn-outline">Preview</button>
+          <button id="preview-mode" class="btn btn-outline" disabled
+            >Preview</button
+          >
+          <button id="page-settings" class="btn btn-ghost" disabled>
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -191,22 +213,348 @@ import Layout from "../layouts/Layout.astro";
         </form>
       </div>
     </dialog>
+
+    <!-- Page Settings Modal -->
+    <dialog id="page-settings-modal" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">Page Settings</h3>
+        <form id="page-settings-form" class="space-y-4 mt-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Page Title</span>
+            </label>
+            <input
+              type="text"
+              id="page-settings-title"
+              class="input input-bordered"
+              required
+            />
+          </div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Page Slug</span>
+            </label>
+            <input
+              type="text"
+              id="page-settings-slug"
+              class="input input-bordered"
+              required
+            />
+          </div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Meta Description (SEO)</span>
+            </label>
+            <textarea
+              id="page-settings-description"
+              class="textarea textarea-bordered"
+              placeholder="Brief description of this page for search engines"
+              rows="3"></textarea>
+          </div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Keywords (SEO)</span>
+            </label>
+            <input
+              type="text"
+              id="page-settings-keywords"
+              class="input input-bordered"
+              placeholder="keyword1, keyword2, keyword3"
+            />
+          </div>
+          <div class="modal-action">
+            <button
+              type="button"
+              class="btn"
+              onclick="document.getElementById('page-settings-modal').close()"
+              >Cancel</button
+            >
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
   </main>
 </Layout>
+
+<style>
+  .site-editor-section {
+    position: relative;
+    transition: all 0.2s ease;
+  }
+
+  .site-editor-section:hover {
+    outline: 2px dashed rgb(59 130 246 / 0.5);
+    outline-offset: 4px;
+  }
+
+  .drag-handle {
+    cursor: move;
+    user-select: none;
+  }
+
+  .drag-handle:hover {
+    transform: scale(1.1);
+  }
+
+  .sortable-ghost {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+
+  .input-error {
+    border-color: rgb(239 68 68) !important;
+    background-color: rgb(254 242 242) !important;
+  }
+
+  #page-preview {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  #sections-panel {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  #sections-panel::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #sections-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #sections-panel::-webkit-scrollbar-thumb {
+    background: rgb(156 163 175);
+    border-radius: 3px;
+  }
+
+  #sections-panel::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128);
+  }
+
+  .form-control textarea {
+    font-family: "Courier New", monospace;
+    font-size: 0.875rem;
+  }
+
+  #component-grid .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .alert {
+    animation: slideInRight 0.3s ease;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .loading-state {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .space-y-3 > * + * {
+    margin-top: 0.75rem;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .rich-text-editor .ql-toolbar {
+    border: 1px solid rgb(229, 231, 235);
+    border-bottom: none;
+    border-radius: 0.375rem 0.375rem 0 0;
+    background: rgb(249, 250, 251);
+  }
+
+  .rich-text-editor .ql-container {
+    border: 1px solid rgb(229, 231, 235);
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    font-family: inherit;
+  }
+
+  .rich-text-editor .ql-editor {
+    min-height: 150px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .rich-text-editor .ql-editor h1 {
+    font-size: 2.5rem !important;
+    font-weight: bold;
+    margin: 1rem 0 0.5rem 0;
+  }
+
+  .rich-text-editor .ql-editor h2 {
+    font-size: 2rem !important;
+    font-weight: bold;
+    margin: 0.75rem 0 0.5rem 0;
+  }
+
+  .rich-text-editor .ql-editor h3 {
+    font-size: 1.5rem !important;
+    font-weight: bold;
+    margin: 0.5rem 0 0.25rem 0;
+  }
+
+  .rich-text-editor .ql-editor .ql-size-small {
+    font-size: 0.75rem !important;
+  }
+
+  .rich-text-editor .ql-editor .ql-size-large {
+    font-size: 1.25rem !important;
+  }
+
+  .rich-text-editor .ql-editor .ql-size-huge {
+    font-size: 1.5rem !important;
+  }
+
+  .rich-text-editor .ql-editor p {
+    margin: 0.5rem 0;
+  }
+
+  .rich-text-editor .ql-editor ul,
+  .rich-text-editor .ql-editor ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .rich-text-editor .ql-editor strong {
+    font-weight: bold;
+  }
+
+  .rich-text-editor .ql-editor em {
+    font-style: italic;
+  }
+
+  .rich-text-editor .ql-editor u {
+    text-decoration: underline;
+  }
+
+  .rich-text-editor .ql-editor a {
+    color: rgb(59, 130, 246);
+    text-decoration: underline;
+  }
+
+  .content-typography {
+    color: inherit;
+  }
+
+  @media (max-width: 768px) {
+    #editor-area {
+      grid-template-columns: 1fr !important;
+    }
+
+    .xl\\:col-span-3 {
+      order: 2;
+    }
+
+    .xl\\:col-span-1 {
+      order: 1;
+    }
+  }
+
+  /* Visual Editor Styles */
+  .features-visual-editor .card,
+  .testimonials-visual-editor .card,
+  .plans-visual-editor .card {
+    transition: all 0.2s ease;
+    margin-bottom: 0.75rem;
+  }
+
+  .features-visual-editor .card:hover,
+  .testimonials-visual-editor .card:hover,
+  .plans-visual-editor .card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .plan-features-editor {
+    background: rgb(249 250 251);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    border: 1px solid rgb(229 231 235);
+    min-height: 60px;
+  }
+
+  .visual-editor-empty {
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(0, 0, 0, 0.05) 10px,
+      rgba(0, 0, 0, 0.05) 20px
+    );
+  }
+
+  /* Responsive fixes for inputs */
+  .features-visual-editor input,
+  .testimonials-visual-editor input,
+  .plans-visual-editor input,
+  .features-visual-editor textarea,
+  .testimonials-visual-editor textarea,
+  .plans-visual-editor textarea,
+  .features-visual-editor select,
+  .testimonials-visual-editor select,
+  .plans-visual-editor select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Better mobile layout */
+  @media (max-width: 640px) {
+    .features-visual-editor .card-body,
+    .testimonials-visual-editor .card-body,
+    .plans-visual-editor .card-body {
+      padding: 0.75rem;
+    }
+
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
 
 <!-- Load SortableJS for drag and drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"
 ></script>
 
+<!-- Load Quill.js for rich text editing -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
 <script>
   // @ts-nocheck
-  // Dynamic imports for client-side modules
+
+  // Add type declarations to fix TypeScript errors
+  window.Quill = window.Quill || undefined;
+
   let apiHelpers, componentRegistry;
 
   const loadModules = async () => {
     try {
+      console.log("Loading modules...");
       const api = await import("../utils/api-helpers.js");
       const comp = await import("../utils/component-registry.js");
+
+      console.log("API module loaded:", api);
+      console.log("Component registry loaded:", comp);
 
       apiHelpers = {
         fetchPages: api.fetchPages,
@@ -214,6 +562,7 @@ import Layout from "../layouts/Layout.astro";
         updatePage: api.updatePage,
         createPage: api.createPage,
         deletePage: api.deletePage,
+        updatePageSettings: api.updatePageSettings,
       };
 
       componentRegistry = {
@@ -221,6 +570,9 @@ import Layout from "../layouts/Layout.astro";
         createNewSection: comp.createNewSection,
         getComponentMeta: comp.getComponentMeta,
       };
+
+      console.log("API helpers configured:", apiHelpers);
+      console.log("Component registry configured:", componentRegistry);
 
       return true;
     } catch (error) {
@@ -236,20 +588,33 @@ import Layout from "../layouts/Layout.astro";
       this.isSaving = false;
       this.sections = [];
       this.sortable = null;
+      this.sectionsPanelSortable = null; // For sidebar drag and drop
+      this.quillEditors = new Map();
+      this.selectedSectionIndex = null; // Track selected section
+
+      // Bind event handlers to maintain 'this' context
+      this.boundHandleFieldChange = this.handleFieldChange.bind(this);
 
       this.init();
     }
 
     async init() {
       try {
+        console.log("Initializing Site Editor...");
+
         const modulesLoaded = await loadModules();
         if (!modulesLoaded) {
           this.showAlert("Failed to load required modules", "error");
           return;
         }
 
+        console.log("Modules loaded successfully, checking auth...");
         this.checkAuth();
+
+        console.log("Auth check passed, loading pages...");
         await this.loadPages();
+
+        console.log("Pages loaded, setting up event listeners...");
         this.setupEventListeners();
         this.setupComponentModal();
 
@@ -261,10 +626,15 @@ import Layout from "../layouts/Layout.astro";
     }
 
     checkAuth() {
+      console.log("Checking authentication...");
       const jwt = localStorage.getItem("jwt");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+      console.log("JWT exists:", !!jwt);
+      console.log("User data:", user);
+
       if (!jwt || !user.id) {
+        console.log("Authentication failed, redirecting to login...");
         window.location.href = "/login";
         return;
       }
@@ -277,33 +647,127 @@ import Layout from "../layouts/Layout.astro";
 
     async loadPages() {
       try {
+        console.log("Starting to load pages...");
+
         const pages = await apiHelpers.fetchPages();
+        console.log("Fetched pages from API helper:", pages);
+
         const selector = document.getElementById("page-selector");
+        if (!selector) {
+          console.error("Page selector element not found!");
+          return;
+        }
 
         selector.innerHTML = '<option value="">Select a page...</option>';
 
+        if (!Array.isArray(pages)) {
+          console.error("Pages is not an array:", pages);
+          this.showAlert("Invalid pages data received", "error");
+          return;
+        }
+
         pages.forEach((page) => {
-          const option = document.createElement("option");
-          option.value = page.id.toString();
-          option.textContent = page.title;
-          selector.appendChild(option);
+          if (page && page.id && page.title) {
+            const option = document.createElement("option");
+            option.value = page.id.toString();
+            option.textContent = page.title;
+            selector.appendChild(option);
+            console.log(`Added page option: ${page.title} (ID: ${page.id})`);
+          } else {
+            console.warn("Invalid page data:", page);
+          }
         });
 
-        console.log(`Loaded ${pages.length} pages`);
+        console.log(`Successfully loaded ${pages.length} pages`);
+
+        if (pages.length === 0) {
+          this.showAlert("No pages found. Create your first page!", "info");
+        }
       } catch (error) {
         this.showAlert("Failed to load pages", "error");
         console.error("Error loading pages:", error);
+        console.error("Error details:", error.message, error.stack);
       }
     }
 
     async loadPage(pageId) {
       try {
         const page = await apiHelpers.fetchPage(pageId);
+        console.log("Loaded page from API:", JSON.stringify(page, null, 2));
         this.currentPage = page;
-        this.sections = page.sections || [];
+
+        // Transform Strapi component format to visual editor format
+        this.sections = (page.sections || []).map((section) => {
+          const transformedSection = { ...section };
+
+          // Transform feature-grid components
+          if (
+            section.__component === "blocks.feature-grid" &&
+            Array.isArray(section.features)
+          ) {
+            console.log("Transforming feature-grid section:", section);
+            transformedSection.features = section.features.map((feature) => ({
+              icon: feature.icon || "🚀",
+              title: feature.title || "",
+              description: feature.description || "",
+              badge: feature.badge || "",
+              badgeStyle: feature.badgeStyle || "primary",
+              link: feature.link || "",
+              iconStyle: feature.iconStyle || "emoji",
+              size: feature.size || "md",
+            }));
+            console.log("Transformed features:", transformedSection.features);
+          }
+
+          // Transform testimonial components
+          if (
+            section.__component === "blocks.testimonial" &&
+            Array.isArray(section.testimonials)
+          ) {
+            transformedSection.testimonials = section.testimonials.map(
+              (testimonial) => ({
+                quote: testimonial.quote || "",
+                author: testimonial.author || "",
+                role: testimonial.role || "",
+                company: testimonial.company || "",
+              }),
+            );
+          }
+
+          // Transform pricing components
+          if (
+            section.__component === "blocks.pricing" &&
+            Array.isArray(section.plans)
+          ) {
+            transformedSection.plans = section.plans.map((plan) => ({
+              name: plan.name || "",
+              price: plan.price || 0,
+              interval: plan.interval || "one-time",
+              features: Array.isArray(plan.features) ? plan.features : [],
+              buttonText: plan.buttonText || "Get Started",
+              featured: Boolean(plan.featured),
+              description: plan.description || "",
+              badge: plan.badge || "",
+              badgeStyle: plan.badgeStyle || "primary",
+            }));
+          }
+
+          return transformedSection;
+        });
+
+        console.log(
+          "Transformed sections for editor:",
+          JSON.stringify(this.sections, null, 2),
+        );
 
         const deleteBtn = document.getElementById("delete-page");
         deleteBtn.disabled = false;
+
+        const previewBtn = document.getElementById("preview-mode");
+        previewBtn.disabled = false;
+
+        const settingsBtn = document.getElementById("page-settings");
+        settingsBtn.disabled = false;
 
         const editorArea = document.getElementById("editor-area");
         if (editorArea) editorArea.style.display = "grid";
@@ -329,7 +793,129 @@ import Layout from "../layouts/Layout.astro";
       });
 
       preview.innerHTML = html;
+
+      this.sections.forEach((section, index) => {
+        if (section.__component === "blocks.content") {
+          const contentDiv = preview.querySelector(
+            `[data-content-section="${index}"]`,
+          );
+          if (contentDiv && section.content) {
+            contentDiv.innerHTML = this.applyDaisyUIClasses(section.content);
+          }
+        }
+      });
+
+      // Add click handlers for section selection
+      preview
+        .querySelectorAll(".site-editor-section")
+        .forEach((sectionEl, index) => {
+          sectionEl.addEventListener("click", (e) => {
+            // Don't trigger if clicking on drag handle
+            if (e.target.closest(".drag-handle")) return;
+
+            e.stopPropagation();
+            this.selectSection(index);
+          });
+        });
+
+      // Add click handler to deselect when clicking outside sections
+      preview.addEventListener("click", (e) => {
+        if (!e.target.closest(".site-editor-section")) {
+          this.selectSection(null);
+        }
+      });
+
       this.setupSortable();
+    }
+
+    selectSection(index) {
+      // Update selected section
+      this.selectedSectionIndex = index;
+
+      // Update visual selection in preview
+      const preview = document.getElementById("page-preview");
+      if (preview) {
+        // Remove previous selection
+        preview.querySelectorAll(".site-editor-section").forEach((el) => {
+          el.classList.remove("selected-section");
+        });
+
+        // Add selection to new section
+        if (index !== null) {
+          const selectedSection = preview.querySelector(
+            `[data-section-index="${index}"]`,
+          );
+          if (selectedSection) {
+            selectedSection.classList.add("selected-section");
+          }
+        }
+      }
+
+      // Re-render sections panel to show only selected section or all sections
+      this.renderSectionsPanel();
+    }
+
+    applyDaisyUIClasses(htmlContent) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = htmlContent;
+
+      tempDiv.querySelectorAll("h1").forEach((el) => {
+        el.className = "text-4xl font-bold mb-4";
+      });
+
+      tempDiv.querySelectorAll("h2").forEach((el) => {
+        el.className = "text-3xl font-bold mb-3";
+      });
+
+      tempDiv.querySelectorAll("h3").forEach((el) => {
+        el.className = "text-2xl font-semibold mb-3";
+      });
+
+      tempDiv.querySelectorAll("h4").forEach((el) => {
+        el.className = "text-xl font-semibold mb-2";
+      });
+
+      tempDiv.querySelectorAll("h5").forEach((el) => {
+        el.className = "text-lg font-semibold mb-2";
+      });
+
+      tempDiv.querySelectorAll("h6").forEach((el) => {
+        el.className = "text-base font-semibold mb-2";
+      });
+
+      tempDiv.querySelectorAll("p").forEach((el) => {
+        el.className = "mb-4 leading-relaxed";
+      });
+
+      tempDiv.querySelectorAll("strong").forEach((el) => {
+        el.className = "font-bold";
+      });
+
+      tempDiv.querySelectorAll("em").forEach((el) => {
+        el.className = "italic";
+      });
+
+      tempDiv.querySelectorAll("u").forEach((el) => {
+        el.className = "underline";
+      });
+
+      tempDiv.querySelectorAll("ul").forEach((el) => {
+        el.className = "list-disc list-inside mb-4 space-y-1";
+      });
+
+      tempDiv.querySelectorAll("ol").forEach((el) => {
+        el.className = "list-decimal list-inside mb-4 space-y-1";
+      });
+
+      tempDiv.querySelectorAll("li").forEach((el) => {
+        el.className = "leading-relaxed";
+      });
+
+      tempDiv.querySelectorAll("a").forEach((el) => {
+        el.className = "text-primary underline hover:text-primary-focus";
+      });
+
+      return tempDiv.innerHTML;
     }
 
     renderSectionHTML(section, index) {
@@ -354,24 +940,32 @@ import Layout from "../layouts/Layout.astro";
             </section>
           `;
 
-        case "blocks.feature-grid":
-          const features = section.features || [];
+        case "blocks.testimonial":
+          const testimonials = section.testimonials || [];
           return `
-            <section class="py-20 bg-base-100 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+            <section class="py-20 bg-base-200 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
               <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
                 ⋮⋮
               </div>
               <div class="container mx-auto px-4">
-                <h2 class="text-4xl font-bold text-center mb-4">${section.title || "Features"}</h2>
+                <h2 class="text-4xl font-bold text-center mb-4">${section.title || "What Our Customers Say"}</h2>
                 ${section.subtitle ? `<p class="text-xl text-center text-base-content/70 mb-12">${section.subtitle}</p>` : ""}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  ${features
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  ${testimonials
                     .map(
-                      (f) => `
-                    <div class="card bg-base-200 shadow-lg">
+                      (t) => `
+                    <div class="card bg-base-100 shadow-lg">
                       <div class="card-body">
-                        <h3 class="card-title">${f.icon || "🚀"} ${f.title || "Feature"}</h3>
-                        <p>${f.description || "Feature description"}</p>
+                        <p class="italic">"${t.quote || "Great product!"}"</p>
+                        <div class="flex items-center gap-3 mt-4">
+                          <div class="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center flex-shrink-0">
+                            ${t.author ? t.author.charAt(0).toUpperCase() : "?"}
+                          </div>
+                          <div>
+                            <div class="font-semibold">${t.author || "Anonymous"}</div>
+                            <div class="text-sm text-base-content/70">${t.role || ""} ${t.company ? `at ${t.company}` : ""}</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   `,
@@ -384,7 +978,7 @@ import Layout from "../layouts/Layout.astro";
 
         case "blocks.cta":
           return `
-            <section class="py-20 bg-${section.backgroundColor || "primary"} site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+            <section class="py-20 bg-${section.backgroundColor || "primary"} text-${section.backgroundColor === "primary" ? "primary-content" : "base-content"} site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
               <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
                 ⋮⋮
               </div>
@@ -392,6 +986,139 @@ import Layout from "../layouts/Layout.astro";
                 <h2 class="text-4xl font-bold mb-4">${section.title || "Call to Action"}</h2>
                 ${section.subtitle ? `<p class="text-xl mb-8 opacity-90">${section.subtitle}</p>` : ""}
                 ${section.buttonText ? `<button class="btn btn-${section.buttonVariant || "accent"} btn-lg">${section.buttonText}</button>` : ""}
+              </div>
+            </section>
+          `;
+
+        case "blocks.content":
+          const layoutClass =
+            section.layout === "full-width"
+              ? "max-w-6xl mx-auto"
+              : section.layout === "two-column"
+                ? "max-w-2xl mx-auto"
+                : "max-w-4xl mx-auto";
+
+          return `
+            <section class="py-20 bg-base-100 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+              <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
+                ⋮⋮
+              </div>
+              <div class="container mx-auto px-4">
+                <div class="${layoutClass}">
+                  ${section.title ? `<h2 class="text-4xl font-bold text-center mb-8">${section.title}</h2>` : ""}
+                  <div class="content-typography" data-content-section="${index}"></div>
+                </div>
+              </div>
+            </section>
+          `;
+
+        case "blocks.pricing":
+          const plans = section.plans || [];
+          return `
+            <section class="py-20 bg-base-100 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+              <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
+                ⋮⋮
+              </div>
+              <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold text-center mb-4">${section.title || "Choose Your Plan"}</h2>
+                ${section.subtitle ? `<p class="text-xl text-center text-base-content/70 mb-12">${section.subtitle}</p>` : ""}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                  ${plans
+                    .map(
+                      (plan) => `
+                    <div class="card bg-base-200 shadow-lg ${plan.featured ? "ring-2 ring-primary transform scale-105" : ""} transition-all">
+                      <div class="card-body">
+                        <div class="flex items-center gap-2 mb-3">
+                          ${plan.featured ? `<div class="badge badge-primary">Most Popular</div>` : ""}
+                          ${plan.badge ? `<div class="badge badge-${plan.badgeStyle || "secondary"}">${plan.badge}</div>` : ""}
+                        </div>
+                        <h3 class="card-title text-2xl mb-2">${plan.name || "Plan"}</h3>
+                        ${plan.description ? `<p class="text-sm text-base-content/70 mb-4">${plan.description}</p>` : ""}
+                        <div class="text-4xl font-bold mb-4">
+                          $${plan.price || 0}
+                          <span class="text-lg font-normal text-base-content/70">/${plan.interval || "one-time"}</span>
+                        </div>
+                        <ul class="space-y-2 mb-6">
+                          ${(plan.features || [])
+                            .map(
+                              (feature) =>
+                                `<li class="flex items-center gap-2"><span class="text-success text-lg">✓</span> <span class="text-sm">${feature}</span></li>`,
+                            )
+                            .join("")}
+                        </ul>
+                        <button class="btn ${plan.featured ? "btn-primary" : "btn-outline btn-primary"} btn-block">${plan.buttonText || "Get Started"}</button>
+                      </div>
+                    </div>
+                  `,
+                    )
+                    .join("")}
+                </div>
+              </div>
+            </section>
+          `;
+
+        case "blocks.feature-grid":
+          const features = section.features || [];
+          return `
+            <section class="py-20 bg-base-100 site-editor-section relative" data-section-index="${index}" data-component="${section.__component}">
+              <div class="drag-handle absolute top-4 right-4 btn btn-sm btn-ghost opacity-50 hover:opacity-100 z-10">
+                ⋮⋮
+              </div>
+              <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold text-center mb-4">${section.title || "Features"}</h2>
+                ${section.subtitle ? `<p class="text-xl text-center text-base-content/70 mb-12">${section.subtitle}</p>` : ""}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  ${features
+                    .map((f) => {
+                      const iconSizeClass =
+                        f.size === "sm"
+                          ? "text-xl"
+                          : f.size === "lg"
+                            ? "text-4xl"
+                            : "text-2xl";
+                      const cardSizeClass =
+                        f.size === "sm"
+                          ? "p-4"
+                          : f.size === "lg"
+                            ? "p-8"
+                            : "p-6";
+
+                      return `
+                          <div class="card bg-base-200 shadow-lg ${f.link ? "hover:shadow-xl transition-shadow cursor-pointer" : ""}">
+                            <div class="card-body ${cardSizeClass}">
+                              <div class="flex items-start gap-3 mb-3">
+                                ${
+                                  f.iconStyle === "circle"
+                                    ? `
+                                  <div class="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center flex-shrink-0">
+                                    <span class="${iconSizeClass}">${f.icon || "🚀"}</span>
+                                  </div>       
+                                `
+                                    : f.iconStyle === "square"
+                                      ? `
+                                  <div class="w-12 h-12 rounded-lg bg-primary text-primary-content flex items-center justify-center">
+                                    <span class="${iconSizeClass}">${f.icon || "🚀"}</span>
+                                  </div>
+                                `
+                                      : `
+                                  <span class="${iconSizeClass} flex-shrink-0">${f.icon || "🚀"}</span>
+                                `
+                                }
+                                <div class="flex-1">
+                                  <div class="flex items-center gap-2 mb-2">
+                                    <h3 class="card-title text-lg">${f.title || "Feature"}</h3>
+                                    ${f.badge ? `<span class="badge badge-${f.badgeStyle || "primary"} badge-sm">${f.badge}</span>` : ""}
+                                  </div>
+                                </div>
+                              </div>
+                              <p class="text-base-content/80">${f.description || "Feature description"}</p>
+                              ${f.link ? `<div class="card-actions justify-end mt-4"><span class="text-primary text-sm font-medium">Learn more →</span></div>` : ""}
+                            </div>
+                          </div>
+                        `;
+                    })
+                    .join("")}
+                </div>
               </div>
             </section>
           `;
@@ -419,9 +1146,35 @@ import Layout from "../layouts/Layout.astro";
       const panel = document.getElementById("sections-panel");
       if (!panel) return;
 
+      this.cleanupQuillEditors();
+
       panel.innerHTML = "";
 
-      this.sections.forEach((section, index) => {
+      // Show selection info if a section is selected
+      if (this.selectedSectionIndex !== null) {
+        const selectionInfo = document.createElement("div");
+        selectionInfo.className = "alert alert-info mb-4";
+        selectionInfo.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span>Editing section ${this.selectedSectionIndex + 1}</span>
+            <button class="btn btn-sm btn-ghost" onclick="siteEditor.selectSection(null)">Show All Sections</button>
+          </div>
+        `;
+        panel.appendChild(selectionInfo);
+      }
+
+      // Determine which sections to show
+      const sectionsToShow =
+        this.selectedSectionIndex !== null
+          ? [
+              {
+                section: this.sections[this.selectedSectionIndex],
+                index: this.selectedSectionIndex,
+              },
+            ]
+          : this.sections.map((section, index) => ({ section, index }));
+
+      sectionsToShow.forEach(({ section, index }) => {
         const meta = componentRegistry.getComponentMeta(section.__component);
         if (!meta) return;
 
@@ -435,6 +1188,7 @@ import Layout from "../layouts/Layout.astro";
                 <span class="drag-handle cursor-move text-lg">⋮⋮</span>
                 <span class="text-lg">${meta.icon}</span>
                 <span class="font-semibold">${meta.name}</span>
+                ${this.selectedSectionIndex === null ? `<span class="badge badge-outline">Section ${index + 1}</span>` : ""}
               </div>
               <button class="btn btn-error btn-xs delete-section">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,6 +1206,55 @@ import Layout from "../layouts/Layout.astro";
       });
 
       this.setupFieldListeners();
+      this.setupSectionsPanelSortable();
+    }
+
+    setupSectionsPanelSortable() {
+      const panel = document.getElementById("sections-panel");
+      if (!panel || this.selectedSectionIndex !== null) return; // Don't enable drag when section is selected
+
+      if (this.sectionsPanelSortable) {
+        this.sectionsPanelSortable.destroy();
+      }
+
+      if (typeof window.Sortable !== "undefined") {
+        this.sectionsPanelSortable = new window.Sortable(panel, {
+          animation: 150,
+          ghostClass: "sortable-ghost",
+          handle: ".drag-handle",
+          draggable: ".card",
+          onEnd: (evt) => {
+            console.log(
+              "Sections panel drag end:",
+              evt.oldIndex,
+              "->",
+              evt.newIndex,
+            );
+            if (evt.oldIndex !== evt.newIndex) {
+              // Reorder sections array
+              const item = this.sections.splice(evt.oldIndex, 1)[0];
+              this.sections.splice(evt.newIndex, 0, item);
+
+              this.setDirty(true);
+              this.renderPagePreview();
+              this.renderSectionsPanel();
+            }
+          },
+        });
+        console.log(
+          "Sections panel sortable initialized:",
+          this.sectionsPanelSortable,
+        );
+      }
+    }
+
+    cleanupQuillEditors() {
+      this.quillEditors.forEach((editor, key) => {
+        if (editor && editor.container) {
+          editor.container.remove();
+        }
+      });
+      this.quillEditors.clear();
     }
 
     renderSectionFields(section, index) {
@@ -460,7 +1263,7 @@ import Layout from "../layouts/Layout.astro";
           return `
             <div class="form-control">
               <label class="label"><span class="label-text">Title</span></label>
-              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${section.title || ""}">
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${(section.title || "").replace(/"/g, "&quot;")}">
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">Subtitle</span></label>
@@ -468,11 +1271,20 @@ import Layout from "../layouts/Layout.astro";
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">Button Text</span></label>
-              <input type="text" class="input input-bordered input-sm" data-field="buttonText" data-section="${index}" value="${section.buttonText || ""}">
+              <input type="text" class="input input-bordered input-sm" data-field="buttonText" data-section="${index}" value="${(section.buttonText || "").replace(/"/g, "&quot;")}">
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">Button Link</span></label>
-              <input type="text" class="input input-bordered input-sm" data-field="buttonLink" data-section="${index}" value="${section.buttonLink || ""}">
+              <input type="text" class="input input-bordered input-sm" data-field="buttonLink" data-section="${index}" value="${(section.buttonLink || "").replace(/"/g, "&quot;")}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Button Variant</span></label>
+              <select class="select select-bordered select-sm" data-field="buttonVariant" data-section="${index}">
+                <option value="primary" ${section.buttonVariant === "primary" ? "selected" : ""}>Primary</option>
+                <option value="secondary" ${section.buttonVariant === "secondary" ? "selected" : ""}>Secondary</option>
+                <option value="accent" ${section.buttonVariant === "accent" ? "selected" : ""}>Accent</option>
+                <option value="outline" ${section.buttonVariant === "outline" ? "selected" : ""}>Outline</option>
+              </select>
             </div>
           `;
 
@@ -480,15 +1292,41 @@ import Layout from "../layouts/Layout.astro";
           return `
             <div class="form-control">
               <label class="label"><span class="label-text">Title</span></label>
-              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${section.title || ""}">
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${(section.title || "").replace(/"/g, "&quot;")}">
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">Subtitle</span></label>
               <textarea class="textarea textarea-bordered textarea-sm" data-field="subtitle" data-section="${index}">${section.subtitle || ""}</textarea>
             </div>
             <div class="form-control">
-              <label class="label"><span class="label-text">Features (JSON)</span></label>
-              <textarea class="textarea textarea-bordered textarea-sm" data-field="features" data-section="${index}" rows="4">${JSON.stringify(section.features || [], null, 2)}</textarea>
+              <label class="label">
+                <span class="label-text">Features</span>
+                <button type="button" class="btn btn-xs btn-primary add-feature-btn" data-section="${index}">+ Add Feature</button>
+              </label>
+              <div class="features-visual-editor space-y-3" data-section="${index}">
+                ${this.renderFeaturesEditor(section.features || [], index)}
+              </div>
+            </div>
+          `;
+
+        case "blocks.testimonial":
+          return `
+            <div class="form-control">
+              <label class="label"><span class="label-text">Title</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${(section.title || "").replace(/"/g, "&quot;")}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Subtitle</span></label>
+              <textarea class="textarea textarea-bordered textarea-sm" data-field="subtitle" data-section="${index}">${section.subtitle || ""}</textarea>
+            </div>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Testimonials</span>
+                <button type="button" class="btn btn-xs btn-primary add-testimonial-btn" data-section="${index}">+ Add Testimonial</button>
+              </label>
+              <div class="testimonials-visual-editor space-y-3" data-section="${index}">
+                ${this.renderTestimonialsEditor(section.testimonials || [], index)}
+              </div>
             </div>
           `;
 
@@ -496,7 +1334,7 @@ import Layout from "../layouts/Layout.astro";
           return `
             <div class="form-control">
               <label class="label"><span class="label-text">Title</span></label>
-              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${section.title || ""}">
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${(section.title || "").replace(/"/g, "&quot;")}">
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">Subtitle</span></label>
@@ -504,13 +1342,344 @@ import Layout from "../layouts/Layout.astro";
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">Button Text</span></label>
-              <input type="text" class="input input-bordered input-sm" data-field="buttonText" data-section="${index}" value="${section.buttonText || ""}">
+              <input type="text" class="input input-bordered input-sm" data-field="buttonText" data-section="${index}" value="${(section.buttonText || "").replace(/"/g, "&quot;")}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Button Link</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="buttonLink" data-section="${index}" value="${(section.buttonLink || "").replace(/"/g, "&quot;")}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Button Variant</span></label>
+              <select class="select select-bordered select-sm" data-field="buttonVariant" data-section="${index}">
+                <option value="primary" ${section.buttonVariant === "primary" ? "selected" : ""}>Primary</option>
+                <option value="secondary" ${section.buttonVariant === "secondary" ? "selected" : ""}>Secondary</option>
+                <option value="accent" ${section.buttonVariant === "accent" ? "selected" : ""}>Accent</option>
+                <option value="outline" ${section.buttonVariant === "outline" ? "selected" : ""}>Outline</option>
+              </select>
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Background Color</span></label>
+              <select class="select select-bordered select-sm" data-field="backgroundColor" data-section="${index}">
+                <option value="primary" ${section.backgroundColor === "primary" ? "selected" : ""}>Primary</option>
+                <option value="secondary" ${section.backgroundColor === "secondary" ? "selected" : ""}>Secondary</option>
+                <option value="accent" ${section.backgroundColor === "accent" ? "selected" : ""}>Accent</option>
+                <option value="base-200" ${section.backgroundColor === "base-200" ? "selected" : ""}>Light Gray</option>
+              </select>
+            </div>
+          `;
+
+        case "blocks.content":
+          return `
+            <div class="form-control">
+              <label class="label"><span class="label-text">Title (Optional)</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${(section.title || "").replace(/"/g, "&quot;")}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Content</span></label>
+              <div class="rich-text-editor" data-field="content" data-section="${index}" data-content="${encodeURIComponent(section.content || "")}"></div>
+              <div class="label">
+                <span class="label-text-alt">Use the rich text editor to format your content</span>
+              </div>
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Layout</span></label>
+              <select class="select select-bordered select-sm" data-field="layout" data-section="${index}">
+                <option value="centered" ${section.layout === "centered" ? "selected" : ""}>Centered</option>
+                <option value="full-width" ${section.layout === "full-width" ? "selected" : ""}>Full Width</option>
+                <option value="two-column" ${section.layout === "two-column" ? "selected" : ""}>Two Column</option>
+              </select>
+            </div>
+          `;
+
+        case "blocks.pricing":
+          return `
+            <div class="form-control">
+              <label class="label"><span class="label-text">Title</span></label>
+              <input type="text" class="input input-bordered input-sm" data-field="title" data-section="${index}" value="${(section.title || "").replace(/"/g, "&quot;")}">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Subtitle</span></label>
+              <textarea class="textarea textarea-bordered textarea-sm" data-field="subtitle" data-section="${index}">${section.subtitle || ""}</textarea>
+            </div>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Pricing Plans</span>
+                <button type="button" class="btn btn-xs btn-primary add-plan-btn" data-section="${index}">+ Add Plan</button>
+              </label>
+              <div class="plans-visual-editor space-y-3" data-section="${index}">
+                ${this.renderPlansEditor(section.plans || [], index)}
+              </div>
             </div>
           `;
 
         default:
           return `<p class="text-sm text-base-content/70">Component editor not implemented yet</p>`;
       }
+    }
+
+    renderFeaturesEditor(features, sectionIndex) {
+      if (!Array.isArray(features) || features.length === 0) {
+        return '<div class="text-sm text-base-content/70 p-3 border border-dashed border-base-300 rounded">No features yet. Click "Add Feature" to get started.</div>';
+      }
+
+      return features
+        .map(
+          (feature, index) => `
+        <div class="card bg-base-100 border border-base-300 mb-4">
+          <div class="card-body p-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <span class="font-medium">Feature ${index + 1}</span>
+              <button type="button" class="btn btn-sm btn-error remove-feature-btn" data-section="${sectionIndex}" data-index="${index}">Remove</button>
+            </div>
+            
+            <div class="space-y-4">
+              <!-- Icon and Title Row -->
+              <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Icon</span></label>
+                  <input type="text" class="input input-bordered input-sm" value="${feature.icon || "🚀"}" 
+                         data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="icon" placeholder="🚀">
+                  <label class="label"><span class="label-text-alt">Emoji or text</span></label>
+                </div>
+                <div class="form-control lg:col-span-3">
+                  <label class="label"><span class="label-text">Title</span></label>
+                  <input type="text" class="input input-bordered input-sm" value="${(feature.title || "").replace(/"/g, "&quot;")}" 
+                         data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="title" placeholder="Feature Title">
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="form-control">
+                <label class="label"><span class="label-text">Description</span></label>
+                <textarea class="textarea textarea-bordered textarea-sm" rows="3"
+                          data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="description" placeholder="Detailed feature description...">${feature.description || ""}</textarea>
+              </div>
+
+              <!-- Custom Badge -->
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Badge (optional)</span>
+                  <span class="label-text-alt">e.g., "New", "Popular", "Pro"</span>
+                </label>
+                <div class="join">
+                  <input type="text" class="input input-bordered input-sm join-item flex-1" value="${(feature.badge || "").replace(/"/g, "&quot;")}" 
+                         data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="badge" placeholder="New">
+                  <select class="select select-bordered select-sm join-item" 
+                          data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="badgeStyle">
+                    <option value="primary" ${feature.badgeStyle === "primary" ? "selected" : ""}>Primary</option>
+                    <option value="secondary" ${feature.badgeStyle === "secondary" ? "selected" : ""}>Secondary</option>
+                    <option value="accent" ${feature.badgeStyle === "accent" ? "selected" : ""}>Accent</option>
+                    <option value="success" ${feature.badgeStyle === "success" ? "selected" : ""}>Success</option>
+                    <option value="warning" ${feature.badgeStyle === "warning" ? "selected" : ""}>Warning</option>
+                    <option value="info" ${feature.badgeStyle === "info" ? "selected" : ""}>Info</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Link (optional) -->
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Link (optional)</span>
+                  <span class="label-text-alt">Make feature clickable</span>
+                </label>
+                <input type="url" class="input input-bordered input-sm" value="${(feature.link || "").replace(/"/g, "&quot;")}" 
+                       data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="link" placeholder="https://example.com/feature">
+              </div>
+
+              <!-- Style Options -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Icon Style</span></label>
+                  <select class="select select-bordered select-sm" 
+                          data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="iconStyle">
+                    <option value="emoji" ${feature.iconStyle === "emoji" ? "selected" : ""}>Emoji</option>
+                    <option value="circle" ${feature.iconStyle === "circle" ? "selected" : ""}>Circle Background</option>
+                    <option value="square" ${feature.iconStyle === "square" ? "selected" : ""}>Square Background</option>
+                    <option value="none" ${feature.iconStyle === "none" ? "selected" : ""}>No Background</option>
+                  </select>
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Size</span></label>
+                  <select class="select select-bordered select-sm" 
+                          data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="size">
+                    <option value="sm" ${feature.size === "sm" ? "selected" : ""}>Small</option>
+                    <option value="md" ${feature.size === "md" ? "selected" : ""}>Medium</option>
+                    <option value="lg" ${feature.size === "lg" ? "selected" : ""}>Large</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+        )
+        .join("");
+    }
+
+    renderTestimonialsEditor(testimonials, sectionIndex) {
+      if (!Array.isArray(testimonials) || testimonials.length === 0) {
+        return '<div class="text-sm text-base-content/70 p-3 border border-dashed border-base-300 rounded">No testimonials yet. Click "Add Testimonial" to get started.</div>';
+      }
+
+      return testimonials
+        .map(
+          (testimonial, index) => `
+        <div class="card bg-base-100 border border-base-300 mb-3">
+          <div class="card-body p-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <span class="font-medium text-sm">Testimonial ${index + 1}</span>
+              <button type="button" class="btn btn-xs btn-error remove-testimonial-btn self-end sm:self-auto" data-section="${sectionIndex}" data-index="${index}">Remove</button>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <label class="label py-1"><span class="label-text text-xs">Quote</span></label>
+                <textarea class="textarea textarea-bordered textarea-xs w-full" rows="3"
+                          data-field="testimonials" data-section="${sectionIndex}" data-testimonial-index="${index}" data-testimonial-field="quote" placeholder="Customer quote">${testimonial.quote || ""}</textarea>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label class="label py-1"><span class="label-text text-xs">Author</span></label>
+                  <input type="text" class="input input-bordered input-xs w-full" value="${(testimonial.author || "").replace(/"/g, "&quot;")}" 
+                         data-field="testimonials" data-section="${sectionIndex}" data-testimonial-index="${index}" data-testimonial-field="author" placeholder="John Doe">
+                </div>
+                <div>
+                  <label class="label py-1"><span class="label-text text-xs">Role</span></label>
+                  <input type="text" class="input input-bordered input-xs w-full" value="${(testimonial.role || "").replace(/"/g, "&quot;")}" 
+                         data-field="testimonials" data-section="${sectionIndex}" data-testimonial-index="${index}" data-testimonial-field="role" placeholder="CEO">
+                </div>
+                <div>
+                  <label class="label py-1"><span class="label-text text-xs">Company</span></label>
+                  <input type="text" class="input input-bordered input-xs w-full" value="${(testimonial.company || "").replace(/"/g, "&quot;")}" 
+                         data-field="testimonials" data-section="${sectionIndex}" data-testimonial-index="${index}" data-testimonial-field="company" placeholder="Acme Corp">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+        )
+        .join("");
+    }
+
+    renderPlansEditor(plans, sectionIndex) {
+      if (!Array.isArray(plans) || plans.length === 0) {
+        return '<div class="text-sm text-base-content/70 p-3 border border-dashed border-base-300 rounded">No pricing plans yet. Click "Add Plan" to get started.</div>';
+      }
+
+      return plans
+        .map(
+          (plan, index) => `
+        <div class="card bg-base-100 border border-base-300 mb-4">
+          <div class="card-body p-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <span class="font-medium">Plan ${index + 1}</span>
+              <div class="flex gap-2 items-center">
+                <label class="label cursor-pointer gap-2">
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" ${plan.featured ? "checked" : ""}
+                         data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="featured">
+                  <span class="label-text">Featured</span>
+                </label>
+                <button type="button" class="btn btn-sm btn-error remove-plan-btn" data-section="${sectionIndex}" data-index="${index}">Remove</button>
+              </div>
+            </div>
+            
+            <!-- Basic Plan Info -->
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Plan Name</span></label>
+                  <input type="text" class="input input-bordered input-sm" value="${(plan.name || "").replace(/"/g, "&quot;")}" 
+                         data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="name" placeholder="Basic Plan">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Button Text</span></label>
+                  <input type="text" class="input input-bordered input-sm" value="${(plan.buttonText || "").replace(/"/g, "&quot;")}" 
+                         data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="buttonText" placeholder="Get Started">
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Price</span></label>
+                  <label class="input input-bordered input-sm flex items-center gap-2">
+                    <span>$</span>
+                    <input type="number" class="grow" value="${plan.price || 0}" 
+                           data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="price" placeholder="99">
+                  </label>
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Billing Period</span></label>
+                  <select class="select select-bordered select-sm" 
+                          data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="interval">
+                    <option value="month" ${plan.interval === "month" ? "selected" : ""}>per month</option>
+                    <option value="year" ${plan.interval === "year" ? "selected" : ""}>per year</option>
+                    <option value="one-time" ${plan.interval === "one-time" ? "selected" : ""}>one-time</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Custom Description -->
+              <div class="form-control">
+                <label class="label"><span class="label-text">Description (optional)</span></label>
+                <textarea class="textarea textarea-bordered textarea-sm" rows="2" 
+                          data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="description" placeholder="Perfect for small teams getting started...">${plan.description || ""}</textarea>
+              </div>
+
+              <!-- Custom Badge -->
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Custom Badge (optional)</span>
+                  <span class="label-text-alt">e.g., "Most Popular", "Best Value"</span>
+                </label>
+                <div class="join">
+                  <input type="text" class="input input-bordered input-sm join-item flex-1" value="${(plan.badge || "").replace(/"/g, "&quot;")}" 
+                         data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="badge" placeholder="Most Popular">
+                  <select class="select select-bordered select-sm join-item" 
+                          data-field="plans" data-section="${sectionIndex}" data-plan-index="${index}" data-plan-field="badgeStyle">
+                    <option value="primary" ${plan.badgeStyle === "primary" ? "selected" : ""}>Primary</option>
+                    <option value="secondary" ${plan.badgeStyle === "secondary" ? "selected" : ""}>Secondary</option>
+                    <option value="accent" ${plan.badgeStyle === "accent" ? "selected" : ""}>Accent</option>
+                    <option value="success" ${plan.badgeStyle === "success" ? "selected" : ""}>Success</option>
+                    <option value="warning" ${plan.badgeStyle === "warning" ? "selected" : ""}>Warning</option>
+                    <option value="error" ${plan.badgeStyle === "error" ? "selected" : ""}>Error</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Plan Features -->
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Features</span>
+                  <button type="button" class="btn btn-xs btn-primary add-plan-feature-btn" data-section="${sectionIndex}" data-plan-index="${index}">+ Add Feature</button>
+                </label>
+                <div class="plan-features-editor space-y-2" data-section="${sectionIndex}" data-plan-index="${index}">
+                  ${this.renderPlanFeaturesEditor(plan.features || [], sectionIndex, index)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+        )
+        .join("");
+    }
+
+    renderPlanFeaturesEditor(features, sectionIndex, planIndex) {
+      if (!Array.isArray(features) || features.length === 0) {
+        return '<div class="text-xs text-base-content/50 p-3 border border-dashed border-base-200 rounded">No features listed</div>';
+      }
+
+      return features
+        .map(
+          (feature, index) => `
+        <div class="flex gap-2 mb-2">
+          <input type="text" class="input input-bordered input-xs flex-1 w-full" value="${(feature || "").replace(/"/g, "&quot;")}" 
+                 data-field="plans" data-section="${sectionIndex}" data-plan-index="${planIndex}" data-plan-feature-index="${index}" placeholder="Feature name">
+          <button type="button" class="btn btn-xs btn-error remove-plan-feature-btn flex-shrink-0" data-section="${sectionIndex}" data-plan-index="${planIndex}" data-feature-index="${index}">×</button>
+        </div>
+      `,
+        )
+        .join("");
     }
 
     setupSortable() {
@@ -577,8 +1746,19 @@ import Layout from "../layouts/Layout.astro";
       const deleteBtn = document.getElementById("delete-page");
       deleteBtn?.addEventListener("click", () => this.deletePage());
 
+      const previewBtn = document.getElementById("preview-mode");
+      previewBtn?.addEventListener("click", () => this.previewPage());
+
+      const settingsBtn = document.getElementById("page-settings");
+      settingsBtn?.addEventListener("click", () => this.showPageSettings());
+
       const createForm = document.getElementById("create-page-form");
       createForm?.addEventListener("submit", (e) => this.handleCreatePage(e));
+
+      const settingsForm = document.getElementById("page-settings-form");
+      settingsForm?.addEventListener("submit", (e) =>
+        this.handlePageSettings(e),
+      );
 
       const titleInput = document.getElementById("page-title-input");
       const slugInput = document.getElementById("page-slug-input");
@@ -622,9 +1802,30 @@ import Layout from "../layouts/Layout.astro";
 
     setupFieldListeners() {
       const inputs = document.querySelectorAll("[data-field]");
+      console.log(`Setting up field listeners for ${inputs.length} elements`);
+
       inputs.forEach((input) => {
-        input.addEventListener("input", (e) => this.handleFieldChange(e));
-        input.addEventListener("change", (e) => this.handleFieldChange(e));
+        if (input.classList.contains("rich-text-editor")) {
+          this.initializeQuillEditor(input);
+        } else {
+          // Remove existing listeners first to avoid duplicates
+          input.removeEventListener("input", this.boundHandleFieldChange);
+          input.removeEventListener("change", this.boundHandleFieldChange);
+
+          // Add new listeners
+          input.addEventListener("input", this.boundHandleFieldChange);
+          input.addEventListener("change", this.boundHandleFieldChange);
+
+          if (input.type === "checkbox") {
+            console.log(
+              `Set up checkbox listener for:`,
+              input.getAttribute("data-plan-field"),
+            );
+            // Add explicit click handler for checkboxes to ensure they work
+            input.removeEventListener("click", this.boundHandleFieldChange);
+            input.addEventListener("click", this.boundHandleFieldChange);
+          }
+        }
       });
 
       const deleteButtons = document.querySelectorAll(".delete-section");
@@ -638,6 +1839,153 @@ import Layout from "../layouts/Layout.astro";
           }
         });
       });
+
+      // Visual editor buttons
+      this.setupVisualEditorListeners();
+    }
+
+    setupVisualEditorListeners() {
+      // Feature editor listeners
+      document.querySelectorAll(".add-feature-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          this.addFeature(sectionIndex);
+        });
+      });
+
+      document.querySelectorAll(".remove-feature-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          const featureIndex = parseInt(e.target.getAttribute("data-index"));
+          this.removeFeature(sectionIndex, featureIndex);
+        });
+      });
+
+      // Testimonial editor listeners
+      document.querySelectorAll(".add-testimonial-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          this.addTestimonial(sectionIndex);
+        });
+      });
+
+      document.querySelectorAll(".remove-testimonial-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          const testimonialIndex = parseInt(
+            e.target.getAttribute("data-index"),
+          );
+          this.removeTestimonial(sectionIndex, testimonialIndex);
+        });
+      });
+
+      // Plan editor listeners
+      document.querySelectorAll(".add-plan-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          this.addPlan(sectionIndex);
+        });
+      });
+
+      document.querySelectorAll(".remove-plan-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          const planIndex = parseInt(e.target.getAttribute("data-index"));
+          this.removePlan(sectionIndex, planIndex);
+        });
+      });
+
+      // Plan feature listeners
+      document.querySelectorAll(".add-plan-feature-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          const planIndex = parseInt(e.target.getAttribute("data-plan-index"));
+          this.addPlanFeature(sectionIndex, planIndex);
+        });
+      });
+
+      document.querySelectorAll(".remove-plan-feature-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sectionIndex = parseInt(e.target.getAttribute("data-section"));
+          const planIndex = parseInt(e.target.getAttribute("data-plan-index"));
+          const featureIndex = parseInt(
+            e.target.getAttribute("data-feature-index"),
+          );
+          this.removePlanFeature(sectionIndex, planIndex, featureIndex);
+        });
+      });
+    }
+
+    initializeQuillEditor(editorElement) {
+      const field = editorElement.getAttribute("data-field");
+      const sectionIndex = editorElement.getAttribute("data-section");
+      const encodedContent = editorElement.getAttribute("data-content");
+      const content = encodedContent ? decodeURIComponent(encodedContent) : "";
+
+      const editorId = `quill-${field}-${sectionIndex}`;
+
+      if (this.quillEditors.has(editorId)) {
+        const existingEditor = this.quillEditors.get(editorId);
+        if (existingEditor && existingEditor.container) {
+          existingEditor.container.remove();
+        }
+        this.quillEditors.delete(editorId);
+      }
+
+      const editorContainer = document.createElement("div");
+      editorContainer.style.height = "200px";
+      editorContainer.style.backgroundColor = "white";
+      editorContainer.style.border = "1px solid #e5e7eb";
+      editorContainer.style.borderRadius = "0.375rem";
+
+      editorElement.appendChild(editorContainer);
+
+      if (typeof window.Quill !== "undefined") {
+        const quill = new window.Quill(editorContainer, {
+          theme: "snow",
+          modules: {
+            toolbar: [
+              [{ header: [1, 2, 3, 4, 5, 6, false] }],
+              ["bold", "italic", "underline"],
+              [{ color: [] }, { background: [] }],
+              [{ list: "ordered" }, { list: "bullet" }],
+              [{ align: [] }],
+              ["link"],
+              ["clean"],
+            ],
+          },
+          formats: [
+            "header",
+            "bold",
+            "italic",
+            "underline",
+            "color",
+            "background",
+            "list",
+            "align",
+            "link",
+          ],
+        });
+
+        if (content) {
+          quill.root.innerHTML = content;
+        }
+
+        this.quillEditors.set(editorId, quill);
+
+        quill.on("text-change", () => {
+          const htmlContent = quill.root.innerHTML;
+          const sectionIdx = parseInt(sectionIndex);
+
+          if (this.sections[sectionIdx]) {
+            this.sections[sectionIdx][field] = htmlContent;
+            this.setDirty(true);
+            this.renderPagePreview();
+          }
+        });
+      } else {
+        setTimeout(() => this.initializeQuillEditor(editorElement), 100);
+      }
     }
 
     handleFieldChange(e) {
@@ -645,15 +1993,88 @@ import Layout from "../layouts/Layout.astro";
       const field = target.getAttribute("data-field");
       const sectionIndex = parseInt(target.getAttribute("data-section") || "0");
 
+      console.log(`handleFieldChange called:`, {
+        type: target.type,
+        field,
+        sectionIndex,
+        checked: target.checked,
+        value: target.value,
+      });
+
       if (!field || isNaN(sectionIndex)) return;
+
+      // Handle visual editor fields
+      if (this.handleVisualEditorChange(e, target, field, sectionIndex)) {
+        return;
+      }
 
       let value = target.value;
 
-      if (field === "features" && target.tagName === "TEXTAREA") {
+      if (
+        (field === "features" ||
+          field === "testimonials" ||
+          field === "plans") &&
+        target.tagName === "TEXTAREA"
+      ) {
         try {
-          value = JSON.parse(target.value);
+          // Try to parse JSON, but be more lenient with validation
+          let trimmedValue = target.value.trim();
+
+          // Remove trailing comma if it exists (common while typing)
+          if (trimmedValue.endsWith(",")) {
+            trimmedValue = trimmedValue.slice(0, -1);
+          }
+
+          value = JSON.parse(trimmedValue);
+
+          target.classList.remove("input-error");
+
+          if (field === "features" && Array.isArray(value)) {
+            const validFeatures = value.every(
+              (f) =>
+                typeof f === "object" &&
+                f !== null &&
+                typeof f.title === "string",
+            );
+            if (!validFeatures) {
+              throw new Error("Features must have at least a 'title' property");
+            }
+          } else if (field === "testimonials" && Array.isArray(value)) {
+            const validTestimonials = value.every(
+              (t) =>
+                typeof t === "object" &&
+                t !== null &&
+                typeof t.quote === "string" &&
+                typeof t.author === "string",
+            );
+            if (!validTestimonials) {
+              throw new Error(
+                "Testimonials must have 'quote' and 'author' properties",
+              );
+            }
+          } else if (field === "plans" && Array.isArray(value)) {
+            const validPlans = value.every(
+              (p) =>
+                typeof p === "object" &&
+                p !== null &&
+                typeof p.name === "string" &&
+                typeof p.price !== "undefined",
+            );
+            if (!validPlans) {
+              throw new Error("Plans must have 'name' and 'price' properties");
+            }
+          }
         } catch (error) {
-          console.warn("Invalid JSON in features field");
+          // Only show validation error on 'change' event, not 'input' event
+          if (e.type === "change") {
+            console.warn(`Invalid JSON in ${field} field:`, error.message);
+            target.classList.add("input-error");
+            this.showAlert(
+              `Invalid ${field} format: ${error.message}`,
+              "warning",
+            );
+            setTimeout(() => target.classList.remove("input-error"), 3000);
+          }
           return;
         }
       }
@@ -663,6 +2084,363 @@ import Layout from "../layouts/Layout.astro";
         this.setDirty(true);
         this.renderPagePreview();
       }
+    }
+
+    handleVisualEditorChange(e, target, field, sectionIndex) {
+      // Handle feature editor fields
+      if (field === "features" && target.hasAttribute("data-feature-index")) {
+        const featureIndex = parseInt(
+          target.getAttribute("data-feature-index"),
+        );
+        const featureField = target.getAttribute("data-feature-field");
+
+        if (!this.sections[sectionIndex].features)
+          this.sections[sectionIndex].features = [];
+        if (!this.sections[sectionIndex].features[featureIndex]) return true;
+
+        this.sections[sectionIndex].features[featureIndex][featureField] =
+          target.value;
+        this.setDirty(true);
+        this.renderPagePreview();
+        return true;
+      }
+
+      // Handle testimonial editor fields
+      if (
+        field === "testimonials" &&
+        target.hasAttribute("data-testimonial-index")
+      ) {
+        const testimonialIndex = parseInt(
+          target.getAttribute("data-testimonial-index"),
+        );
+        const testimonialField = target.getAttribute("data-testimonial-field");
+
+        if (!this.sections[sectionIndex].testimonials)
+          this.sections[sectionIndex].testimonials = [];
+        if (!this.sections[sectionIndex].testimonials[testimonialIndex])
+          return true;
+
+        this.sections[sectionIndex].testimonials[testimonialIndex][
+          testimonialField
+        ] = target.value;
+        this.setDirty(true);
+        this.renderPagePreview();
+        return true;
+      }
+
+      // Handle plan editor fields
+      if (field === "plans" && target.hasAttribute("data-plan-index")) {
+        const planIndex = parseInt(target.getAttribute("data-plan-index"));
+        const planField = target.getAttribute("data-plan-field");
+
+        if (!this.sections[sectionIndex].plans)
+          this.sections[sectionIndex].plans = [];
+        if (!this.sections[sectionIndex].plans[planIndex]) return true;
+
+        let value = target.value;
+        if (planField === "price") value = parseFloat(value) || 0;
+        if (planField === "featured") {
+          value = target.checked;
+          console.log(`Featured checkbox changed:`, {
+            value,
+            targetChecked: target.checked,
+            planIndex,
+            sectionIndex,
+            beforeValue:
+              this.sections[sectionIndex].plans[planIndex][planField],
+            fullPlan: this.sections[sectionIndex].plans[planIndex],
+          });
+        }
+
+        this.sections[sectionIndex].plans[planIndex][planField] = value;
+
+        if (planField === "featured") {
+          console.log(`After setting featured:`, {
+            newValue: this.sections[sectionIndex].plans[planIndex][planField],
+            fullPlan: this.sections[sectionIndex].plans[planIndex],
+          });
+          // Update only the specific plan card in preview without full re-render
+          this.updatePlanPreview(sectionIndex, planIndex);
+          this.setDirty(true);
+          return true;
+        }
+
+        // For other visual fields, use selective updates when possible
+        if (
+          planField === "badge" ||
+          planField === "badgeStyle" ||
+          planField === "name" ||
+          planField === "price" ||
+          planField === "description" ||
+          planField === "interval"
+        ) {
+          this.updatePlanPreview(sectionIndex, planIndex);
+          this.setDirty(true);
+          return true;
+        }
+
+        this.setDirty(true);
+        this.renderPagePreview();
+        return true;
+      }
+
+      // Handle plan feature fields
+      if (field === "plans" && target.hasAttribute("data-plan-feature-index")) {
+        const planIndex = parseInt(target.getAttribute("data-plan-index"));
+        const featureIndex = parseInt(
+          target.getAttribute("data-plan-feature-index"),
+        );
+
+        if (!this.sections[sectionIndex].plans?.[planIndex]?.features)
+          return true;
+
+        this.sections[sectionIndex].plans[planIndex].features[featureIndex] =
+          target.value;
+        this.setDirty(true);
+        this.renderPagePreview();
+        return true;
+      }
+
+      return false;
+    }
+
+    // Visual editor helper methods
+    updatePlanPreview(sectionIndex, planIndex) {
+      const preview = document.getElementById("page-preview");
+      if (!preview) return;
+
+      const sectionEl = preview.querySelector(
+        `[data-section-index="${sectionIndex}"]`,
+      );
+      if (!sectionEl) return;
+
+      const section = this.sections[sectionIndex];
+      if (
+        section.__component !== "blocks.pricing" ||
+        !section.plans?.[planIndex]
+      )
+        return;
+
+      const plan = section.plans[planIndex];
+      const planCards = sectionEl.querySelectorAll(".grid > .card");
+      const planCard = planCards[planIndex];
+
+      if (planCard) {
+        console.log(`Updating plan card ${planIndex}:`, plan);
+
+        // Update the featured styling - ring and scale
+        if (plan.featured) {
+          planCard.classList.add(
+            "ring-2",
+            "ring-primary",
+            "transform",
+            "scale-105",
+          );
+        } else {
+          planCard.classList.remove(
+            "ring-2",
+            "ring-primary",
+            "transform",
+            "scale-105",
+          );
+        }
+
+        // Update plan name in card-title
+        const nameEl = planCard.querySelector(".card-title");
+        if (nameEl && plan.name) {
+          nameEl.textContent = plan.name;
+        }
+
+        // Update price in the text-4xl element
+        const priceEl = planCard.querySelector(".text-4xl");
+        if (priceEl && typeof plan.price !== "undefined") {
+          priceEl.innerHTML = `$${plan.price}<span class="text-lg font-normal text-base-content/70">/${plan.interval || "one-time"}</span>`;
+        }
+
+        // Update description paragraph
+        const descEl = planCard.querySelector(
+          ".text-sm.text-base-content\\/70",
+        );
+        if (plan.description) {
+          if (descEl) {
+            descEl.textContent = plan.description;
+            descEl.style.display = "";
+          } else {
+            // Create description if it doesn't exist
+            const titleEl = planCard.querySelector(".card-title");
+            if (titleEl) {
+              const newDesc = document.createElement("p");
+              newDesc.className = "text-sm text-base-content/70 mb-4";
+              newDesc.textContent = plan.description;
+              titleEl.parentNode.insertBefore(newDesc, titleEl.nextSibling);
+            }
+          }
+        } else if (descEl) {
+          descEl.style.display = "none";
+        }
+
+        // Update badges in the flex container
+        const badgeContainer = planCard.querySelector(
+          ".flex.items-center.gap-2",
+        );
+        if (badgeContainer) {
+          // Clear existing badges
+          badgeContainer.innerHTML = "";
+
+          // Add "Most Popular" badge if featured
+          if (plan.featured) {
+            const popularBadge = document.createElement("div");
+            popularBadge.className = "badge badge-primary";
+            popularBadge.textContent = "Most Popular";
+            badgeContainer.appendChild(popularBadge);
+          }
+
+          // Add custom badge if it exists
+          if (plan.badge) {
+            const customBadge = document.createElement("div");
+            customBadge.className = `badge badge-${plan.badgeStyle || "secondary"}`;
+            customBadge.textContent = plan.badge;
+            badgeContainer.appendChild(customBadge);
+          }
+        }
+
+        // Update button styling based on featured status
+        const button = planCard.querySelector(".btn");
+        if (button) {
+          if (plan.featured) {
+            button.className = "btn btn-primary btn-block";
+          } else {
+            button.className = "btn btn-outline btn-primary btn-block";
+          }
+          if (plan.buttonText) {
+            button.textContent = plan.buttonText;
+          }
+        }
+
+        console.log(
+          `Successfully updated plan preview for plan ${planIndex}, featured: ${plan.featured}`,
+        );
+      } else {
+        console.warn(`Could not find plan card at index ${planIndex}`);
+      }
+    }
+
+    addFeature(sectionIndex) {
+      if (!this.sections[sectionIndex]) return;
+
+      if (!this.sections[sectionIndex].features) {
+        this.sections[sectionIndex].features = [];
+      }
+
+      this.sections[sectionIndex].features.push({
+        icon: "🚀",
+        title: "New Feature",
+        description: "Feature description",
+        badge: "",
+        badgeStyle: "primary",
+        link: "",
+        iconStyle: "emoji",
+        size: "md",
+      });
+
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
+    }
+
+    removeFeature(sectionIndex, featureIndex) {
+      if (!this.sections[sectionIndex]?.features) return;
+
+      this.sections[sectionIndex].features.splice(featureIndex, 1);
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
+    }
+
+    addTestimonial(sectionIndex) {
+      if (!this.sections[sectionIndex]) return;
+
+      if (!this.sections[sectionIndex].testimonials) {
+        this.sections[sectionIndex].testimonials = [];
+      }
+
+      this.sections[sectionIndex].testimonials.push({
+        quote: "Great product!",
+        author: "John Doe",
+        role: "CEO",
+        company: "Acme Corp",
+      });
+
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
+    }
+
+    removeTestimonial(sectionIndex, testimonialIndex) {
+      if (!this.sections[sectionIndex]?.testimonials) return;
+
+      this.sections[sectionIndex].testimonials.splice(testimonialIndex, 1);
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
+    }
+
+    addPlan(sectionIndex) {
+      if (!this.sections[sectionIndex]) return;
+
+      if (!this.sections[sectionIndex].plans) {
+        this.sections[sectionIndex].plans = [];
+      }
+
+      this.sections[sectionIndex].plans.push({
+        name: "New Plan",
+        price: 99,
+        interval: "month",
+        features: ["Feature 1", "Feature 2"],
+        buttonText: "Get Started",
+        featured: false,
+        description: "",
+        badge: "",
+        badgeStyle: "primary",
+      });
+
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
+    }
+
+    removePlan(sectionIndex, planIndex) {
+      if (!this.sections[sectionIndex]?.plans) return;
+
+      this.sections[sectionIndex].plans.splice(planIndex, 1);
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
+    }
+
+    addPlanFeature(sectionIndex, planIndex) {
+      if (!this.sections[sectionIndex]?.plans?.[planIndex]) return;
+
+      if (!this.sections[sectionIndex].plans[planIndex].features) {
+        this.sections[sectionIndex].plans[planIndex].features = [];
+      }
+
+      this.sections[sectionIndex].plans[planIndex].features.push("New feature");
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
+    }
+
+    removePlanFeature(sectionIndex, planIndex, featureIndex) {
+      if (!this.sections[sectionIndex]?.plans?.[planIndex]?.features) return;
+
+      this.sections[sectionIndex].plans[planIndex].features.splice(
+        featureIndex,
+        1,
+      );
+      this.setDirty(true);
+      this.renderSectionsPanel();
+      this.renderPagePreview();
     }
 
     addSection(componentUid) {
@@ -711,15 +2489,74 @@ import Layout from "../layouts/Layout.astro";
               key !== "updatedAt" &&
               key !== "__temp_id__"
             ) {
-              cleanSection[key] = section[key];
+              // Transform visual editor data to Strapi component format
+              if (
+                section.__component === "blocks.feature-grid" &&
+                key === "features" &&
+                Array.isArray(section[key])
+              ) {
+                // Transform features array to Strapi component format
+                cleanSection[key] = section[key].map((feature) => ({
+                  __component: "elements.feature-item",
+                  icon: feature.icon || "🚀",
+                  title: feature.title || "",
+                  description: feature.description || "",
+                  badge: feature.badge || "",
+                  badgeStyle: feature.badgeStyle || "primary",
+                  link: feature.link || "",
+                  iconStyle: feature.iconStyle || "emoji",
+                  size: feature.size || "md",
+                }));
+              } else if (
+                section.__component === "blocks.testimonial" &&
+                key === "testimonials" &&
+                Array.isArray(section[key])
+              ) {
+                // Transform testimonials array to Strapi component format
+                cleanSection[key] = section[key].map((testimonial) => ({
+                  __component: "elements.testimonial-item",
+                  quote: testimonial.quote || "",
+                  author: testimonial.author || "",
+                  role: testimonial.role || "",
+                  company: testimonial.company || "",
+                }));
+              } else if (
+                section.__component === "blocks.pricing" &&
+                key === "plans" &&
+                Array.isArray(section[key])
+              ) {
+                // Transform plans array to Strapi component format
+                cleanSection[key] = section[key].map((plan) => ({
+                  __component: "elements.pricing-plan",
+                  name: plan.name || "",
+                  price: parseFloat(plan.price) || 0,
+                  interval: plan.interval || "one-time",
+                  features: Array.isArray(plan.features) ? plan.features : [],
+                  buttonText: plan.buttonText || "Get Started",
+                  featured: Boolean(plan.featured),
+                  description: plan.description || "",
+                  badge: plan.badge || "",
+                  badgeStyle: plan.badgeStyle || "primary",
+                }));
+              } else {
+                cleanSection[key] = section[key];
+              }
             }
           });
 
           return cleanSection;
         });
 
-        console.log("Saving sections:", cleanSections);
-        await apiHelpers.updatePage(this.currentPage.id, cleanSections);
+        console.log(
+          "Original sections before cleaning:",
+          JSON.stringify(this.sections, null, 2),
+        );
+        console.log("Saving sections:", JSON.stringify(cleanSections, null, 2));
+        const result = await apiHelpers.updatePage(
+          this.currentPage.id,
+          cleanSections,
+        );
+        console.log("Save result:", result);
         this.setDirty(false);
         this.showAlert("Page saved successfully", "success");
       } catch (error) {
@@ -736,8 +2573,8 @@ import Layout from "../layouts/Layout.astro";
       const titleInput = document.getElementById("page-title-input");
       const slugInput = document.getElementById("page-slug-input");
 
-      const title = titleInput.value.trim();
-      const slug = slugInput.value.trim();
+      const title = titleInput ? titleInput.value.trim() : "";
+      const slug = slugInput ? slugInput.value.trim() : "";
 
       if (!title || !slug) {
         this.showAlert("Please fill in all fields", "error");
@@ -748,13 +2585,13 @@ import Layout from "../layouts/Layout.astro";
         const newPage = await apiHelpers.createPage(title, slug);
 
         const modal = document.getElementById("create-page-modal");
-        modal.close();
-        titleInput.value = "";
-        slugInput.value = "";
+        if (modal) modal.close();
+        if (titleInput) titleInput.value = "";
+        if (slugInput) slugInput.value = "";
 
         await this.loadPages();
         const selector = document.getElementById("page-selector");
-        selector.value = newPage.id.toString();
+        if (selector) selector.value = newPage.id.toString();
         await this.loadPage(newPage.id);
 
         this.showAlert("Page created successfully", "success");
@@ -784,12 +2621,112 @@ import Layout from "../layouts/Layout.astro";
         const editorArea = document.getElementById("editor-area");
         if (editorArea) editorArea.style.display = "none";
 
+        // Disable buttons when no page is selected
+        const deleteBtn = document.getElementById("delete-page");
+        const previewBtn = document.getElementById("preview-mode");
+        const settingsBtn = document.getElementById("page-settings");
+        if (deleteBtn) deleteBtn.disabled = true;
+        if (previewBtn) previewBtn.disabled = true;
+        if (settingsBtn) settingsBtn.disabled = true;
+
         await this.loadPages();
 
         this.showAlert("Page deleted successfully", "success");
       } catch (error) {
         this.showAlert("Failed to delete page", "error");
         console.error("Error deleting page:", error);
+      }
+    }
+
+    previewPage() {
+      if (!this.currentPage) {
+        this.showAlert("Please select a page to preview", "warning");
+        return;
+      }
+
+      // Open the page in a new tab/window for preview
+      const previewUrl = `/${this.currentPage.slug}`;
+      window.open(previewUrl, "_blank");
+
+      this.showAlert(`Opening preview for "${this.currentPage.title}"`, "info");
+    }
+
+    showPageSettings() {
+      if (!this.currentPage) {
+        this.showAlert("Please select a page to edit settings", "warning");
+        return;
+      }
+
+      // Populate the form with current page data
+      const titleInput = document.getElementById("page-settings-title");
+      const slugInput = document.getElementById("page-settings-slug");
+      const descriptionInput = document.getElementById(
+        "page-settings-description",
+      );
+      const keywordsInput = document.getElementById("page-settings-keywords");
+
+      if (titleInput) titleInput.value = this.currentPage.title || "";
+      if (slugInput) slugInput.value = this.currentPage.slug || "";
+      if (descriptionInput)
+        descriptionInput.value = this.currentPage.seoDescription || "";
+      if (keywordsInput)
+        keywordsInput.value = this.currentPage.seoKeywords || "";
+
+      // Show the modal
+      const modal = document.getElementById("page-settings-modal");
+      modal.showModal();
+    }
+
+    async handlePageSettings(e) {
+      e.preventDefault();
+
+      const titleInput = document.getElementById("page-settings-title");
+      const slugInput = document.getElementById("page-settings-slug");
+      const descriptionInput = document.getElementById(
+        "page-settings-description",
+      );
+      const keywordsInput = document.getElementById("page-settings-keywords");
+
+      const title = titleInput ? titleInput.value.trim() : "";
+      const slug = slugInput ? slugInput.value.trim() : "";
+      const seoDescription = descriptionInput
+        ? descriptionInput.value.trim()
+        : "";
+      const seoKeywords = keywordsInput ? keywordsInput.value.trim() : "";
+
+      if (!title || !slug) {
+        this.showAlert("Please fill in title and slug", "error");
+        return;
+      }
+
+      try {
+        // Update page settings via API
+        await apiHelpers.updatePageSettings(this.currentPage.id, {
+          title,
+          slug,
+          seoDescription,
+          seoKeywords,
+        });
+
+        // Update local page data
+        this.currentPage.title = title;
+        this.currentPage.slug = slug;
+        this.currentPage.seoDescription = seoDescription;
+        this.currentPage.seoKeywords = seoKeywords;
+
+        // Close modal
+        const modal = document.getElementById("page-settings-modal");
+        modal.close();
+
+        // Reload pages to update the selector
+        await this.loadPages();
+        const selector = document.getElementById("page-selector");
+        if (selector) selector.value = this.currentPage.id.toString();
+
+        this.showAlert("Page settings updated successfully", "success");
+      } catch (error) {
+        this.showAlert("Failed to update page settings", "error");
+        console.error("Error updating page settings:", error);
       }
     }
 
@@ -825,21 +2762,42 @@ import Layout from "../layouts/Layout.astro";
 
       const alert = document.createElement("div");
       alert.className = `alert alert-${type} shadow-lg`;
+      alert.style.cursor = "pointer";
+      alert.style.userSelect = "none";
       alert.innerHTML = `
-        <div>
-          <span>${message}</span>
+        <div style="pointer-events: none;">
+          <span style="pointer-events: none;">${message}</span>
         </div>
       `;
 
       container.appendChild(alert);
 
-      setTimeout(() => {
-        alert.remove();
+      // Auto-dismiss after 5 seconds
+      const timeoutId = setTimeout(() => {
+        if (alert.parentNode) {
+          alert.remove();
+        }
       }, 5000);
+
+      // Add click to dismiss functionality
+      alert.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        clearTimeout(timeoutId);
+        alert.remove();
+      });
+
+      // Add some visual feedback on hover
+      alert.addEventListener("mouseenter", () => {
+        alert.style.opacity = "0.8";
+      });
+
+      alert.addEventListener("mouseleave", () => {
+        alert.style.opacity = "1";
+      });
     }
   }
 
-  // Initialize when DOM is ready
   document.addEventListener("DOMContentLoaded", () => {
     new SiteEditor();
   });

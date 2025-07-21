@@ -3,7 +3,7 @@ export interface Page {
   id: number;
   title: string;
   slug: string;
-  sections: Section<any>[];
+  sections: Section<any>[]; 
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;

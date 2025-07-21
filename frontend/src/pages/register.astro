@@ -1,0 +1,187 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Team Registration - Staff Portal">
+  <main class="hero min-h-screen bg-base-200">
+    <div class="hero-content text-center">
+      <div class="max-w-md">
+        <div class="card w-full max-w-sm shadow-2xl bg-base-100">
+          <div class="card-body">
+            <h1 class="text-2xl font-bold mb-6">Team Registration</h1>
+            <p class="text-sm text-base-content/70 mb-4">
+              Register for team access. Your account will need admin approval
+              before you can log in.
+            </p>
+
+            <form id="register-form">
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Username</span>
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  placeholder="username"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Email</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="email@example.com"
+                  class="input input-bordered"
+                  required
+                />
+              </div>
+
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Password</span>
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  placeholder="password"
+                  class="input input-bordered"
+                  required
+                  minlength="6"
+                />
+              </div>
+
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Confirm Password</span>
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  placeholder="confirm password"
+                  class="input input-bordered"
+                  required
+                  minlength="6"
+                />
+              </div>
+
+              <div class="form-control mt-6">
+                <button type="submit" class="btn btn-primary">
+                  Request Access
+                </button>
+              </div>
+            </form>
+
+            <div id="success-message" class="alert alert-success mt-4 hidden">
+              <span id="success-text"></span>
+            </div>
+
+            <div id="error-message" class="alert alert-error mt-4 hidden">
+              <span id="error-text"></span>
+            </div>
+
+            <div class="divider"></div>
+
+            <p class="text-sm text-base-content/70">
+              Already have an account?
+              <a href="/login" class="link link-primary">Sign in here</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  document
+    .getElementById("register-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const usernameInput = document.getElementById(
+        "username",
+      ) as HTMLInputElement;
+      const emailInput = document.getElementById("email") as HTMLInputElement;
+      const passwordInput = document.getElementById(
+        "password",
+      ) as HTMLInputElement;
+      const confirmPasswordInput = document.getElementById(
+        "confirmPassword",
+      ) as HTMLInputElement;
+      const errorDiv = document.getElementById("error-message");
+      const errorText = document.getElementById("error-text");
+      const successDiv = document.getElementById("success-message");
+      const successText = document.getElementById("success-text");
+
+      if (
+        !usernameInput ||
+        !emailInput ||
+        !passwordInput ||
+        !confirmPasswordInput ||
+        !errorDiv ||
+        !errorText ||
+        !successDiv ||
+        !successText
+      )
+        return;
+
+      // Hide previous messages
+      errorDiv.classList.add("hidden");
+      successDiv.classList.add("hidden");
+
+      // Validate passwords match
+      if (passwordInput.value !== confirmPasswordInput.value) {
+        errorDiv.classList.remove("hidden");
+        errorText.textContent = "Passwords do not match";
+        return;
+      }
+
+      // Validate password length
+      if (passwordInput.value.length < 6) {
+        errorDiv.classList.remove("hidden");
+        errorText.textContent = "Password must be at least 6 characters long";
+        return;
+      }
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(`${cmsUrl}/api/team/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: usernameInput.value.trim(),
+            email: emailInput.value.trim().toLowerCase(),
+            password: passwordInput.value,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || "Registration failed");
+        }
+
+        // Show success message
+        successDiv.classList.remove("hidden");
+        successText.textContent =
+          "Registration request submitted! Please wait for admin approval before attempting to log in.";
+
+        // Clear form
+        (e.target as HTMLFormElement).reset();
+      } catch (error) {
+        errorDiv.classList.remove("hidden");
+        errorText.textContent =
+          error instanceof Error ? error.message : "Registration failed";
+      }
+    });
+</script>

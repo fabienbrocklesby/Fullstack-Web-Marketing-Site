@@ -23,7 +23,9 @@
     "demo:seed": "echo '🌱 Seeding demo data...' && node demo-seeder.cjs",
     "demo:quick": "echo '⚡ Quick demo setup (assumes backend is built)...' && pnpm run demo:seed && echo '✅ Demo data ready! Run: pnpm dev'",
     "demo:verify": "echo '🔍 Verifying demo data...' && node demo-verify.cjs",
-    "decrypt": "node decrypt-deactivation-code.cjs"
+    "decrypt": "node decrypt-deactivation-code.cjs",
+    "team:list": "echo '📋 Listing pending team registrations...' && node list-pending-users.js",
+    "team:unblock": "echo '🔓 Usage: pnpm team:unblock <email>' && echo 'Example: pnpm team:unblock john@example.com'"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

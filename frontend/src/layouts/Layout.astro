@@ -2,6 +2,7 @@
 export interface Props {
   title?: string;
   description?: string;
+  keywords?: string;
   image?: string;
   canonical?: string;
   noindex?: boolean;
@@ -11,6 +12,7 @@ export interface Props {
 const {
   title = "SaaS Boilerplate",
   description = "A production-ready SaaS marketing site boilerplate",
+  keywords = "",
   image = "/og-image.jpg",
   canonical = Astro.url.href,
   noindex = false,
@@ -33,6 +35,7 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
     <!-- SEO Meta Tags -->
     <title>{title}</title>
     <meta name="description" content={description} />
+    {keywords && <meta name="keywords" content={keywords} />}
     <meta
       name="robots"
       content={`${noindex ? "noindex" : "index"}, ${nofollow ? "nofollow" : "follow"}`}

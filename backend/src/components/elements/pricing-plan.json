@@ -2,7 +2,7 @@
   "collectionName": "components_elements_pricing_plans",
   "info": {
     "displayName": "Pricing Plan",
-    "description": "Individual pricing plan with features and call-to-action"
+    "description": "Individual pricing plan with features, customization options and call-to-action"
   },
   "options": {},
   "attributes": {
@@ -15,10 +15,6 @@
       "type": "decimal",
       "required": true,
       "default": 99.0
-    },
-    "currency": {
-      "type": "string",
-      "default": "USD"
     },
     "interval": {
       "type": "enumeration",
@@ -38,13 +34,20 @@
       "type": "string",
       "default": "Get Started"
     },
-    "buttonLink": {
-      "type": "string",
-      "default": "/pricing"
-    },
-    "popular": {
+    "featured": {
       "type": "boolean",
       "default": false
+    },
+    "description": {
+      "type": "text"
+    },
+    "badge": {
+      "type": "string"
+    },
+    "badgeStyle": {
+      "type": "enumeration",
+      "enum": ["primary", "secondary", "accent", "success", "warning", "error"],
+      "default": "primary"
     }
   }
 }

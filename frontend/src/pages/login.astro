@@ -43,6 +43,13 @@ import Layout from "../layouts/Layout.astro";
             <div id="error-message" class="alert alert-error mt-4 hidden">
               <span id="error-text"></span>
             </div>
+
+            <div class="divider"></div>
+
+            <p class="text-sm text-base-content/70">
+              Need access?
+              <a href="/register" class="link link-primary">Register here</a>
+            </p>
           </div>
         </div>
       </div>
@@ -69,7 +76,7 @@ import Layout from "../layouts/Layout.astro";
         const cmsUrl =
           document.documentElement.getAttribute("data-cms-url") ||
           "http://localhost:1337";
-        const response = await fetch(`${cmsUrl}/api/auth/local`, {
+        const response = await fetch(`${cmsUrl}/api/team/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -10,10 +10,26 @@ interface TestimonialItem {
 export interface Props {
   title: string;
   subtitle?: string;
-  testimonials: TestimonialItem[];
+  testimonials: TestimonialItem[] | any[]; // Support both simple arrays and Strapi components
 }
 
 const { title, subtitle, testimonials = [] } = Astro.props;
+
+// Transform testimonials to handle both formats (simple arrays and Strapi components)
+const transformedTestimonials = testimonials.map((testimonial) => {
+  // If it's a Strapi component, extract the actual data
+  if (testimonial.__component === "elements.testimonial-item") {
+    return {
+      quote: testimonial.quote,
+      author: testimonial.author,
+      role: testimonial.role,
+      company: testimonial.company,
+      avatar: testimonial.avatar,
+    };
+  }
+  // Otherwise, use it as-is (simple object format)
+  return testimonial;
+});
 ---
 
 <section class="py-20 bg-base-200">
@@ -24,7 +40,7 @@ const { title, subtitle, testimonials = [] } = Astro.props;
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {
-        testimonials.map((testimonial) => (
+        transformedTestimonials.map((testimonial) => (
           <div class="card bg-base-100 shadow-lg">
             <div class="card-body">
               <blockquote class="text-lg italic mb-4">
@@ -32,7 +48,7 @@ const { title, subtitle, testimonials = [] } = Astro.props;
               </blockquote>
               <div class="flex items-center gap-3">
                 <div class="avatar placeholder">
-                  <div class="bg-neutral-focus text-neutral-content rounded-full w-12">
+                  <div class="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center flex-shrink-0">
                     <span class="text-xl">
                       {testimonial.author.charAt(0).toUpperCase()}
                     </span>

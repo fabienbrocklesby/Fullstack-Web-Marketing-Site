@@ -2,7 +2,7 @@
   "collectionName": "components_elements_feature_items",
   "info": {
     "displayName": "Feature Item",
-    "description": "Individual feature with icon, title and description"
+    "description": "Individual feature with icon, title, description and customization options"
   },
   "options": {},
   "attributes": {
@@ -18,6 +18,27 @@
     "description": {
       "type": "text",
       "required": true
+    },
+    "badge": {
+      "type": "string"
+    },
+    "badgeStyle": {
+      "type": "enumeration",
+      "enum": ["primary", "secondary", "accent", "success", "warning", "info"],
+      "default": "primary"
+    },
+    "link": {
+      "type": "string"
+    },
+    "iconStyle": {
+      "type": "enumeration",
+      "enum": ["emoji", "circle", "square", "none"],
+      "default": "emoji"
+    },
+    "size": {
+      "type": "enumeration",
+      "enum": ["sm", "md", "lg"],
+      "default": "md"
     }
   }
 }

@@ -110,7 +110,7 @@ export interface ElementsFeatureItem extends Schema.Component {
   collectionName: "components_elements_feature_items";
   info: {
     displayName: "Feature Item";
-    description: "Individual feature with icon, title and description";
+    description: "Individual feature with icon, title, description and customization options";
   };
   attributes: {
     icon: Attribute.String &
@@ -118,6 +118,15 @@ export interface ElementsFeatureItem extends Schema.Component {
       Attribute.DefaultTo<"\uD83D\uDE80">;
     title: Attribute.String & Attribute.Required;
     description: Attribute.Text & Attribute.Required;
+    badge: Attribute.String;
+    badgeStyle: Attribute.Enumeration<
+      ["primary", "secondary", "accent", "success", "warning", "info"]
+    > &
+      Attribute.DefaultTo<"primary">;
+    link: Attribute.String;
+    iconStyle: Attribute.Enumeration<["emoji", "circle", "square", "none"]> &
+      Attribute.DefaultTo<"emoji">;
+    size: Attribute.Enumeration<["sm", "md", "lg"]> & Attribute.DefaultTo<"md">;
   };
 }
 
@@ -125,14 +134,13 @@ export interface ElementsPricingPlan extends Schema.Component {
   collectionName: "components_elements_pricing_plans";
   info: {
     displayName: "Pricing Plan";
-    description: "Individual pricing plan with features and call-to-action";
+    description: "Individual pricing plan with features, customization options and call-to-action";
   };
   attributes: {
     name: Attribute.String &
       Attribute.Required &
       Attribute.DefaultTo<"Starter Plan">;
     price: Attribute.Decimal & Attribute.Required & Attribute.DefaultTo<99>;
-    currency: Attribute.String & Attribute.DefaultTo<"USD">;
     interval: Attribute.Enumeration<["one-time", "month", "year"]> &
       Attribute.DefaultTo<"one-time">;
     features: Attribute.JSON &
@@ -141,8 +149,13 @@ export interface ElementsPricingPlan extends Schema.Component {
         ["Complete source code", "Basic documentation", "Email support"]
       >;
     buttonText: Attribute.String & Attribute.DefaultTo<"Get Started">;
-    buttonLink: Attribute.String & Attribute.DefaultTo<"/pricing">;
-    popular: Attribute.Boolean & Attribute.DefaultTo<false>;
+    featured: Attribute.Boolean & Attribute.DefaultTo<false>;
+    description: Attribute.Text;
+    badge: Attribute.String;
+    badgeStyle: Attribute.Enumeration<
+      ["primary", "secondary", "accent", "success", "warning", "error"]
+    > &
+      Attribute.DefaultTo<"primary">;
   };
 }
 

@@ -37,15 +37,43 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 /**
+ * Transform Strapi v4 response format to flat format
+ */
+function transformStrapiData(strapiData: any): any {
+  if (Array.isArray(strapiData)) {
+    return strapiData.map(item => transformStrapiItem(item));
+  }
+  return transformStrapiItem(strapiData);
+}
+
+/**
+ * Transform a single Strapi v4 item to flat format
+ */
+function transformStrapiItem(item: any): any {
+  if (!item || typeof item !== 'object') return item;
+  
+  if (item.attributes && item.id !== undefined) {
+    // This is a Strapi v4 format item
+    return {
+      id: item.id,
+      ...item.attributes
+    };
+  }
+  
+  return item;
+}
+
+/**
  * Fetch a single page with populated sections
  */
 export async function fetchPage(id: number): Promise<Page> {
   try {
-    const response = await fetch(`${CMS_URL}/api/pages/${id}?populate=sections`, {
+    const response = await fetch(`${CMS_URL}/api/pages/${id}?populate[sections][populate]=*`, {
       headers: getAuthHeaders(),
     });
     
-    return await handleResponse<Page>(response);
+    const rawData = await handleResponse<any>(response);
+    return transformStrapiData(rawData);
   } catch (error) {
     console.error('Error fetching page:', error);
     throw new Error(`Failed to fetch page: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -57,11 +85,12 @@ export async function fetchPage(id: number): Promise<Page> {
  */
 export async function fetchPages(): Promise<Page[]> {
   try {
-    const response = await fetch(`${CMS_URL}/api/pages?populate=sections`, {
+    const response = await fetch(`${CMS_URL}/api/pages?populate[sections][populate]=*`, {
       headers: getAuthHeaders(),
     });
     
-    return await handleResponse<Page[]>(response);
+    const rawData = await handleResponse<any[]>(response);
+    return transformStrapiData(rawData);
   } catch (error) {
     console.error('Error fetching pages:', error);
     throw new Error(`Failed to fetch pages: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -83,7 +112,8 @@ export async function updatePage(id: number, sections: any[]): Promise<Page> {
       }),
     });
     
-    return await handleResponse<Page>(response);
+    const rawData = await handleResponse<any>(response);
+    return transformStrapiData(rawData);
   } catch (error) {
     console.error('Error updating page:', error);
     throw new Error(`Failed to update page: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -108,7 +138,8 @@ export async function createPage(title: string, slug: string, sections: any[] = 
       }),
     });
     
-    return await handleResponse<Page>(response);
+    const rawData = await handleResponse<any>(response);
+    return transformStrapiData(rawData);
   } catch (error) {
     console.error('Error creating page:', error);
     throw new Error(`Failed to create page: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -131,5 +162,31 @@ export async function deletePage(id: number): Promise<void> {
   } catch (error) {
     console.error('Error deleting page:', error);
     throw new Error(`Failed to delete page: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Update page settings (title, slug, description, keywords)
+ */
+export async function updatePageSettings(id: number, settings: { title: string; slug: string; seoDescription?: string; seoKeywords?: string }): Promise<Page> {
+  try {
+    const response = await fetch(`${CMS_URL}/api/pages/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        data: {
+          title: settings.title,
+          slug: settings.slug,
+          seoDescription: settings.seoDescription || '',
+          seoKeywords: settings.seoKeywords || '',
+        },
+      }),
+    });
+    
+    const rawData = await handleResponse<any>(response);
+    return transformStrapiData(rawData);
+  } catch (error) {
+    console.error('Error updating page settings:', error);
+    throw new Error(`Failed to update page settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

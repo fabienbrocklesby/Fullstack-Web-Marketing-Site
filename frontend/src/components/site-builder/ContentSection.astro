@@ -2,24 +2,62 @@
 export interface Props {
   title?: string;
   content: string;
-  layout?: "full-width" | "centered" | "two-column";
+  layout?: "centered" | "full-width" | "two-column";
 }
 
 const { title, content, layout = "centered" } = Astro.props;
 
 const containerClass =
   layout === "full-width"
-    ? "w-full"
-    : layout === "centered"
-      ? "max-w-4xl mx-auto"
-      : "max-w-6xl mx-auto";
+    ? "max-w-6xl mx-auto"
+    : layout === "two-column"
+      ? "max-w-2xl mx-auto"
+      : "max-w-4xl mx-auto";
+
+// Function to apply daisyUI classes to HTML content
+function applyDaisyUIClasses(htmlContent: string): string {
+  // Simple regex-based replacement for server-side rendering
+  return htmlContent
+    .replace(/<h1([^>]*)>/g, '<h1$1 class="text-4xl font-bold mb-4">')
+    .replace(/<h2([^>]*)>/g, '<h2$1 class="text-3xl font-bold mb-3">')
+    .replace(/<h3([^>]*)>/g, '<h3$1 class="text-2xl font-semibold mb-3">')
+    .replace(/<h4([^>]*)>/g, '<h4$1 class="text-xl font-semibold mb-2">')
+    .replace(/<h5([^>]*)>/g, '<h5$1 class="text-lg font-semibold mb-2">')
+    .replace(/<h6([^>]*)>/g, '<h6$1 class="text-base font-semibold mb-2">')
+    .replace(/<p([^>]*)>/g, '<p$1 class="mb-4 leading-relaxed">')
+    .replace(/<strong([^>]*)>/g, '<strong$1 class="font-bold">')
+    .replace(/<em([^>]*)>/g, '<em$1 class="italic">')
+    .replace(/<u([^>]*)>/g, '<u$1 class="underline">')
+    .replace(
+      /<ul([^>]*)>/g,
+      '<ul$1 class="list-disc list-inside mb-4 space-y-1">',
+    )
+    .replace(
+      /<ol([^>]*)>/g,
+      '<ol$1 class="list-decimal list-inside mb-4 space-y-1">',
+    )
+    .replace(/<li([^>]*)>/g, '<li$1 class="leading-relaxed">')
+    .replace(
+      /<a([^>]*)>/g,
+      '<a$1 class="text-primary underline hover:text-primary-focus">',
+    );
+}
+
+const processedContent = applyDaisyUIClasses(content);
 ---
 
 <section class="py-20 bg-base-100">
   <div class="container mx-auto px-4">
     <div class={containerClass}>
       {title && <h2 class="text-3xl font-bold mb-8 text-center">{title}</h2>}
-      <div class="prose prose-lg max-w-none" set:html={content} />
+      <div class="content-typography" set:html={processedContent} />
     </div>
   </div>
 </section>
+
+<style>
+  /* Basic content wrapper styling */
+  .content-typography {
+    color: inherit;
+  }
+</style>

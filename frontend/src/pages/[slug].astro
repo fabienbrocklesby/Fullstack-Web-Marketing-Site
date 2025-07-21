@@ -21,7 +21,7 @@ console.log(`[${slug}] Attempting to fetch page data...`);
 
 try {
   const CMS_URL = "http://localhost:1337";
-  const url = `${CMS_URL}/api/pages?filters[slug][$eq]=${slug}&populate=sections`;
+  const url = `${CMS_URL}/api/pages?filters[slug][$eq]=${slug}&populate[sections][populate]=*`;
 
   console.log(`[${slug}] Fetching from: ${url}`);
 
@@ -34,11 +34,16 @@ try {
     const pages = data.data || [];
 
     console.log(`[${slug}] Found ${pages.length} pages`);
+    console.log(`[${slug}] Raw page data:`, JSON.stringify(pages, null, 2));
 
     if (pages.length > 0) {
       page = pages[0];
       console.log(
         `[${slug}] Successfully loaded page: ${page.attributes.title}`,
+      );
+      console.log(
+        `[${slug}] Page sections:`,
+        JSON.stringify(page.attributes.sections, null, 2),
       );
     } else {
       console.log(`[${slug}] No pages found for slug`);
@@ -74,9 +79,14 @@ const {
 } = pageAttributes;
 
 console.log(`[${slug}] Rendering page with ${sections.length} sections`);
+console.log(`[${slug}] Page SEO data:`, {
+  title: seoTitle,
+  description: seoDescription,
+  keywords: seoKeywords,
+});
 ---
 
-<Layout title={seoTitle} description={seoDescription}>
+<Layout title={seoTitle} description={seoDescription} keywords={seoKeywords}>
   <Header />
 
   <main>
