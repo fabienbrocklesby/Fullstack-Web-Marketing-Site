@@ -90,6 +90,10 @@
     "deactivationCode": {
       "type": "text",
       "description": "Encrypted deactivation code for secure license deactivation"
+    },
+    "activationNonce": {
+      "type": "string",
+      "description": "Hashed nonce used for secure offline deactivation"
     }
   }
 }

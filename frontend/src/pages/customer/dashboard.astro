@@ -56,6 +56,7 @@ import Layout from "../../layouts/Layout.astro";
                 d="M19 9l-7 7-7-7"></path>
             </svg>
           </label>
+
           <ul
             tabindex="0"
             class="menu menu-compact dropdown-content z-50 mt-3 p-2 shadow bg-base-100 rounded-box w-52"
@@ -166,6 +167,102 @@ import Layout from "../../layouts/Layout.astro";
       </div>
     </div>
   </main>
+
+  <!-- Generate Activation Code Modal -->
+  <dialog id="generate_activation_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Your Activation Code</h3>
+      <div id="activation-confirmation-step">
+        <p class="py-4">
+          Activating this license will lock it to one machine. You will need to
+          deactivate it from that machine before you can use it on another.
+          <br /><br />
+          <strong>This code will only be shown once.</strong> Please copy it carefully.
+        </p>
+        <div class="modal-action">
+          <button class="btn btn-primary" onclick="confirmActivation()">
+            I Understand, Generate Code
+          </button>
+          <form method="dialog">
+            <button class="btn">Cancel</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="activation-code-step" class="hidden">
+        <p class="py-4">
+          Copy the details below and paste them into your application to
+          activate it offline.
+        </p>
+        <div class="form-control">
+          <label class="label"
+            ><span class="label-text">License Key</span></label
+          >
+          <div class="input-group">
+            <input
+              id="license_key_display"
+              type="text"
+              class="input input-bordered w-full"
+              readonly
+            />
+            <button class="btn" onclick="copyFromDisplay('license_key_display')"
+              >Copy</button
+            >
+          </div>
+        </div>
+        <div class="form-control mt-4">
+          <label class="label"
+            ><span class="label-text">Activation Code</span></label
+          >
+          <textarea
+            id="activation_code_textarea"
+            class="textarea textarea-bordered h-32"
+            readonly></textarea>
+        </div>
+        <div class="text-center mt-2 hidden" id="activation-loading">
+          <span class="loading loading-spinner"></span>
+        </div>
+        <div class="modal-action">
+          <button class="btn btn-primary" onclick="copyActivationCode()">
+            Copy Activation Code
+          </button>
+          <form method="dialog">
+            <button class="btn">Close</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- Deactivation Modal -->
+  <dialog id="deactivation_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Offline Deactivation</h3>
+      <p class="py-4">
+        Paste the deactivation code from your application below to deactivate
+        this license.
+      </p>
+      <div class="form-control">
+        <textarea
+          id="deactivation_code_textarea"
+          class="textarea textarea-bordered h-32"
+          placeholder="Paste deactivation code here..."></textarea>
+      </div>
+      <div class="text-center mt-2 hidden" id="deactivation-loading">
+        <span class="loading loading-spinner"></span>
+      </div>
+      <div class="modal-action">
+        <button class="btn btn-primary" onclick="submitDeactivation()"
+          >Submit Deactivation</button
+        >
+        <form method="dialog">
+          <button class="btn">Close</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
 </Layout>
 
 <script>
@@ -347,9 +444,22 @@ import Layout from "../../layouts/Layout.astro";
           }
           
           <div class="card-actions justify-end mt-4">
-            <button class="btn btn-primary btn-sm" onclick="copyToClipboard('${license.key}')">
-              📋 Copy License Key
+            <button class="btn btn-ghost btn-sm" onclick="copyToClipboard('${license.key}')">
+              📋 Copy Key
             </button>
+            ${
+              license.isUsed
+                ? `
+                <button class="btn btn-warning btn-sm" onclick="openDeactivationModal('${license.id}')">
+                  🔌 Offline Deactivate
+                </button>
+                `
+                : `
+                <button class="btn btn-secondary btn-sm" onclick="openGenerateActivationModal('${license.id}')">
+                  ⚡ Offline Activate
+                </button>
+                `
+            }
           </div>
         </div>
       </div>
@@ -381,6 +491,159 @@ import Layout from "../../layouts/Layout.astro";
       if (activeElement) activeElement.textContent = activeLicenses;
       if (availableElement) availableElement.textContent = availableLicenses;
     }
+
+    let currentLicenseId = null;
+
+    (window as any).openGenerateActivationModal = function (licenseId) {
+      currentLicenseId = licenseId;
+      const modal = document.getElementById(
+        "generate_activation_modal",
+      ) as HTMLDialogElement;
+
+      // Reset modal to the confirmation step
+      const confirmStep = document.getElementById(
+        "activation-confirmation-step",
+      );
+      const codeStep = document.getElementById("activation-code-step");
+      if (confirmStep) confirmStep.classList.remove("hidden");
+      if (codeStep) codeStep.classList.add("hidden");
+
+      modal?.showModal();
+    };
+
+    (window as any).confirmActivation = async function () {
+      const confirmStep = document.getElementById(
+        "activation-confirmation-step",
+      );
+      const codeStep = document.getElementById("activation-code-step");
+      const textarea = document.getElementById(
+        "activation_code_textarea",
+      ) as HTMLTextAreaElement;
+      const licenseKeyDisplay = document.getElementById(
+        "license_key_display",
+      ) as HTMLInputElement;
+      const loading = document.getElementById("activation-loading");
+
+      if (confirmStep) confirmStep.classList.add("hidden");
+      if (codeStep) codeStep.classList.remove("hidden");
+
+      textarea.value = "";
+      licenseKeyDisplay.value = "";
+      if (loading) loading.classList.remove("hidden");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+        const response = await fetch(
+          `${cmsUrl}/api/license-keys/${currentLicenseId}/generate-activation-code`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(
+            error.error?.message || "Failed to generate activation code",
+          );
+        }
+
+        const { activationCode, licenseKey } = await response.json();
+        textarea.value = activationCode;
+        licenseKeyDisplay.value = licenseKey;
+        loadDashboardData(); // Refresh data to show license is now "Active"
+      } catch (error) {
+        alert(`Error: ${(error as Error).message}`);
+        const modal = document.getElementById(
+          "generate_activation_modal",
+        ) as HTMLDialogElement;
+        modal?.close();
+      } finally {
+        if (loading) loading.classList.add("hidden");
+      }
+    };
+
+    (window as any).copyActivationCode = function () {
+      const textarea = document.getElementById(
+        "activation_code_textarea",
+      ) as HTMLTextAreaElement;
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        alert("Activation code copied to clipboard!");
+      });
+    };
+
+    (window as any).copyFromDisplay = function (elementId) {
+      const input = document.getElementById(elementId) as HTMLInputElement;
+      navigator.clipboard.writeText(input.value).then(() => {
+        alert("Copied to clipboard!");
+      });
+    };
+
+    (window as any).openDeactivationModal = function (licenseId) {
+      currentLicenseId = licenseId;
+      const modal = document.getElementById(
+        "deactivation_modal",
+      ) as HTMLDialogElement;
+      const textarea = document.getElementById(
+        "deactivation_code_textarea",
+      ) as HTMLTextAreaElement;
+      textarea.value = "";
+      modal?.showModal();
+    };
+
+    (window as any).submitDeactivation = async function () {
+      const modal = document.getElementById(
+        "deactivation_modal",
+      ) as HTMLDialogElement;
+      const textarea = document.getElementById(
+        "deactivation_code_textarea",
+      ) as HTMLTextAreaElement;
+      const loading = document.getElementById("deactivation-loading");
+      const deactivationCode = textarea.value;
+
+      if (!deactivationCode) {
+        alert("Please paste the deactivation code.");
+        return;
+      }
+
+      if (loading) loading.classList.remove("hidden");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+        const response = await fetch(
+          `${cmsUrl}/api/license-keys/${currentLicenseId}/deactivate-with-code`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${customerToken}`,
+            },
+            body: JSON.stringify({ deactivationCode }),
+          },
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(
+            error.error?.message || "Failed to deactivate license",
+          );
+        }
+
+        alert("License deactivated successfully!");
+        modal?.close();
+        loadDashboardData(); // Refresh data
+      } catch (error) {
+        alert(`Error: ${(error as Error).message}`);
+      } finally {
+        if (loading) loading.classList.add("hidden");
+      }
+    };
 
     function updateRecentActivity(purchases, licenseKeys) {
       const container = document.getElementById("recent-activity");

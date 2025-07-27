@@ -987,6 +987,7 @@ export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
       > &
       Attribute.DefaultTo<0>;
     deactivationCode: Attribute.Text;
+    activationNonce: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
