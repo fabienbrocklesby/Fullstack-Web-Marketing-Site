@@ -3,91 +3,203 @@ import Layout from "../../layouts/Layout.astro";
 ---
 
 <Layout title="Customer Registration">
-  <main class="hero min-h-screen bg-base-200">
-    <div class="hero-content text-center">
-      <div class="max-w-md">
-        <div class="card w-full max-w-sm shadow-2xl bg-base-100">
-          <div class="card-body">
-            <h1 class="text-2xl font-bold mb-6">Create Customer Account</h1>
-            <form id="register-form">
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">First Name</span>
-                </label>
-                <input
+  <main class="relative min-h-screen flex items-stretch overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 -z-10">
+      <div
+        class="absolute inset-0 bg-gradient-to-br from-accent/10 via-base-200 to-base-100"
+      >
+      </div>
+      <div
+        class="absolute top-[-18%] left-[-8%] w-[30rem] h-[30rem] rounded-full bg-accent/25 blur-3xl opacity-40"
+      >
+      </div>
+      <div
+        class="absolute bottom-[-22%] right-[-6%] w-[36rem] h-[36rem] rounded-full bg-primary/25 blur-3xl opacity-40"
+      >
+      </div>
+    </div>
+    <div
+      class="container mx-auto px-5 py-10 flex flex-col lg:flex-row gap-14 lg:gap-20 items-center"
+    >
+      <div class="w-full max-w-xl space-y-10 text-center lg:text-left">
+        <a
+          href="/"
+          class="btn btn-ghost btn-sm -ml-2 lg:ml-0 inline-flex items-center gap-2"
+        >
+          <span class="text-lg">←</span>
+          <span>Back to Home</span>
+        </a>
+        <div class="space-y-6">
+          <h1
+            class="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight"
+          >
+            <span
+              class="bg-gradient-to-br from-base-content to-base-content/60 bg-clip-text text-transparent"
+              >Unlock the fastest engraving workflow</span
+            >
+          </h1>
+          <p
+            class="text-base md:text-lg text-base-content/70 max-w-lg mx-auto lg:mx-0"
+          >
+            Private beta access. Enter your activation code to create an account
+            and accelerate every single job with Lightlane’s optimised pipeline.
+          </p>
+          <ul class="grid sm:grid-cols-2 gap-4 text-sm">
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-primary badge-soft mt-0.5">Preview</span
+              ><span class="text-base-content/70"
+                >Real-time path & power feedback for confident first runs.</span>
+            </li>
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-success badge-soft mt-0.5"
+                >Throughput</span
+              ><span class="text-base-content/70"
+                >Fewer modal hops. Rapid template reuse. High repeatability.</span>
+            </li>
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-accent badge-soft mt-0.5">Offline</span
+              ><span class="text-base-content/70"
+                >Activation & licensing resilient to patchy networks.</span>
+            </li>
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-secondary badge-soft mt-0.5">Scale</span
+              ><span class="text-base-content/70"
+                >Materials DB & smart parameter memory reduce setup drift.</span>
+            </li>
+          </ul>
+          <div
+            class="flex flex-wrap gap-3 justify-center lg:justify-start text-xs text-base-content/60"
+          >
+            <span class="badge badge-soft badge-info">Private Beta</span><span
+              class="badge badge-soft badge-warning">One-Time Codes</span
+            ><span class="badge badge-soft badge-error">Limited Seats</span>
+          </div>
+        </div>
+      </div>
+      <div class="w-full max-w-sm">
+        <div
+          class="card shadow-2xl bg-base-100/90 backdrop-blur border border-base-300/60"
+        >
+          <div class="card-body p-8 space-y-6">
+            <div class="space-y-2 text-center">
+              <h2 class="text-2xl font-bold tracking-tight">
+                Create your account
+              </h2>
+              <p class="text-sm text-base-content/60">
+                Activation code required – single use.
+              </p>
+            </div>
+            <form id="register-form" class="space-y-5" novalidate>
+              <div class="form-control gap-2">
+                <label class="text-sm font-medium" for="activationCode"
+                  >Activation Code</label
+                ><input
                   type="text"
-                  id="firstName"
-                  placeholder="First Name"
-                  class="input input-bordered"
+                  id="activationCode"
+                  placeholder="e.g. BETA-9F3K-ALPHA"
+                  class="input input-bordered w-full tracking-wide"
                   required
                 />
               </div>
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">Last Name</span>
-                </label>
-                <input
-                  type="text"
-                  id="lastName"
-                  placeholder="Last Name"
-                  class="input input-bordered"
-                  required
-                />
+              <div class="grid grid-cols-2 gap-4">
+                <div class="form-control gap-2">
+                  <label class="text-sm font-medium" for="firstName"
+                    >First Name</label
+                  ><input
+                    type="text"
+                    id="firstName"
+                    placeholder="Jane"
+                    class="input input-bordered w-full"
+                    required
+                  />
+                </div>
+                <div class="form-control gap-2">
+                  <label class="text-sm font-medium" for="lastName"
+                    >Last Name</label
+                  ><input
+                    type="text"
+                    id="lastName"
+                    placeholder="Maker"
+                    class="input input-bordered w-full"
+                    required
+                  />
+                </div>
               </div>
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">Email</span>
-                </label>
-                <input
+              <div class="form-control gap-2">
+                <label class="text-sm font-medium" for="email">Email</label
+                ><input
                   type="email"
                   id="email"
-                  placeholder="email@example.com"
-                  class="input input-bordered"
+                  placeholder="you@company.com"
+                  class="input input-bordered w-full"
                   required
                 />
               </div>
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">Password</span>
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  placeholder="password"
-                  class="input input-bordered"
-                  required
-                />
+              <div class="grid grid-cols-2 gap-4">
+                <div class="form-control gap-2">
+                  <label class="text-sm font-medium" for="password"
+                    >Password</label
+                  ><input
+                    type="password"
+                    id="password"
+                    placeholder="••••••••"
+                    class="input input-bordered w-full"
+                    required
+                  />
+                </div>
+                <div class="form-control gap-2">
+                  <label class="text-sm font-medium" for="confirmPassword"
+                    >Confirm</label
+                  ><input
+                    type="password"
+                    id="confirmPassword"
+                    placeholder="Repeat"
+                    class="input input-bordered w-full"
+                    required
+                  />
+                </div>
               </div>
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">Confirm Password</span>
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  placeholder="confirm password"
-                  class="input input-bordered"
-                  required
-                />
-              </div>
-              <div class="form-control mt-6">
-                <button type="submit" class="btn btn-primary"
-                  >Create Account</button
-                >
-              </div>
+              <button
+                type="submit"
+                class="btn btn-primary w-full"
+                data-register-btn
+                ><span data-btn-label>Create Account</span><span
+                  class="loading loading-dots loading-sm hidden"
+                  data-btn-loading></span></button
+              >
             </form>
-            <div id="error-message" class="alert alert-error mt-4 hidden">
+            <div
+              id="error-message"
+              class="alert alert-error hidden"
+              role="alert"
+            >
               <span id="error-text"></span>
             </div>
-            <div id="success-message" class="alert alert-success mt-4 hidden">
+            <div
+              id="success-message"
+              class="alert alert-success hidden"
+              role="status"
+            >
               <span id="success-text"></span>
             </div>
-            <p class="text-center mt-4">
-              Already have an account? <a
-                href="/customer/login"
-                class="link link-primary">Login here</a
-              >
-            </p>
+            <div
+              class="pt-2 text-center text-[11px] leading-relaxed text-base-content/50"
+            >
+              <p>
+                Already have access? <a
+                  href="/customer/login"
+                  class="link link-primary">Login</a
+                >.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -101,6 +213,9 @@ import Layout from "../../layouts/Layout.astro";
     ?.addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const activationCodeInput = document.getElementById(
+        "activationCode",
+      ) as HTMLInputElement;
       const firstNameInput = document.getElementById(
         "firstName",
       ) as HTMLInputElement;
@@ -120,6 +235,7 @@ import Layout from "../../layouts/Layout.astro";
       const successText = document.getElementById("success-text");
 
       if (
+        !activationCodeInput ||
         !firstNameInput ||
         !lastNameInput ||
         !emailInput ||
@@ -135,6 +251,12 @@ import Layout from "../../layouts/Layout.astro";
       // Hide previous messages
       errorDiv.classList.add("hidden");
       successDiv.classList.add("hidden");
+
+      if (!activationCodeInput.value.trim()) {
+        errorDiv.classList.remove("hidden");
+        errorText.textContent = "Activation code is required";
+        return;
+      }
 
       // Validate passwords match
       if (passwordInput.value !== confirmPasswordInput.value) {
@@ -170,24 +292,39 @@ import Layout from "../../layouts/Layout.astro";
           );
         }
 
-        const response = await fetch(`${cmsUrl}/api/customers/register`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        const response = await fetch(
+          `${cmsUrl.replace(/\/$/, "")}/api/customers/register`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              activationCode: activationCodeInput.value.trim(),
+              firstName: firstNameInput.value,
+              lastName: lastNameInput.value,
+              email: emailInput.value,
+              password: passwordInput.value,
+              affiliateCode: affiliateCode || null,
+            }),
           },
-          body: JSON.stringify({
-            firstName: firstNameInput.value,
-            lastName: lastNameInput.value,
-            email: emailInput.value,
-            password: passwordInput.value,
-            affiliateCode: affiliateCode || null,
-          }),
-        });
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Registration failed");
+          let message = "Registration failed";
+          const err = data?.error;
+          if (err) {
+            if (typeof err === "string") message = err;
+            else if (typeof err.message === "string") message = err.message;
+            else if (Array.isArray(err) && err[0]?.message)
+              message = err[0].message;
+            else if (err.details?.errors?.length) {
+              message = err.details.errors[0].message || message;
+            }
+          }
+          throw new Error(message);
         }
 
         // Store the customer token
@@ -244,7 +381,11 @@ import Layout from "../../layouts/Layout.astro";
       } catch (error) {
         errorDiv.classList.remove("hidden");
         errorText.textContent =
-          error instanceof Error ? error.message : "Registration failed";
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : "Registration failed";
       }
     });
 </script>

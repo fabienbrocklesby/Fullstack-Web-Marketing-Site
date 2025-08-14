@@ -4,7 +4,7 @@ import Layout from "../../layouts/Layout.astro";
 
 <Layout title="Customer Dashboard">
   <main class="min-h-screen bg-base-200">
-    <div class="navbar bg-base-100">
+    <div class="navbar bg-base-100 sticky top-0 z-40 shadow-sm">
       <div class="navbar-start">
         <div class="dropdown">
           <label tabindex="0" class="btn btn-ghost lg:hidden">
@@ -41,10 +41,21 @@ import Layout from "../../layouts/Layout.astro";
       </div>
       <div class="navbar-end">
         <div class="dropdown dropdown-end">
-          <label tabindex="0" class="btn btn-ghost">
-            <span id="customer-name">Customer</span>
+          <label tabindex="0" class="gap-2">
+            <div
+              class="md:hidden avatar avatar-placeholder hover:cursor-pointer"
+            >
+              <div class="bg-neutral text-neutral-content rounded-full w-10">
+                <span id="nav-initials">CU</span>
+              </div>
+            </div>
+            <span
+              id="customer-name"
+              class="hidden md:inline max-w-[140px] truncate hover:cursor-pointer"
+              >Customer</span
+            >
             <svg
-              class="w-4 h-4 ml-1"
+              class="w-4 h-4 ml-1 hidden md:inline"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -56,11 +67,13 @@ import Layout from "../../layouts/Layout.astro";
                 d="M19 9l-7 7-7-7"></path>
             </svg>
           </label>
-
           <ul
             tabindex="0"
             class="menu menu-compact dropdown-content z-50 mt-3 p-2 shadow bg-base-100 rounded-box w-52"
           >
+            <li class="md:hidden text-xs opacity-60">
+              <span id="customer-name-mobile">Customer</span>
+            </li>
             <li><a href="/customer/profile">Profile</a></li>
             <li><a id="logout-btn">Logout</a></li>
           </ul>
@@ -108,9 +121,11 @@ import Layout from "../../layouts/Layout.astro";
             <h2 class="card-title">
               <div class="avatar placeholder">
                 <div
-                  class="bg-neutral-focus text-neutral-content rounded-full w-8"
+                  class="bg-neutral-focus text-neutral-content rounded-full w-8 h-8 flex items-center justify-center"
                 >
-                  <span class="text-xs" id="customer-initials">CU</span>
+                  <span class="text-xs leading-none" id="customer-initials"
+                    >CU</span
+                  >
                 </div>
               </div>
               Account Info
@@ -123,10 +138,6 @@ import Layout from "../../layouts/Layout.astro";
               <div>
                 <span class="text-sm opacity-70">Email:</span>
                 <span id="customer-email" class="ml-2">Loading...</span>
-              </div>
-              <div>
-                <span class="text-sm opacity-70">Customer ID:</span>
-                <span id="customer-id" class="ml-2">Loading...</span>
               </div>
             </div>
           </div>
@@ -585,23 +596,29 @@ import Layout from "../../layouts/Layout.astro";
 
     function updateCustomerInfo(customerData) {
       const customerNameElement = document.getElementById("customer-name");
+      const customerNameMobileElement = document.getElementById(
+        "customer-name-mobile",
+      );
       const customerInitialsElement =
         document.getElementById("customer-initials");
+      const navInitialsElement = document.getElementById("nav-initials");
       const customerFullNameElement =
         document.getElementById("customer-full-name");
       const customerEmailElement = document.getElementById("customer-email");
-      const customerIdElement = document.getElementById("customer-id");
 
-      if (customerNameElement) {
-        customerNameElement.textContent =
-          `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
-          "Customer";
-      }
+      const fullName =
+        `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+        "Customer";
+      if (customerNameElement) customerNameElement.textContent = fullName;
+      if (customerNameMobileElement)
+        customerNameMobileElement.textContent = fullName;
 
-      if (customerInitialsElement) {
-        const initials = `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}`;
+      const initials =
+        `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}` ||
+        "CU";
+      if (customerInitialsElement)
         customerInitialsElement.textContent = initials || "CU";
-      }
+      if (navInitialsElement) navInitialsElement.textContent = initials || "CU";
 
       if (customerFullNameElement) {
         customerFullNameElement.textContent =
@@ -611,10 +628,6 @@ import Layout from "../../layouts/Layout.astro";
 
       if (customerEmailElement) {
         customerEmailElement.textContent = customerData.email || "No email";
-      }
-
-      if (customerIdElement) {
-        customerIdElement.textContent = customerData.id || "No ID";
       }
 
       // Update localStorage with fresh data

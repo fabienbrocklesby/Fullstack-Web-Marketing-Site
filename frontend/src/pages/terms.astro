@@ -1,0 +1,163 @@
+---
+import Layout from "../layouts/Layout.astro";
+const today = new Date();
+const lastUpdated = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+---
+
+<Layout title="Terms & Conditions">
+  <main class="min-h-screen bg-base-200">
+    <section class="max-w-4xl mx-auto px-6 py-12">
+      <h1 class="text-4xl font-bold mb-2">Light Lane Terms &amp; Conditions</h1>
+      <p class="text-sm opacity-70 mb-8">
+        Last Updated: {lastUpdated} • Contact: <a
+          href="mailto:support@lightlane.app"
+          class="link link-primary">support@lightlane.app</a>
+      </p>
+
+      <ol class="space-y-10 list-decimal list-inside">
+        <li id="acceptance" class="space-y-4">
+          <h2 class="text-2xl font-semibold">Acceptance of Terms</h2>
+          <p>
+            By accessing, installing, downloading, or using Light Lane
+            ("Software," "Application," "App," "We," "Us," or "Our"), you agree
+            to be bound by these Terms &amp; Conditions ("Terms"). If you do not
+            agree, you must immediately discontinue all use and uninstall the
+            Software.
+          </p>
+          <p>
+            These Terms apply to all users, whether authorized, invited, or
+            otherwise. Any unauthorized use is strictly prohibited and may
+            result in legal action.
+          </p>
+        </li>
+        <li id="beta" class="space-y-4">
+          <h2 class="text-2xl font-semibold">
+            Beta Status &amp; Invite-Only Access
+          </h2>
+          <p>
+            Light Lane is currently in beta testing and is invite-only. Access
+            is granted solely at our discretion and only to approved testers.
+          </p>
+          <p>
+            Any attempt to obtain, install, or use the Software without an
+            official invitation constitutes unauthorized access. Such actions
+            may violate applicable laws, including computer misuse, intellectual
+            property, and data protection laws, and will be pursued to the
+            fullest extent permitted.
+          </p>
+        </li>
+        <li id="refunds" class="space-y-4">
+          <h2 class="text-2xl font-semibold">No Refund Policy</h2>
+          <p><strong>All payments are final.</strong></p>
+          <p>
+            We do not offer refunds under any circumstances, including but not
+            limited to dissatisfaction, compatibility issues, feature requests,
+            or changes in your business needs. By purchasing or subscribing, you
+            acknowledge and accept this strict no-refund policy.
+          </p>
+        </li>
+        <li id="license" class="space-y-4">
+          <h2 class="text-2xl font-semibold">
+            License Grant &amp; Restrictions
+          </h2>
+          <p>
+            We grant you a limited, non-exclusive, non-transferable, revocable
+            license to install and use Light Lane for the purpose intended
+            during the beta period.
+          </p>
+          <p class="font-medium">You agree NOT to:</p>
+          <ul class="list-disc list-inside space-y-1 ml-4">
+            <li>
+              Copy, modify, reverse-engineer, decompile, disassemble, or create
+              derivative works of the Software.
+            </li>
+            <li>Share, sell, lease, rent, or sublicense your access.</li>
+            <li>Attempt to bypass invitation-only restrictions.</li>
+            <li>
+              Use the Software for illegal purposes or in violation of any laws.
+            </li>
+          </ul>
+          <p>
+            Any violation of these terms will result in immediate termination of
+            your license and potential legal action.
+          </p>
+        </li>
+        <li id="ip" class="space-y-4">
+          <h2 class="text-2xl font-semibold">Intellectual Property</h2>
+          <p>
+            All intellectual property rights in Light Lane, including but not
+            limited to software code, trademarks, trade secrets, and designs,
+            remain the exclusive property of Light Lane and its licensors.
+          </p>
+          <p>You do not acquire any ownership rights by using the Software.</p>
+        </li>
+        <li id="beta-risks" class="space-y-4">
+          <h2 class="text-2xl font-semibold">Beta Features &amp; Risks</h2>
+          <p>You understand that Light Lane is in beta testing, which means:</p>
+          <ul class="list-disc list-inside space-y-1 ml-4">
+            <li>
+              The Software may contain bugs, errors, or incomplete features.
+            </li>
+            <li>Features may change or be removed without notice.</li>
+            <li>There may be downtime or unexpected behavior.</li>
+          </ul>
+          <p>
+            By participating in the beta, you accept these risks and agree that
+            we are not liable for any loss, damage, or inconvenience resulting
+            from the use of the Software.
+          </p>
+        </li>
+        <li id="liability" class="space-y-4">
+          <h2 class="text-2xl font-semibold">Limitation of Liability</h2>
+          <p>
+            To the maximum extent permitted by law, Light Lane and its
+            affiliates shall not be liable for any indirect, incidental,
+            special, consequential, or punitive damages, including loss of
+            profits, business interruption, or loss of data, arising from your
+            use of the Software.
+          </p>
+          <p>
+            In all cases, our total liability will be limited to the amount you
+            paid for the Software.
+          </p>
+        </li>
+        <li id="termination" class="space-y-4">
+          <h2 class="text-2xl font-semibold">Termination</h2>
+          <p>
+            We reserve the right to suspend or terminate your access without
+            notice if you violate these Terms or engage in any unauthorized or
+            harmful activity. Upon termination, you must immediately uninstall
+            and cease all use of the Software.
+          </p>
+        </li>
+        <li id="law" class="space-y-4">
+          <h2 class="text-2xl font-semibold">
+            Governing Law &amp; Jurisdiction
+          </h2>
+          <p>
+            These Terms shall be governed by and construed in accordance with
+            the laws of New Zealand, without regard to its conflict of law
+            principles. Any disputes shall be subject to the exclusive
+            jurisdiction of the courts located in Nelson, New Zealand.
+          </p>
+        </li>
+        <li id="changes" class="space-y-4">
+          <h2 class="text-2xl font-semibold">Changes to Terms</h2>
+          <p>
+            We may update these Terms at any time. Continued use of the Software
+            after changes are posted constitutes your acceptance of the updated
+            Terms.
+          </p>
+        </li>
+        <li id="contact" class="space-y-4">
+          <h2 class="text-2xl font-semibold">Contact</h2>
+          <p>
+            For any questions or concerns regarding these Terms, please contact: <a
+              href="mailto:support@lightlane.app"
+              class="link">support@lightlane.app</a>
+          </p>
+        </li>
+      </ol>
+    </section>
+  </main>
+</Layout>

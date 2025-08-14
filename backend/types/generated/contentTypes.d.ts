@@ -788,6 +788,37 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
   };
 }
 
+export interface ApiActivationCodeActivationCode extends Schema.CollectionType {
+  collectionName: "activation_codes";
+  info: {
+    singularName: "activation-code";
+    pluralName: "activation-codes";
+    displayName: "Activation Code";
+    description: "One-time activation codes permitting gated customer registration";
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    code: Attribute.String & Attribute.Required & Attribute.Unique;
+    note: Attribute.String;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::activation-code.activation-code",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::activation-code.activation-code",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiAffiliateAffiliate extends Schema.CollectionType {
   collectionName: "affiliates";
   info: {
@@ -1343,6 +1374,7 @@ declare module "@strapi/types" {
       "plugin::users-permissions.permission": PluginUsersPermissionsPermission;
       "plugin::users-permissions.role": PluginUsersPermissionsRole;
       "plugin::users-permissions.user": PluginUsersPermissionsUser;
+      "api::activation-code.activation-code": ApiActivationCodeActivationCode;
       "api::affiliate.affiliate": ApiAffiliateAffiliate;
       "api::blogpost.blogpost": ApiBlogpostBlogpost;
       "api::contact-message.contact-message": ApiContactMessageContactMessage;
