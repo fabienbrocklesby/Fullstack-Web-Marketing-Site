@@ -10,10 +10,10 @@ export interface Props {
 }
 
 const {
-  title = "SaaS Boilerplate",
-  description = "A production-ready SaaS marketing site boilerplate",
+  title = "Lightlane – Laser Engraving Software",
+  description = "Lightlane is the faster, smarter, gradient-driven laser engraving software: import → preview → engrave in fewer clicks.",
   keywords = "",
-  image = "/og-image.jpg",
+  image = "/og-lightlane.jpg",
   canonical = Astro.url.href,
   noindex = false,
   nofollow = false,
@@ -25,11 +25,13 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
 ---
 
 <!doctype html>
-<html lang="en" data-cms-url={cmsUrl}>
+<html lang="en" data-cms-url={cmsUrl} data-theme="lightlane">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="canonical" href={canonical} />
 
     <!-- SEO Meta Tags -->

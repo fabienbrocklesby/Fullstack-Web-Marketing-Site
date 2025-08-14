@@ -66,12 +66,15 @@
         </li>
       </ul>
     </div>
-    <a href="/" class="btn btn-ghost text-xl font-bold">
-      <span
-        class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
-      >
-        SaaS Boilerplate
-      </span>
+    <a href="/" class="flex items-center gap-2 px-2">
+      <img
+        src="/LogoHorizontalSVG.svg"
+        alt="Lightlane"
+        class="h-10 w-auto hidden sm:block"
+        loading="eager"
+        decoding="async"
+      />
+      <img src="/favicon.svg" alt="LL" class="h-8 w-8 sm:hidden" />
     </a>
   </div>
 
@@ -85,11 +88,14 @@
   </div>
 
   <!-- Desktop Menu -->
-  <div class="navbar-end hidden lg:flex gap-2" id="desktop-menu">
+  <div
+    class="navbar-end hidden lg:flex gap-2 items-center pr-2"
+    id="desktop-menu"
+  >
     <!-- Default Desktop Menu (shown when not authenticated) -->
     <div class="auth-default">
       <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+        <div tabindex="0" role="button" class="btn btn-ghost h-full btn-sm">
           Account
         </div>
         <ul
@@ -103,7 +109,9 @@
           </li>
         </ul>
       </div>
-      <a href="/customer/login" class="btn btn-primary btn-sm">Login</a>
+      <a href="/pricing#enquire" class="btn btn-gradient btn-sm lg:inline-flex"
+        >Request Early Access</a
+      >
     </div>
 
     <!-- Customer Desktop Menu (shown when customer is authenticated) -->

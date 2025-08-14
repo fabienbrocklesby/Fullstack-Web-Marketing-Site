@@ -2,6 +2,20 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 
+// Helper: generate a unique-ish license key. This used to live in the license-key controller
+// but was referenced here without being in scope, causing a ReferenceError and aborting the
+// purchase processing before creating the license key. We inline it here to ensure availability.
+// Format: <PROD>-<CUST>-<BASE36TIME>-<RANDHEX>
+function generateLicenseKey(productName, customerId, attempt = 0) {
+  const MAX_ATTEMPTS = 5;
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const randomString = crypto.randomBytes(8).toString("hex").toUpperCase();
+  const productCode = (productName || "PRD").substring(0, 3).toUpperCase();
+  const customerCode = (customerId?.toString() || "0000").substring(0, 4);
+  const key = `${productCode}-${customerCode}-${timestamp}-${randomString}`;
+  return key;
+}
+
 // Price mappings for development (you'll replace these with real Stripe price IDs)
 const PRICE_MAPPINGS = {
   price_starter: {
@@ -546,32 +560,67 @@ module.exports = {
       );
 
       // Generate license key
-      const licenseKey = generateLicenseKey(priceInfo.name, customer.id);
-
-      // Create license key record
-      const licenseKeyRecord = await strapi.entityService.create(
-        "api::license-key.license-key",
-        {
-          data: {
-            key: licenseKey,
-            productName: priceInfo.name,
-            priceId: priceId,
-            customer: customer.id,
-            purchase: purchase.id,
-            isActive: true,
-            isUsed: false,
-            maxActivations: 1,
-            currentActivations: 0,
+      let licenseKeyRecord = null;
+      try {
+        const licenseKey = generateLicenseKey(priceInfo.name, customer.id);
+        console.log("🔑 Generated license key candidate:", licenseKey);
+        licenseKeyRecord = await strapi.entityService.create(
+          "api::license-key.license-key",
+          {
+            data: {
+              key: licenseKey,
+              productName: priceInfo.name,
+              priceId: priceId,
+              customer: customer.id,
+              purchase: purchase.id,
+              // status will start as 'unused' per schema default unless we explicitly set active state
+              status: "unused",
+              isActive: true,
+              isUsed: false,
+              maxActivations: 1,
+              currentActivations: 0,
+            },
           },
-        },
-      );
+        );
+        console.log(
+          "✅ License key record created with id:",
+          licenseKeyRecord.id,
+        );
+      } catch (licenseErr) {
+        console.error("❌ Failed to create license key record:", licenseErr);
+      }
 
       // Update purchase with license key
-      await strapi.entityService.update("api::purchase.purchase", purchase.id, {
-        data: {
-          licenseKey: licenseKeyRecord.id,
-        },
-      });
+      if (licenseKeyRecord?.id) {
+        try {
+          await strapi.entityService.update(
+            "api::purchase.purchase",
+            purchase.id,
+            {
+              data: {
+                licenseKey: licenseKeyRecord.id,
+              },
+            },
+          );
+          console.log(
+            "🔗 Linked license key",
+            licenseKeyRecord.id,
+            "to purchase",
+            purchase.id,
+          );
+        } catch (linkErr) {
+          console.error(
+            "⚠️ Failed linking license key to purchase",
+            purchase.id,
+            linkErr,
+          );
+        }
+      } else {
+        console.warn(
+          "⚠️ Skipping purchase->license link because license key record was not created",
+          purchase.id,
+        );
+      }
 
       // Update affiliate earnings
       if (affiliate) {
@@ -591,14 +640,18 @@ module.exports = {
       }
 
       console.log("✅ Customer purchase processed successfully:", purchase.id);
-      console.log("🔐 License key created:", licenseKey);
+      if (licenseKeyRecord?.key) {
+        console.log("🔐 License key created:", licenseKeyRecord.key);
+      }
 
       ctx.body = {
         success: true,
         purchase: purchase,
         licenseKey: licenseKeyRecord,
         affiliate: affiliate,
-        message: "Purchase processed successfully",
+        message: licenseKeyRecord
+          ? "Purchase processed successfully"
+          : "Purchase processed (license key creation failed)",
       };
     } catch (error) {
       console.error("❌ Error processing customer purchase:", error);

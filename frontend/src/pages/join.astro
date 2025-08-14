@@ -8,15 +8,20 @@ import LLButton from "../components/ui/LLButton.astro";
 import { inviteCodeSchema, redeemSchema } from "../lib/validation/invite";
 ---
 
-<Layout title="Join" description="Join with invite code">
+<Layout
+  title="Join Lightlane"
+  description="Enter your Lightlane invite code to access the beta"
+>
   <Header />
   <main class="py-16">
     <div class="container max-w-xl">
       <div class="card bg-base-200 shadow-xl">
         <div class="card-body" id="step-code">
-          <h1 class="card-title mb-2">Enter Invite Code</h1>
+          <h1 class="card-title mb-2 text-ll-gradient">
+            Enter Your Lightlane Code
+          </h1>
           <p class="text-sm opacity-70 mb-2">
-            Your 6 character code from the invite email.
+            6 characters from your Early Access email.
           </p>
           <form id="code-form" class="space-y-5" novalidate aria-live="polite">
             <LLCodeInput />
@@ -31,7 +36,7 @@ import { inviteCodeSchema, redeemSchema } from "../lib/validation/invite";
           </form>
         </div>
         <div class="card-body hidden" id="step-account">
-          <h2 class="card-title mb-2">Create Account</h2>
+          <h2 class="card-title mb-2">Create Your Account</h2>
           <form id="account-form" novalidate class="space-y-4">
             <input type="hidden" name="code" id="code-hidden" />
             <LLInput name="firstName" label="First Name" required />

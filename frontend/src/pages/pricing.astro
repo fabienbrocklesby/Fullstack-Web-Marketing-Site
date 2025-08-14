@@ -9,8 +9,8 @@ import { enquirySchema } from "../lib/validation/enquiry";
 ---
 
 <Layout
-  title="Pricing - SaaS Boilerplate"
-  description="Choose the perfect plan for your SaaS project"
+  title="Lightlane Early Access"
+  description="Request Early Access to Lightlane – faster import → preview → engrave workflows."
 >
   <Header />
 
@@ -18,10 +18,12 @@ import { enquirySchema } from "../lib/validation/enquiry";
     <section class="py-20">
       <div class="container mx-auto px-4">
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-bold mb-4">Early Access Pricing</h1>
-          <p class="text-xl text-base-content/70 mb-6">
-            Request an invite to join the private beta. Limited seats each
-            month.
+          <h1 class="text-4xl font-bold mb-4 text-ll-gradient">
+            Early Access Tiers
+          </h1>
+          <p class="text-xl text-base-content/70 mb-6 max-w-2xl mx-auto">
+            Lightlane private beta is invite‑only. Seats open in small waves so
+            early users help refine the fastest laser engraving workflow.
           </p>
           <div class="alert alert-info max-w-2xl mx-auto">
             <svg
@@ -50,26 +52,26 @@ import { enquirySchema } from "../lib/validation/enquiry";
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div class="card bg-base-200 shadow-lg">
             <div class="card-body">
-              <h3 class="card-title text-2xl">Starter</h3>
+              <h3 class="card-title text-2xl">Creator</h3>
               <div class="py-2 text-sm opacity-70">
-                Foundation for solo builders
+                Solo makers & hobby rigs
               </div>
               <ul class="space-y-2 mb-6">
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  Complete source code
+                  Core Lightlane engine
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  Basic documentation
+                  Fast import & preview
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  Email support
+                  Offline activation
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  1 year updates
+                  Community support
                 </li>
               </ul>
               <button
@@ -82,26 +84,26 @@ import { enquirySchema } from "../lib/validation/enquiry";
           <div class="card bg-primary text-primary-content shadow-xl scale-105">
             <div class="card-body">
               <div class="badge badge-secondary mb-2">Most Popular</div>
-              <h3 class="card-title text-2xl">Pro</h3>
+              <h3 class="card-title text-2xl">Studio</h3>
               <div class="py-2 text-sm opacity-80">
-                Growth features & premium components
+                Growing engraving setups
               </div>
               <ul class="space-y-2 mb-6">
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  Everything in Starter
+                  Everything in Creator
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  Premium components
+                  Template packs
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class="text-success">✓</span>
+                  Device streaming
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
                   Priority support
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="text-success">✓</span>
-                  Lifetime updates
                 </li>
               </ul>
               <button class="btn btn-accent w-full enquire-btn" data-plan="pro"
@@ -114,24 +116,24 @@ import { enquirySchema } from "../lib/validation/enquiry";
             <div class="card-body">
               <h3 class="card-title text-2xl">Enterprise</h3>
               <div class="py-2 text-sm opacity-70">
-                Custom integrations & scale
+                Teams & advanced workflows
               </div>
               <ul class="space-y-2 mb-6">
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  Everything in Pro
+                  Everything in Studio
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  Custom integrations
+                  Advanced automation
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  1-on-1 consultation
+                  Multi‑seat licensing
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="text-success">✓</span>
-                  White-label rights
+                  Dedicated success
                 </li>
               </ul>
               <button

@@ -30,7 +30,7 @@ import Layout from "../../layouts/Layout.astro";
           </ul>
         </div>
         <a href="/customer/dashboard" class="btn btn-ghost normal-case text-xl"
-          >Customer Portal</a
+          >Lightlane Portal</a
         >
       </div>
       <div class="navbar-center hidden lg:flex">
@@ -537,9 +537,39 @@ import Layout from "../../layouts/Layout.astro";
         }
 
         const licenseData = await licenseResponse.json();
-        displayLicenseKeys(licenseData.licenseKeys);
-        updateStats(licenseData.licenseKeys);
-        updateRecentActivity(customerData.purchases, licenseData.licenseKeys);
+        console.debug("License keys API raw response", licenseData);
+        // Support alternative shapes: { data: [...] } or direct array
+        const keys = Array.isArray(licenseData)
+          ? licenseData
+          : Array.isArray(licenseData.licenseKeys)
+            ? licenseData.licenseKeys
+            : Array.isArray(licenseData.data)
+              ? licenseData.data
+              : [];
+        let finalKeys = keys;
+        if (
+          (!Array.isArray(finalKeys) || finalKeys.length === 0) &&
+          Array.isArray(customerData.licenseKeys) &&
+          customerData.licenseKeys.length
+        ) {
+          console.warn("Using licenseKeys from profile fallback");
+          finalKeys = customerData.licenseKeys.map((k) => ({
+            ...k,
+            isUsed: k.status === "active" || k.isUsed,
+          }));
+        }
+        if (
+          (!finalKeys || finalKeys.length === 0) &&
+          customerData?.purchases?.length
+        ) {
+          console.warn(
+            "No license keys returned but purchases exist",
+            customerData.purchases,
+          );
+        }
+        displayLicenseKeys(finalKeys || []);
+        updateStats(finalKeys || []);
+        updateRecentActivity(customerData.purchases, finalKeys || []);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
         const container = document.getElementById("license-keys-container");
@@ -620,21 +650,40 @@ import Layout from "../../layouts/Layout.astro";
       const cmsUrl =
         document.documentElement.getAttribute("data-cms-url") ||
         "http://localhost:1337";
-      const res = await fetch(`${cmsUrl}/api/customer-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          priceId,
-          successUrl: window.location.origin + "/customer/dashboard",
-          cancelUrl: window.location.href,
-        }),
-      });
-      const out = await res.json();
-      if (out.url) {
-        window.location.href = out.url;
-      } else {
+      if (!priceId) {
         if (purchaseError) {
-          purchaseError.textContent = "Failed to initiate checkout";
+          purchaseError.textContent = "Please select a plan";
+          purchaseError.classList.remove("hidden");
+        }
+        return;
+      }
+      try {
+        const res = await fetch(`${cmsUrl}/api/customer-checkout`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${customerToken}`,
+          },
+          body: JSON.stringify({
+            priceId,
+            successUrl: window.location.origin + "/customer/success",
+            cancelUrl: window.location.href,
+          }),
+        });
+        const out = await res.json();
+        if (!res.ok) {
+          throw new Error(out?.error || out?.message || res.statusText);
+        }
+        if (out.url) {
+          window.location.href = out.url;
+        } else {
+          throw new Error("No checkout URL returned");
+        }
+      } catch (err) {
+        console.error("Checkout initiation failed:", err);
+        if (purchaseError) {
+          purchaseError.textContent =
+            err instanceof Error ? err.message : "Failed to initiate checkout";
           purchaseError.classList.remove("hidden");
         }
       }
@@ -660,9 +709,18 @@ import Layout from "../../layouts/Layout.astro";
 
       const container = document.getElementById("license-keys-container");
       if (!container) return;
+      // Defensive: if API shape changed or missing
+      if (!Array.isArray(licenseKeys)) {
+        console.warn("licenseKeys not an array", licenseKeys);
+        container.innerHTML = `<div class="alert alert-error text-sm">Unable to load license keys. Please refresh.</div>`;
+        container.removeAttribute("aria-busy");
+        return;
+      }
 
       if (licenseKeys.length === 0) {
+        container.removeAttribute("aria-busy");
         showHero();
+        container.innerHTML = `<div class="p-4 text-sm opacity-70">No license keys yet.</div>`;
         return;
       }
       // Hide hero if licenses exist

@@ -13,13 +13,21 @@ module.exports = createCoreController(
         if (!customerId) {
           return ctx.unauthorized("Not authenticated");
         }
-
+        console.log("[license-key.find] customerId=", customerId);
+        // For manyToOne relation Strapi creates a foreign key column (e.g. customer_id) or join table depending on DB; use nested filter form for safety
         const licenseKeys = await strapi.entityService.findMany(
           "api::license-key.license-key",
           {
-            filters: { customer: customerId },
+            filters: { customer: { id: { $eq: customerId } } },
             populate: ["purchase"],
           },
+        );
+
+        console.log(
+          "[license-key.find] fetched",
+          licenseKeys.length,
+          "keys for customer",
+          customerId,
         );
 
         // Add a dynamic `isUsed` property for frontend compatibility
@@ -27,6 +35,8 @@ module.exports = createCoreController(
           ...key,
           isUsed: key.status === "active",
         }));
+
+        // Removed raw SQL diagnostic (caused sqlite column error) – rely on entityService abstraction
 
         ctx.body = { licenseKeys: licenseKeysWithStatus };
       } catch (error) {
