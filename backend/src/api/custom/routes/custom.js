@@ -77,6 +77,14 @@ module.exports = {
         auth: false,
       },
     },
+    {
+      method: "POST",
+      path: "/purchases/manual-credit",
+      handler: "custom.manualCreditPurchase",
+      config: {
+        auth: false,
+      },
+    },
     // Visitor tracking for affiliate conversions
     {
       method: "POST",
@@ -85,6 +93,12 @@ module.exports = {
       config: {
         auth: false,
       },
+    },
+    {
+      method: "GET",
+      path: "/affiliate-leads",
+      handler: "custom.getAffiliateLeads",
+      config: { auth: false },
     },
     // Get affiliate conversion stats
     {

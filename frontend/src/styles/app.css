@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: lightlane --default, dark --prefersdark;
+}
+@plugin "daisyui/theme" {
+  name: "lightlane";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: oklch(99% 0.01 250);
+  --color-base-200: oklch(96% 0.02 250);
+  --color-base-300: oklch(92% 0.03 250);
+  --color-base-content: oklch(22% 0.04 250);
+  --color-primary: oklch(60% 0.22 270);
+  --color-primary-content: oklch(98% 0.01 270);
+  --color-secondary: oklch(65% 0.18 200);
+  --color-secondary-content: oklch(98% 0.01 200);
+  --color-accent: oklch(72% 0.19 160);
+  --color-accent-content: oklch(15% 0.03 160);
+  --color-neutral: oklch(40% 0.04 250);
+  --color-neutral-content: oklch(95% 0.02 250);
+  --color-info: oklch(70% 0.18 230);
+  --color-info-content: oklch(15% 0.03 230);
+  --color-success: oklch(64% 0.2 150);
+  --color-success-content: oklch(15% 0.03 150);
+  --color-warning: oklch(78% 0.2 80);
+  --color-warning-content: oklch(22% 0.05 80);
+  --color-error: oklch(60% 0.25 30);
+  --color-error-content: oklch(98% 0.01 30);
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="dark"] {
+    --color-base-100: oklch(22% 0.03 250);
+    --color-base-200: oklch(28% 0.04 250);
+    --color-base-300: oklch(34% 0.05 250);
+    --color-base-content: oklch(95% 0.02 250);
+  }
+}
+
+html, body { font-feature-settings: "cv02","cv03","cv04","cv11"; }
+.container { @apply mx-auto px-4 max-w-7xl; }
+.section { @apply py-16 md:py-24; }
+.page-header { @apply text-center max-w-3xl mx-auto mb-12; }
+
+.fade-in { animation: fade .4s ease; }
+@keyframes fade { from { opacity:0; transform: translateY(4px);} to { opacity:1; transform: translateY(0);} }

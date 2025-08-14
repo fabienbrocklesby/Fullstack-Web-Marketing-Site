@@ -61,6 +61,15 @@
     "resetPasswordExpires": {
       "type": "datetime",
       "private": true
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "originEnquiryId": {
+      "type": "string"
+    },
+    "affiliateCodeAtSignup": {
+      "type": "string"
     }
   }
 }

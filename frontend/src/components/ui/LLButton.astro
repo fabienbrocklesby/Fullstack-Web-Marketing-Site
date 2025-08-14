@@ -1,0 +1,42 @@
+---
+export interface Props {
+  id?: string;
+  type?: "button" | "submit" | "reset";
+  variant?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  full?: boolean;
+  ariaLabel?: string;
+}
+const {
+  id,
+  type = "button",
+  variant = "primary",
+  loading = false,
+  disabled = false,
+  full = false,
+  ariaLabel,
+} = Astro.props as Props;
+const base = "btn transition-colors";
+const variants: Record<string, string> = {
+  primary: "btn-primary",
+  secondary: "btn-secondary",
+  outline: "btn-outline",
+  ghost: "btn-ghost",
+  accent: "btn-accent",
+  danger: "btn-error",
+};
+const cls = `${base} ${variants[variant] || variants.primary} ${full ? "w-full" : ""}`;
+---
+
+<button
+  id={id}
+  type={type}
+  aria-label={ariaLabel}
+  class={cls}
+  disabled={disabled || loading}
+  data-loading={loading}
+  >{Astro.slots.default ? <slot /> : "Submit"}{
+    loading && <span class="loading loading-spinner loading-xs ml-2" />
+  }</button
+>

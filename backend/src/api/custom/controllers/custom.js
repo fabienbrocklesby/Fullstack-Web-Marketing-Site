@@ -1683,8 +1683,7 @@ module.exports = {
       if (dateFrom || dateTo) {
         filteredJourneys = filteredJourneys.filter((journey) => {
           const journeyDate = new Date(journey.firstSeen);
-          if (dateFrom && journeyDate < new Date(dateFrom + "T00:00:00.000Z"))
-            return false;
+          if (dateFrom && journeyDate < new Date(dateFrom)) return false;
           if (dateTo && journeyDate > new Date(dateTo + "T23:59:59.999Z"))
             return false;
           return true;
@@ -1804,193 +1803,115 @@ module.exports = {
     }
   },
 
-  // ...existing code...
-};
-
-// Helper function to generate license key
-function generateLicenseKey(productName, customerId) {
-  const timestamp = Date.now().toString(36);
-  const randomString = crypto.randomBytes(8).toString("hex").toUpperCase();
-  const productCode = productName.substring(0, 3).toUpperCase();
-  const customerCode = customerId.toString().substring(0, 4);
-
-  return `${productCode}-${customerCode}-${timestamp}-${randomString}`;
-}
-
-// Helper function to create or get customer
-async function createOrGetCustomer(email, firstName = "", lastName = "") {
-  try {
-    // Check if customer already exists
-    const existingCustomers = await strapi.entityService.findMany(
-      "api::customer.customer",
-      {
-        filters: { email: email.toLowerCase() },
-      },
-    );
-
-    if (existingCustomers.length > 0) {
-      return existingCustomers[0];
-    }
-
-    // Create new customer with temporary password
-    const tempPassword = crypto.randomBytes(16).toString("hex");
-    const hashedPassword = await bcrypt.hash(tempPassword, 12);
-
-    const customer = await strapi.entityService.create(
-      "api::customer.customer",
-      {
-        data: {
-          email: email.toLowerCase(),
-          firstName: firstName || "Customer",
-          lastName: lastName || "",
-          password: hashedPassword,
-          isActive: true,
-          emailVerified: false,
-        },
-      },
-    );
-
-    console.log("Created new customer:", customer.id);
-    return customer;
-  } catch (error) {
-    console.error("Error creating customer:", error);
-    throw error;
-  }
-}
-
-async function handleSuccessfulPayment(session) {
-  try {
-    const { id: sessionId, amount_total, customer_email, metadata } = session;
-    const { affiliateCode, originalPriceId, customerId, customerEmail } =
-      metadata;
-
-    console.log(
-      "Processing successful payment for:",
-      customer_email || customerEmail,
-    );
-
-    // Try to get customer from metadata first (for authenticated purchases)
-    let customer = null;
-    if (customerId) {
-      customer = await strapi.entityService.findOne(
+  async manualCreditPurchase(ctx) {
+    try {
+      const {
+        customerId,
+        priceId,
+        affiliateCode,
+        amount,
+        currency = "usd",
+        reason,
+      } = ctx.request.body;
+      if (!customerId || !priceId || !amount)
+        return ctx.badRequest("customerId, priceId, amount required");
+      const customer = await strapi.entityService.findOne(
         "api::customer.customer",
-        parseInt(customerId),
+        customerId,
       );
-    }
-
-    // If no customer from metadata, create or get customer from email
-    if (!customer) {
-      customer = await createOrGetCustomer(customer_email || customerEmail);
-    }
-
-    // Find affiliate if code exists
-    let affiliate = null;
-    if (affiliateCode) {
-      const affiliates = await strapi.entityService.findMany(
-        "api::affiliate.affiliate",
-        {
-          filters: { code: affiliateCode, isActive: true },
-        },
-      );
-      affiliate = affiliates.length > 0 ? affiliates[0] : null;
-    }
-
-    // Calculate commission using affiliate's actual rate (not default)
-    const commissionRate = affiliate?.commissionRate || 0.1;
-    const commissionAmount = affiliate
-      ? (amount_total / 100) * commissionRate
-      : 0;
-
-    console.log(
-      `💰 Webhook commission calculation: ${affiliate ? affiliate.commissionRate * 100 : 0}% rate = $${commissionAmount.toFixed(2)} for affiliate ${affiliate?.code || "none"}`,
-    );
-
-    // Get product info
-    const priceInfo = PRICE_MAPPINGS[originalPriceId] || {
-      name: "Unknown Product",
-      description: "Product purchase",
-    };
-
-    // Check if purchase already exists
-    const existingPurchases = await strapi.entityService.findMany(
-      "api::purchase.purchase",
-      {
-        filters: { stripeSessionId: sessionId },
-      },
-    );
-
-    if (existingPurchases.length > 0) {
-      console.log("Purchase already exists for session:", sessionId);
-      return;
-    }
-
-    // Create purchase record
-    const purchase = await strapi.entityService.create(
-      "api::purchase.purchase",
-      {
-        data: {
-          stripeSessionId: sessionId,
-          amount: amount_total / 100, // Convert from cents
-          customerEmail: customer.email,
-          priceId: originalPriceId || "unknown",
-          customer: customer.id,
-          affiliate: affiliate ? affiliate.id : null,
-          commissionAmount,
-          status: "completed",
-          metadata: {
-            sessionData: session,
-            processedVia: "stripe-webhook",
-          },
-        },
-      },
-    );
-
-    // Generate license key
-    const licenseKey = generateLicenseKey(priceInfo.name, customer.id);
-
-    // Create license key record
-    const licenseKeyRecord = await strapi.entityService.create(
-      "api::license-key.license-key",
-      {
-        data: {
-          key: licenseKey,
-          productName: priceInfo.name,
-          priceId: originalPriceId || "unknown",
-          customer: customer.id,
-          purchase: purchase.id,
-          isActive: true,
-          isUsed: false,
-          maxActivations: 1,
-          currentActivations: 0,
-        },
-      },
-    );
-
-    // Update purchase with license key
-    await strapi.entityService.update("api::purchase.purchase", purchase.id, {
-      data: {
-        licenseKey: licenseKeyRecord.id,
-      },
-    });
-
-    // Update affiliate earnings
-    if (affiliate) {
-      await strapi.entityService.update(
-        "api::affiliate.affiliate",
-        affiliate.id,
+      if (!customer) return ctx.notFound("customer");
+      let affiliate = null;
+      if (affiliateCode) {
+        const list = await strapi.entityService.findMany(
+          "api::affiliate.affiliate",
+          { filters: { code: affiliateCode } },
+        );
+        affiliate = list[0] || null;
+      }
+      const sessionId = `manual_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const commissionRate = affiliate?.commissionRate || 0.1;
+      const commissionAmount = affiliate ? amount * commissionRate : 0;
+      const purchase = await strapi.entityService.create(
+        "api::purchase.purchase",
         {
           data: {
-            totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
+            stripeSessionId: sessionId,
+            amount,
+            currency,
+            customerEmail: customer.email,
+            priceId,
+            customer: customer.id,
+            affiliate: affiliate ? affiliate.id : null,
+            commissionAmount,
+            isManual: true,
+            manualReason: reason || "manual credit",
+            metadata: { createdVia: "manual-credit" },
           },
         },
       );
+      if (affiliate) {
+        await strapi.entityService.update(
+          "api::affiliate.affiliate",
+          affiliate.id,
+          {
+            data: {
+              totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
+            },
+          },
+        );
+      }
+      const licenseKey = `LIC-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      const licenseKeyRecord = await strapi.entityService.create(
+        "api::license-key.license-key",
+        {
+          data: {
+            key: licenseKey,
+            productName: priceId,
+            priceId,
+            customer: customer.id,
+            purchase: purchase.id,
+            isActive: true,
+            isUsed: false,
+            maxActivations: 1,
+            currentActivations: 0,
+          },
+        },
+      );
+      await strapi.entityService.update("api::purchase.purchase", purchase.id, {
+        data: { licenseKey: licenseKeyRecord.id },
+      });
+      ctx.body = {
+        success: true,
+        purchaseId: purchase.id,
+        licenseKey: licenseKeyRecord.key,
+      };
+    } catch (e) {
+      ctx.status = 500;
+      ctx.body = { error: e.message };
     }
+  },
 
-    console.log("Purchase recorded successfully:", purchase.id);
-    console.log("License key created:", licenseKey);
-
-    // TODO: Send email to customer with license key and account setup instructions
-  } catch (error) {
-    console.error("Error handling successful payment:", error);
-  }
-}
+  async getAffiliateLeads(ctx) {
+    try {
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
+      const affiliates = await strapi.entityService.findMany(
+        "api::affiliate.affiliate",
+        { filters: { $or: [{ user: user.id }, { email: user.email }] } },
+      );
+      if (!affiliates.length) return (ctx.body = { data: [] });
+      const affiliate = affiliates[0];
+      const enquiries = await strapi.entityService.findMany(
+        "api::enquiry.enquiry",
+        {
+          filters: { affiliateCode: affiliate.code },
+          sort: { createdAt: "desc" },
+        },
+      );
+      ctx.body = { data: enquiries };
+    } catch (e) {
+      ctx.status = 500;
+      ctx.body = { error: e.message };
+    }
+  },
+};

@@ -69,6 +69,38 @@ import Layout from "../../layouts/Layout.astro";
     </div>
 
     <div class="container mx-auto px-4 py-8">
+      <!-- Hero Empty State (hidden until determined no licenses) -->
+      <section id="purchase-hero" class="hidden mb-10">
+        <div class="hero bg-base-100 rounded-2xl shadow-lg">
+          <div class="hero-content flex-col lg:flex-row gap-10">
+            <div class="max-w-xl">
+              <h1 class="text-3xl font-bold mb-4">Get Your First License</h1>
+              <p class="opacity-70 mb-6">
+                Choose a plan and checkout securely. Your license key appears
+                instantly and you can generate an offline activation code tied
+                to your machine.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-4 items-start">
+                <select
+                  id="hero-plan"
+                  class="select select-bordered w-full max-w-xs"
+                >
+                  <option value="price_starter">Starter – $99</option>
+                  <option value="price_pro" selected>Pro – $199</option>
+                  <option value="price_enterprise">Enterprise – $499</option>
+                </select>
+                <button id="hero-buy" class="btn btn-primary"
+                  >Buy with Stripe</button
+                >
+              </div>
+              <p class="mt-3 text-xs opacity-60">
+                One device per license • Instant key issuance • Offline
+                activation supported
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Customer Info Card -->
         <div class="card bg-base-100 shadow-xl">
@@ -141,32 +173,74 @@ import Layout from "../../layouts/Layout.astro";
         <div class="card-body">
           <div class="flex justify-between items-center mb-4">
             <h2 class="card-title">Your License Keys</h2>
-            <a href="/pricing" class="btn btn-primary btn-sm">
-              <svg
-                class="w-4 h-4 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              Purchase License
-            </a>
+            <button id="open-purchase" class="btn btn-primary btn-sm"
+              >Buy with Stripe</button
+            >
           </div>
-          <div id="license-keys-container">
-            <div class="text-center py-8">
-              <div class="loading loading-spinner loading-lg"></div>
-              <p class="mt-4">Loading your license keys...</p>
+          <div id="license-keys-container" aria-busy="true">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Skeleton license cards while loading -->
+              <div class="card bg-base-100 border shadow-sm p-6 space-y-4">
+                <div class="flex justify-between">
+                  <div class="space-y-2">
+                    <div class="skeleton h-5 w-40"></div>
+                    <div class="skeleton h-4 w-24"></div>
+                  </div>
+                  <div class="skeleton h-6 w-20"></div>
+                </div>
+                <div class="skeleton h-10 w-full"></div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="skeleton h-4 w-24"></div>
+                  <div class="skeleton h-4 w-24"></div>
+                </div>
+                <div class="flex justify-end gap-2">
+                  <div class="skeleton h-8 w-20"></div>
+                  <div class="skeleton h-8 w-32"></div>
+                </div>
+              </div>
+              <div
+                class="card bg-base-100 border shadow-sm p-6 space-y-4 hidden md:block"
+              >
+                <div class="flex justify-between">
+                  <div class="space-y-2">
+                    <div class="skeleton h-5 w-40"></div>
+                    <div class="skeleton h-4 w-24"></div>
+                  </div>
+                  <div class="skeleton h-6 w-20"></div>
+                </div>
+                <div class="skeleton h-10 w-full"></div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="skeleton h-4 w-24"></div>
+                  <div class="skeleton h-4 w-24"></div>
+                </div>
+                <div class="flex justify-end gap-2">
+                  <div class="skeleton h-8 w-20"></div>
+                  <div class="skeleton h-8 w-32"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </main>
+
+  <dialog id="purchase_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-2">Purchase License</h3>
+      <form id="purchase-form" class="space-y-3">
+        <label class="label">Plan</label>
+        <select id="plan-select" class="select select-bordered w-full">
+          <option value="price_starter">Starter ($99)</option>
+          <option value="price_pro" selected>Pro ($199)</option>
+          <option value="price_enterprise">Enterprise ($499)</option>
+        </select>
+        <button class="btn btn-primary w-full">Checkout</button>
+        <p id="purchase-error" class="text-error text-sm hidden"></p>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
 
   <!-- Generate Activation Code Modal -->
   <dialog id="generate_activation_modal" class="modal">
@@ -517,6 +591,69 @@ import Layout from "../../layouts/Layout.astro";
       localStorage.setItem("customer", JSON.stringify(customerData));
     }
 
+    const purchaseBtn = document.getElementById(
+      "open-purchase",
+    ) as HTMLButtonElement | null;
+    const purchaseModal = document.getElementById(
+      "purchase_modal",
+    ) as HTMLDialogElement | null;
+    const purchaseForm = document.getElementById(
+      "purchase-form",
+    ) as HTMLFormElement | null;
+    const planSelect = document.getElementById(
+      "plan-select",
+    ) as HTMLSelectElement | null;
+    const purchaseError = document.getElementById(
+      "purchase-error",
+    ) as HTMLElement | null;
+    const heroPlan = document.getElementById(
+      "hero-plan",
+    ) as HTMLSelectElement | null;
+    const heroBuy = document.getElementById(
+      "hero-buy",
+    ) as HTMLButtonElement | null;
+    purchaseBtn?.addEventListener("click", () => purchaseModal?.showModal());
+    purchaseForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      purchaseError?.classList.add("hidden");
+      const priceId = planSelect?.value;
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      const res = await fetch(`${cmsUrl}/api/customer-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceId,
+          successUrl: window.location.origin + "/customer/dashboard",
+          cancelUrl: window.location.href,
+        }),
+      });
+      const out = await res.json();
+      if (out.url) {
+        window.location.href = out.url;
+      } else {
+        if (purchaseError) {
+          purchaseError.textContent = "Failed to initiate checkout";
+          purchaseError.classList.remove("hidden");
+        }
+      }
+    });
+    heroBuy?.addEventListener("click", () => {
+      if (heroPlan && planSelect) {
+        planSelect.value = heroPlan.value;
+        purchaseModal?.showModal();
+      } else {
+        purchaseModal?.showModal();
+      }
+    });
+
+    function showHero() {
+      const hero = document.getElementById("purchase-hero");
+      if (hero) hero.classList.remove("hidden");
+      // Hide the license card wrapper (license-keys-container parent card remains for layout, could hide if needed)
+    }
+
     function displayLicenseKeys(licenseKeys) {
       // Store license keys for global access
       currentLicenseKeys = licenseKeys;
@@ -525,16 +662,12 @@ import Layout from "../../layouts/Layout.astro";
       if (!container) return;
 
       if (licenseKeys.length === 0) {
-        container.innerHTML = `
-        <div class="text-center py-8">
-          <div class="text-6xl mb-4">🔐</div>
-          <h3 class="text-lg font-semibold mb-2">No License Keys Yet</h3>
-          <p class="text-gray-600">Your license keys will appear here after making a purchase.</p>
-          <a href="/pricing" class="btn btn-primary mt-4">View Products</a>
-        </div>
-      `;
+        showHero();
         return;
       }
+      // Hide hero if licenses exist
+      document.getElementById("purchase-hero")?.classList.add("hidden");
+      container.removeAttribute("aria-busy");
 
       const licenseCardsHTML = licenseKeys
         .map(

@@ -885,6 +885,9 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
     >;
     resetPasswordToken: Attribute.String & Attribute.Private;
     resetPasswordExpires: Attribute.DateTime & Attribute.Private;
+    metadata: Attribute.JSON;
+    originEnquiryId: Attribute.String;
+    affiliateCodeAtSignup: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -898,6 +901,136 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
       "oneToOne",
       "admin::user"
     > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiCustomerInviteCustomerInvite extends Schema.CollectionType {
+  collectionName: "customer_invites";
+  info: {
+    singularName: "customer-invite";
+    pluralName: "customer-invites";
+    displayName: "CustomerInvite";
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    code: Attribute.UID<
+      "api::customer-invite.customer-invite",
+      "issuedToEmail"
+    > &
+      Attribute.Unique;
+    status: Attribute.Enumeration<["pending", "redeemed", "expired"]> &
+      Attribute.DefaultTo<"pending">;
+    issuedToEmail: Attribute.Email;
+    affiliate: Attribute.Relation<
+      "api::customer-invite.customer-invite",
+      "manyToOne",
+      "api::affiliate.affiliate"
+    >;
+    enquiry: Attribute.Relation<
+      "api::customer-invite.customer-invite",
+      "oneToOne",
+      "api::enquiry.enquiry"
+    >;
+    expiresAt: Attribute.DateTime;
+    redeemedAt: Attribute.DateTime;
+    maxUses: Attribute.Integer & Attribute.DefaultTo<1>;
+    uses: Attribute.Integer & Attribute.DefaultTo<0>;
+    notes: Attribute.Text;
+    metadata: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::customer-invite.customer-invite",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::customer-invite.customer-invite",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiEnquiryEnquiry extends Schema.CollectionType {
+  collectionName: "enquiries";
+  info: {
+    singularName: "enquiry";
+    pluralName: "enquiries";
+    displayName: "Enquiry";
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    fullName: Attribute.String & Attribute.Required;
+    email: Attribute.Email & Attribute.Required;
+    company: Attribute.String;
+    useCase: Attribute.Text;
+    planInterested: Attribute.String;
+    affiliateCode: Attribute.String;
+    status: Attribute.Enumeration<["new", "invited", "closed", "spam"]> &
+      Attribute.DefaultTo<"new">;
+    source: Attribute.String;
+    notes: Attribute.Text;
+    metadata: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::enquiry.enquiry",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::enquiry.enquiry",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiLeadLead extends Schema.CollectionType {
+  collectionName: "leads";
+  info: {
+    singularName: "lead";
+    pluralName: "leads";
+    displayName: "Lead";
+    description: "Sales lead captured from enquiries / early access form";
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    fullName: Attribute.String & Attribute.Required;
+    email: Attribute.Email & Attribute.Required;
+    company: Attribute.String;
+    useCase: Attribute.Text;
+    notes: Attribute.Text;
+    planInterested: Attribute.String;
+    affiliateCode: Attribute.String;
+    source: Attribute.String;
+    status: Attribute.Enumeration<
+      ["new", "contacted", "qualified", "won", "lost"]
+    > &
+      Attribute.DefaultTo<"new">;
+    metadata: Attribute.JSON;
+    enquiry: Attribute.Relation<
+      "api::lead.lead",
+      "oneToOne",
+      "api::enquiry.enquiry"
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<"api::lead.lead", "oneToOne", "admin::user"> &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<"api::lead.lead", "oneToOne", "admin::user"> &
       Attribute.Private;
   };
 }
@@ -1063,6 +1196,13 @@ export interface ApiPurchasePurchase extends Schema.CollectionType {
   };
   attributes: {
     stripeSessionId: Attribute.String & Attribute.Required & Attribute.Unique;
+    isManual: Attribute.Boolean & Attribute.DefaultTo<false>;
+    manualReason: Attribute.Text;
+    createdByAdmin: Attribute.Relation<
+      "api::purchase.purchase",
+      "oneToOne",
+      "plugin::users-permissions.user"
+    >;
     amount: Attribute.Decimal & Attribute.Required;
     currency: Attribute.String & Attribute.DefaultTo<"usd">;
     customerEmail: Attribute.Email;
@@ -1122,6 +1262,9 @@ declare module "@strapi/types" {
       "plugin::users-permissions.user": PluginUsersPermissionsUser;
       "api::affiliate.affiliate": ApiAffiliateAffiliate;
       "api::customer.customer": ApiCustomerCustomer;
+      "api::customer-invite.customer-invite": ApiCustomerInviteCustomerInvite;
+      "api::enquiry.enquiry": ApiEnquiryEnquiry;
+      "api::lead.lead": ApiLeadLead;
       "api::license.license": ApiLicenseLicense;
       "api::license-key.license-key": ApiLicenseKeyLicenseKey;
       "api::page.page": ApiPagePage;

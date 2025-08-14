@@ -1,0 +1,41 @@
+---
+export interface Item {
+  value: string;
+  label: string;
+}
+export interface Props {
+  name: string;
+  legend?: string;
+  items: Item[];
+  value?: string;
+  error?: string;
+}
+const p = Astro.props as Props;
+---
+
+<fieldset class="fieldset" data-field>
+  {p.legend && <legend class="fieldset-legend font-medium">{p.legend}</legend>}
+  <div class="flex flex-wrap gap-4 pt-2">
+    {
+      p.items.map((it) => (
+        <label class="flex items-center gap-2">
+          <input
+            type="radio"
+            class="radio"
+            name={p.name}
+            value={it.value}
+            checked={p.value === it.value}
+          />{" "}
+          <span>{it.label}</span>
+        </label>
+      ))
+    }
+  </div>
+  {
+    p.error && (
+      <p class="mt-2 text-sm text-error" role="alert">
+        {p.error}
+      </p>
+    )
+  }
+</fieldset>

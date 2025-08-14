@@ -2,7 +2,10 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import BuyButton from "../components/BuyButton.astro";
+import LLInput from "../components/ui/LLInput.astro";
+import LLTextarea from "../components/ui/LLTextarea.astro";
+import LLButton from "../components/ui/LLButton.astro";
+import { enquirySchema } from "../lib/validation/enquiry";
 ---
 
 <Layout
@@ -15,9 +18,10 @@ import BuyButton from "../components/BuyButton.astro";
     <section class="py-20">
       <div class="container mx-auto px-4">
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-bold mb-4">Simple, Transparent Pricing</h1>
+          <h1 class="text-4xl font-bold mb-4">Early Access Pricing</h1>
           <p class="text-xl text-base-content/70 mb-6">
-            Choose the perfect plan for your project
+            Request an invite to join the private beta. Limited seats each
+            month.
           </p>
           <div class="alert alert-info max-w-2xl mx-auto">
             <svg
@@ -44,13 +48,11 @@ import BuyButton from "../components/BuyButton.astro";
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <!-- Starter Plan -->
           <div class="card bg-base-200 shadow-lg">
             <div class="card-body">
               <h3 class="card-title text-2xl">Starter</h3>
-              <div class="py-4">
-                <span class="text-4xl font-bold">$99</span>
-                <span class="text-base-content/70">one-time</span>
+              <div class="py-2 text-sm opacity-70">
+                Foundation for solo builders
               </div>
               <ul class="space-y-2 mb-6">
                 <li class="flex items-center gap-2">
@@ -70,23 +72,19 @@ import BuyButton from "../components/BuyButton.astro";
                   1 year updates
                 </li>
               </ul>
-              <BuyButton
-                text="Get Starter"
-                priceId="price_starter"
-                variant="ghost"
-                className="w-full"
-              />
+              <button
+                class="btn btn-primary w-full enquire-btn"
+                data-plan="starter">Request Invite</button
+              >
             </div>
           </div>
 
-          <!-- Pro Plan -->
           <div class="card bg-primary text-primary-content shadow-xl scale-105">
             <div class="card-body">
               <div class="badge badge-secondary mb-2">Most Popular</div>
               <h3 class="card-title text-2xl">Pro</h3>
-              <div class="py-4">
-                <span class="text-4xl font-bold">$199</span>
-                <span class="text-primary-content/70">one-time</span>
+              <div class="py-2 text-sm opacity-80">
+                Growth features & premium components
               </div>
               <ul class="space-y-2 mb-6">
                 <li class="flex items-center gap-2">
@@ -106,22 +104,17 @@ import BuyButton from "../components/BuyButton.astro";
                   Lifetime updates
                 </li>
               </ul>
-              <BuyButton
-                text="Get Pro"
-                priceId="price_pro"
-                variant="accent"
-                className="w-full"
-              />
+              <button class="btn btn-accent w-full enquire-btn" data-plan="pro"
+                >Request Invite</button
+              >
             </div>
           </div>
 
-          <!-- Enterprise Plan -->
           <div class="card bg-base-200 shadow-lg">
             <div class="card-body">
               <h3 class="card-title text-2xl">Enterprise</h3>
-              <div class="py-4">
-                <span class="text-4xl font-bold">$499</span>
-                <span class="text-base-content/70">one-time</span>
+              <div class="py-2 text-sm opacity-70">
+                Custom integrations & scale
               </div>
               <ul class="space-y-2 mb-6">
                 <li class="flex items-center gap-2">
@@ -141,26 +134,213 @@ import BuyButton from "../components/BuyButton.astro";
                   White-label rights
                 </li>
               </ul>
-              <BuyButton
-                text="Get Enterprise"
-                priceId="price_enterprise"
-                variant="ghost"
-                className="w-full"
-              />
+              <button
+                class="btn btn-outline w-full enquire-btn"
+                data-plan="enterprise">Request Invite</button
+              >
             </div>
           </div>
         </div>
       </div>
     </section>
+    <dialog id="enquiry_modal" class="modal">
+      <div class="modal-box max-w-xl">
+        <h3 class="font-bold text-xl mb-4">Request Early Access</h3>
+        <form
+          id="enquiry-form"
+          novalidate
+          class="space-y-4"
+          aria-describedby="enquiry-errors"
+          aria-live="polite"
+        >
+          <div
+            id="enquiry-error-summary"
+            class="hidden alert alert-error text-sm"
+            role="alert"
+          >
+          </div>
+          <input type="hidden" name="planInterested" id="planInterested" />
+          <input type="hidden" name="affiliateCode" id="affiliateCode" />
+          <LLInput name="fullName" label="Full Name" required />
+          <LLInput name="email" type="email" label="Email" required />
+          <LLInput name="company" label="Company" />
+          <LLTextarea
+            name="useCase"
+            label="Use Case"
+            required
+            help="Tell us what you're building"
+          />
+          <LLTextarea name="notes" label="Notes" />
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <LLButton
+              variant="ghost"
+              type="button"
+              ariaLabel="Close"
+              id="close-enquiry"
+            >
+              Cancel
+            </LLButton>
+            <LLButton type="submit" variant="primary" full id="submit-enquiry">
+              Submit<span class="sr-only"> enquiry</span>
+            </LLButton>
+          </div>
+          <p class="text-sm text-success hidden" id="enquiry-success">
+            Thanks – check your inbox soon.
+          </p>
+          <p class="text-sm text-error hidden" id="enquiry-error"></p>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
   </main>
 
   <Footer />
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log(
-        "📊 Pricing page loaded - journey tracker will handle all affiliate tracking automatically",
+  <script type="module">
+    import { enquirySchema } from "/src/lib/validation/enquiry.ts";
+    const modal = document.getElementById("enquiry_modal");
+    const form = document.getElementById("enquiry-form");
+    const successMsg = document.getElementById("enquiry-success");
+    const errorMsg = document.getElementById("enquiry-error");
+    const errorSummary = document.getElementById("enquiry-error-summary");
+    const affiliateCodeInput = document.getElementById("affiliateCode");
+    const planInput = document.getElementById("planInterested");
+    const AFF_COOKIE = "ll_aff";
+    function getAffiliateCode() {
+      const p = new URLSearchParams(location.search).get("ref");
+      if (p) {
+        document.cookie = `${AFF_COOKIE}=${p};path=/;max-age=${60 * 60 * 24 * 30}`;
+        return p;
+      }
+      const ck = document.cookie
+        .split("; ")
+        .find((r) => r.startsWith(AFF_COOKIE + "="));
+      return (
+        p ||
+        (ck ? ck.split("=")[1] : localStorage.getItem("affiliateCode") || "")
       );
+    }
+    if (affiliateCodeInput) affiliateCodeInput.value = getAffiliateCode();
+    document.querySelectorAll(".enquire-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (planInput) planInput.value = btn.getAttribute("data-plan") || "";
+        modal?.showModal();
+      });
+    });
+    document
+      .getElementById("close-enquiry")
+      ?.addEventListener("click", () => modal?.close());
+    function setFieldError(name, msg) {
+      const field = form?.querySelector(`[name="${name}"]`);
+      if (!field) return;
+      let errEl = field.parentElement?.querySelector('[role="alert"]');
+      if (!msg) {
+        if (errEl) errEl.remove();
+        field.classList.remove("input-error");
+        return;
+      }
+      if (!errEl) {
+        errEl = document.createElement("p");
+        errEl.className = "mt-1 text-sm text-error";
+        errEl.setAttribute("role", "alert");
+        field.parentElement?.appendChild(errEl);
+      }
+      errEl.textContent = msg;
+      field.classList.add("input-error");
+    }
+    form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      successMsg?.classList.add("hidden");
+      errorMsg?.classList.add("hidden");
+      errorSummary?.classList.add("hidden");
+      errorSummary.textContent = "";
+      const fd = Object.fromEntries(new FormData(form));
+      const parsed = enquirySchema.safeParse(fd);
+      form
+        .querySelectorAll("[name]")
+        .forEach((i) => setFieldError(i.getAttribute("name"), undefined));
+      if (!parsed.success) {
+        const errs = parsed.error.flatten().fieldErrors;
+        const list = [];
+        for (const k in errs) {
+          if (errs[k]?.[0]) {
+            setFieldError(k, errs[k][0]);
+            list.push(errs[k][0]);
+          }
+        }
+        if (list.length) {
+          errorSummary?.classList.remove("hidden");
+          errorSummary.textContent = "Please fix the highlighted fields.";
+        }
+        return;
+      }
+      const submitBtn = form.querySelector("#submit-enquiry");
+      submitBtn?.setAttribute("disabled", "true");
+      submitBtn?.classList.add("btn-disabled");
+      // Resolve CMS base URL safely without hard-crashing if import.meta.env is undefined in runtime
+      let cms;
+      // 1. Try data attribute injected by server/layout
+      cms = document.documentElement.getAttribute("data-cms-url");
+      // 2. Try build-time replacement (wrapped in try to avoid ReferenceError/undefined chain)
+      if (!cms) {
+        try {
+          cms =
+            (import.meta &&
+              import.meta.env &&
+              import.meta.env.PUBLIC_CMS_URL) ||
+            undefined;
+        } catch (_e) {
+          /* ignore */
+        }
+      }
+      // 3. Final fallback
+      if (!cms) cms = "http://localhost:1337";
+      console.log("[enquiry] Submitting", {
+        cmsSource: document.documentElement.getAttribute("data-cms-url")
+          ? "data-attr"
+          : (() => {
+              try {
+                return import.meta &&
+                  import.meta.env &&
+                  import.meta.env.PUBLIC_CMS_URL
+                  ? "env"
+                  : "fallback";
+              } catch (e) {
+                return "fallback";
+              }
+            })(),
+        cms,
+        payload: parsed.data,
+      });
+      try {
+        const res = await fetch(`${cms.replace(/\/$/, "")}/api/enquiries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parsed.data),
+        });
+        console.log("[enquiry] Response status", res.status);
+        if (res.ok) {
+          successMsg?.classList.remove("hidden");
+          form
+            .querySelectorAll("input,textarea,button,select")
+            .forEach((el) => el.setAttribute("disabled", "true"));
+        } else {
+          const text = await res.text().catch(() => "");
+          console.warn("[enquiry] Non-OK response", res.status, text);
+          errorMsg &&
+            (errorMsg.textContent = `Failed (${res.status}). Try again.`);
+          errorMsg?.classList.remove("hidden");
+          submitBtn?.removeAttribute("disabled");
+          submitBtn?.classList.remove("btn-disabled");
+        }
+      } catch (err) {
+        console.error("[enquiry] Fetch error", err);
+        errorMsg &&
+          (errorMsg.textContent = "Network error. Check console & try again.");
+        errorMsg?.classList.remove("hidden");
+        submitBtn?.removeAttribute("disabled");
+        submitBtn?.classList.remove("btn-disabled");
+      }
     });
   </script>
 </Layout>
