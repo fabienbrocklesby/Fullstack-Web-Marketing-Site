@@ -36,10 +36,18 @@ module.exports = {
     } catch (e) {}
     const joinUrl = `${process.env.PUBLIC_SITE_URL || ""}/join?code=${code}`;
     // Send invite email (non-blocking)
-    mailer.sendBasic({
+    mailer.sendTemplate({
       to: email,
-      subject: "Your Invite to Lightlane",
-      html: `<p>You have been invited to join Lightlane.</p><p><a href="${joinUrl}">Click here to accept your invite</a></p><p>Invite Code: <strong>${code}</strong></p>`,
+      subject: "Your invite to Light Lane",
+      heading: "You're Invited",
+      intro: `You now have early access to Light Lane.`,
+      paragraphs: [
+        `Use the invite code below or simply click the button to continue your onboarding.`,
+        `Invite Code: <strong>${code}</strong>`,
+      ],
+      cta: { label: "Accept Invite", url: joinUrl },
+      includeSignature: true,
+      replyTo: process.env.SALES_EMAIL || "sales@lightlane.app",
     });
     ctx.body = { code, joinUrl };
   },
@@ -108,10 +116,21 @@ module.exports = {
       );
     }
     // Send welcome email
-    mailer.sendBasic({
+    mailer.sendTemplate({
       to: email,
-      subject: "Welcome to Lightlane",
-      html: `<p>Hi ${firstName},</p><p>Your account has been created successfully.</p>`,
+      subject: "Welcome to Light Lane",
+      heading: "Welcome aboard",
+      intro: `Hi ${firstName}, your account is live.`,
+      paragraphs: [
+        "You can now explore the dashboard and start configuring your environment.",
+        "If you have any questions just hit reply – I read everything.",
+      ],
+      cta: {
+        label: "Open Dashboard",
+        url: `${process.env.PUBLIC_SITE_URL || ""}/dashboard`,
+      },
+      includeSignature: true,
+      replyTo: process.env.SALES_EMAIL || "sales@lightlane.app",
     });
     try {
       await strapi

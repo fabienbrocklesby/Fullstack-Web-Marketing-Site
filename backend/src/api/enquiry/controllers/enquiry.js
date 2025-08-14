@@ -46,42 +46,60 @@ module.exports = {
     const adminRecipient =
       process.env.ENQUIRY_ADMIN_EMAIL || "admin@lightlane.app";
     const promises = [];
-    // Admin notification
+    // Admin notification (rich)
     promises.push(
-      mailer.sendBasic({
+      mailer.sendTemplate({
         to: adminRecipient,
         subject: `New Enquiry: ${data.fullName}`,
-        html: `<p><strong>Name:</strong> ${data.fullName}</p>
-             <p><strong>Email:</strong> ${data.email}</p>
-             <p><strong>Company:</strong> ${data.company || "-"}</p>
-             <p><strong>Use Case:</strong> ${data.useCase || "-"}</p>
-             <p><strong>Plan Interested:</strong> ${data.planInterested || "-"}</p>
-             <p><strong>Affiliate Code:</strong> ${data.affiliateCode || "-"}</p>
-             <p><strong>Source:</strong> ${data.source || "-"}</p>`,
+        heading: "New Enquiry Received",
+        intro: `${data.fullName} just submitted an enquiry.`,
+        paragraphs: [
+          `<strong>Name:</strong> ${data.fullName}`,
+          `<strong>Email:</strong> ${data.email}`,
+          `<strong>Company:</strong> ${data.company || "-"}`,
+          `<strong>Use Case:</strong> ${data.useCase || "-"}`,
+          `<strong>Plan Interested:</strong> ${data.planInterested || "-"}`,
+          `<strong>Affiliate Code:</strong> ${data.affiliateCode || "-"}`,
+          `<strong>Source:</strong> ${data.source || "-"}`,
+          `<strong>Lead ID:</strong> ${leadId || "-"}`,
+          `<strong>Enquiry ID:</strong> ${enquiry.id}`,
+        ],
       }),
     );
-    // Sales notification
+    // Sales notification (rich)
     const salesRecipient = process.env.SALES_EMAIL || "sales@lightlane.app";
     promises.push(
-      mailer.sendBasic({
+      mailer.sendTemplate({
         to: salesRecipient,
         subject: `New Lead: ${data.fullName}`,
-        html: `<p>A new lead has been captured.</p>
-             <p><strong>Name:</strong> ${data.fullName}<br/>
-             <strong>Email:</strong> ${data.email}<br/>
-             <strong>Company:</strong> ${data.company || "-"}<br/>
-             <strong>Plan:</strong> ${data.planInterested || "-"}<br/>
-             <strong>Affiliate:</strong> ${data.affiliateCode || "-"}<br/>
-             <strong>Lead ID:</strong> ${leadId || "-"}<br/>
-             <strong>Enquiry ID:</strong> ${enquiry.id}</p>`,
+        heading: "New Lead Captured",
+        intro: "A prospect just raised their hand.",
+        paragraphs: [
+          `<strong>Name:</strong> ${data.fullName}`,
+          `<strong>Email:</strong> ${data.email}`,
+          `<strong>Company:</strong> ${data.company || "-"}`,
+          `<strong>Plan:</strong> ${data.planInterested || "-"}`,
+          `<strong>Affiliate:</strong> ${data.affiliateCode || "-"}`,
+          `<strong>Lead ID:</strong> ${leadId || "-"}`,
+          `<strong>Enquiry ID:</strong> ${enquiry.id}`,
+        ],
       }),
     );
-    // Customer confirmation (simple)
+    // Customer confirmation (with signature)
     promises.push(
-      mailer.sendBasic({
+      mailer.sendTemplate({
         to: data.email,
         subject: "We received your enquiry",
-        html: `<p>Hi ${data.fullName.split(" ")[0]},</p><p>Thanks for reaching out. We received your enquiry about <strong>${data.planInterested || "Lightlane"}</strong>.</p><p>We'll get back to you shortly.</p>`,
+        heading: "Thanks – we got it!",
+        intro: `Hi ${data.fullName.split(" ")[0]}, thanks for your interest in Light Lane.`,
+        paragraphs: [
+          data.planInterested
+            ? `You asked about the <strong>${data.planInterested}</strong> plan – we\'ll review and follow up soon.`
+            : `We\'ll review your details and be in touch shortly.`,
+          "In the meantime you can reply directly to this email if you have any extra context you'd like to share.",
+        ],
+        includeSignature: true,
+        replyTo: process.env.SALES_EMAIL || "sales@lightlane.app",
       }),
     );
     Promise.allSettled(promises).then((r) => {
