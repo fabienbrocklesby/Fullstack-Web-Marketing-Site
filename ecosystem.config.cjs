@@ -3,22 +3,26 @@ module.exports = {
     {
       name: "strapi-backend",
       cwd: "./backend",
-      script: "node",
-      args: "./node_modules/.bin/strapi start",
+  // Invoke the Strapi JS entry directly (avoids shell wrapper being parsed by node)
+  script: "node",
+  args: "./node_modules/@strapi/strapi/bin/strapi.js start",
       env: {
         NODE_ENV: "production"
       },
       watch: false,
-      max_memory_restart: "750M"
+      max_memory_restart: "750M",
+      restart_delay: 4000,
+      max_restarts: 5
     },
     {
       name: "astro-frontend",
       cwd: "./frontend",
       script: "node",
-      args: "./node_modules/.bin/astro preview",
+      // Use the Node adapter's server entry instead of preview (already built)
+      args: "./dist/server/entry.mjs",
       env: {
         NODE_ENV: "production",
-        PORT: 4321
+        PORT: 4000
       },
       watch: false
     }
