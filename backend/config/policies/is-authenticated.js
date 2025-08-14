@@ -3,6 +3,6 @@ module.exports = (policyContext, config, { strapi }) => {
   if (!policyContext.state.user) {
     return false;
   }
-  
+
   return true;
 };

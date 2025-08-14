@@ -1,24 +1,24 @@
 module.exports = {
   routes: [
     {
-      method: 'GET',
-      path: '/my-purchases',
-      handler: 'purchase.find',
+      method: "GET",
+      path: "/my-purchases",
+      handler: "purchase.find",
       config: {
         auth: {
-          strategies: ['users-permissions'],
+          strategies: ["users-permissions"],
         },
         policies: [],
         middlewares: [],
       },
     },
     {
-      method: 'GET',
-      path: '/my-purchases/:id',
-      handler: 'purchase.findOne',
+      method: "GET",
+      path: "/my-purchases/:id",
+      handler: "purchase.findOne",
       config: {
         auth: {
-          strategies: ['users-permissions'],
+          strategies: ["users-permissions"],
         },
         policies: [],
         middlewares: [],

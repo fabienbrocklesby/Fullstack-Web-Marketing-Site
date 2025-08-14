@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>API Test</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>API Test</h1>
     <button onclick="testLogin()">Test Login</button>
     <button onclick="testStats()">Test Stats</button>
@@ -13,86 +13,102 @@
     <pre id="output"></pre>
 
     <script>
-        let jwt = '';
-        const output = document.getElementById('output');
+      let jwt = "";
+      const output = document.getElementById("output");
 
-        async function log(message) {
-            output.textContent += new Date().toISOString() + ': ' + message + '\n';
-            console.log(message);
+      async function log(message) {
+        output.textContent += new Date().toISOString() + ": " + message + "\n";
+        console.log(message);
+      }
+
+      async function testLogin() {
+        try {
+          const response = await fetch("http://localhost:1337/api/auth/local", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              identifier: "test@example.com",
+              password: "password123",
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            jwt = data.jwt;
+            await log(`✅ Login successful, JWT: ${jwt.substring(0, 20)}...`);
+          } else {
+            await log(
+              `❌ Login failed: ${response.status} ${response.statusText}`,
+            );
+          }
+        } catch (error) {
+          await log(`❌ Login error: ${error.message}`);
+        }
+      }
+
+      async function testStats() {
+        if (!jwt) {
+          await log("❌ Please login first");
+          return;
         }
 
-        async function testLogin() {
-            try {
-                const response = await fetch('http://localhost:1337/api/auth/local', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        identifier: 'test@example.com',
-                        password: 'password123'
-                    })
-                });
+        try {
+          const response = await fetch(
+            "http://localhost:1337/api/affiliate-stats",
+            {
+              headers: {
+                Authorization: `Bearer ${jwt}`,
+              },
+            },
+          );
 
-                if (response.ok) {
-                    const data = await response.json();
-                    jwt = data.jwt;
-                    await log(`✅ Login successful, JWT: ${jwt.substring(0, 20)}...`);
-                } else {
-                    await log(`❌ Login failed: ${response.status} ${response.statusText}`);
-                }
-            } catch (error) {
-                await log(`❌ Login error: ${error.message}`);
-            }
+          if (response.ok) {
+            const data = await response.json();
+            await log(
+              `✅ Stats loaded: ${JSON.stringify(data).substring(0, 100)}...`,
+            );
+          } else {
+            await log(
+              `❌ Stats failed: ${response.status} ${response.statusText}`,
+            );
+          }
+        } catch (error) {
+          await log(`❌ Stats error: ${error.message}`);
+        }
+      }
+
+      async function testJourneys() {
+        if (!jwt) {
+          await log("❌ Please login first");
+          return;
         }
 
-        async function testStats() {
-            if (!jwt) {
-                await log('❌ Please login first');
-                return;
-            }
+        try {
+          const response = await fetch(
+            "http://localhost:1337/api/visitor-journeys",
+            {
+              headers: {
+                Authorization: `Bearer ${jwt}`,
+              },
+            },
+          );
 
-            try {
-                const response = await fetch('http://localhost:1337/api/affiliate-stats', {
-                    headers: {
-                        'Authorization': `Bearer ${jwt}`,
-                    },
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    await log(`✅ Stats loaded: ${JSON.stringify(data).substring(0, 100)}...`);
-                } else {
-                    await log(`❌ Stats failed: ${response.status} ${response.statusText}`);
-                }
-            } catch (error) {
-                await log(`❌ Stats error: ${error.message}`);
-            }
+          if (response.ok) {
+            const data = await response.json();
+            await log(
+              `✅ Journeys loaded: ${data.journeys.length} journeys found`,
+            );
+          } else {
+            await log(
+              `❌ Journeys failed: ${response.status} ${response.statusText}`,
+            );
+          }
+        } catch (error) {
+          await log(`❌ Journeys error: ${error.message}`);
         }
-
-        async function testJourneys() {
-            if (!jwt) {
-                await log('❌ Please login first');
-                return;
-            }
-
-            try {
-                const response = await fetch('http://localhost:1337/api/visitor-journeys', {
-                    headers: {
-                        'Authorization': `Bearer ${jwt}`,
-                    },
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    await log(`✅ Journeys loaded: ${data.journeys.length} journeys found`);
-                } else {
-                    await log(`❌ Journeys failed: ${response.status} ${response.statusText}`);
-                }
-            } catch (error) {
-                await log(`❌ Journeys error: ${error.message}`);
-            }
-        }
+      }
     </script>
-</body>
+  </body>
 </html>

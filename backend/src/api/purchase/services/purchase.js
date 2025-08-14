@@ -1,3 +1,3 @@
-const { createCoreService } = require('@strapi/strapi').factories;
+const { createCoreService } = require("@strapi/strapi").factories;
 
-module.exports = createCoreService('api::purchase.purchase');
+module.exports = createCoreService("api::purchase.purchase");

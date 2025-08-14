@@ -3,7 +3,7 @@ export interface Page {
   id: number;
   title: string;
   slug: string;
-  sections: Section<any>[]; 
+  sections: Section<any>[];
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
@@ -20,7 +20,7 @@ export interface HeroProps {
   subtitle?: string;
   buttonText?: string;
   buttonLink?: string;
-  buttonVariant?: 'primary' | 'secondary' | 'accent' | 'ghost';
+  buttonVariant?: "primary" | "secondary" | "accent" | "ghost";
   backgroundImage?: any;
 }
 
@@ -55,14 +55,19 @@ export interface CTAProps {
   subtitle?: string;
   buttonText?: string;
   buttonLink?: string;
-  buttonVariant?: 'primary' | 'secondary' | 'accent' | 'ghost';
-  backgroundColor?: 'primary' | 'secondary' | 'accent' | 'base-100' | 'base-200';
+  buttonVariant?: "primary" | "secondary" | "accent" | "ghost";
+  backgroundColor?:
+    | "primary"
+    | "secondary"
+    | "accent"
+    | "base-100"
+    | "base-200";
 }
 
 export interface ContentProps {
   title?: string;
   content: string;
-  layout?: 'full-width' | 'centered' | 'two-column';
+  layout?: "full-width" | "centered" | "two-column";
 }
 
 export interface PricingProps {

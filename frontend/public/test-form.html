@@ -1,132 +1,177 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Test Form for Journey Tracking</title>
-    <meta data-cms-url="http://localhost:1337">
+    <meta data-cms-url="http://localhost:1337" />
     <script src="/journey-tracker.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input, select, textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #0056b3;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Test Form Page</h1>
-    <p>This page is for testing the visitor journey tracking. Add <code>?ref=test123</code> to the URL to enable tracking.</p>
-    
+    <p>
+      This page is for testing the visitor journey tracking. Add
+      <code>?ref=test123</code> to the URL to enable tracking.
+    </p>
+
     <form id="contact-form" action="#" method="POST">
-        <div class="form-group">
-            <label for="name">Full Name:</label>
-            <input type="text" id="name" name="name" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="email">Email Address:</label>
-            <input type="email" id="email" name="email" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="country">Country:</label>
-            <select id="country" name="country">
-                <option value="">Select a country</option>
-                <option value="US">United States</option>
-                <option value="CA">Canada</option>
-                <option value="UK">United Kingdom</option>
-                <option value="AU">Australia</option>
-                <option value="DE">Germany</option>
-                <option value="FR">France</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="interest">Area of Interest:</label>
-            <input type="radio" id="interest-web" name="interest" value="web-development">
-            <label for="interest-web" style="display: inline; margin-left: 5px;">Web Development</label><br>
-            
-            <input type="radio" id="interest-mobile" name="interest" value="mobile-development">
-            <label for="interest-mobile" style="display: inline; margin-left: 5px;">Mobile Development</label><br>
-            
-            <input type="radio" id="interest-design" name="interest" value="design">
-            <label for="interest-design" style="display: inline; margin-left: 5px;">Design</label>
-        </div>
-        
-        <div class="form-group">
-            <input type="checkbox" id="newsletter" name="newsletter" value="yes">
-            <label for="newsletter" style="display: inline; margin-left: 5px;">Subscribe to newsletter</label>
-        </div>
-        
-        <div class="form-group">
-            <label for="message">Message:</label>
-            <textarea id="message" name="message" rows="4" placeholder="Tell us about your project..."></textarea>
-        </div>
-        
-        <button type="submit" id="submit-btn">Submit Form</button>
+      <div class="form-group">
+        <label for="name">Full Name:</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address:</label>
+        <input type="email" id="email" name="email" required />
+      </div>
+
+      <div class="form-group">
+        <label for="country">Country:</label>
+        <select id="country" name="country">
+          <option value="">Select a country</option>
+          <option value="US">United States</option>
+          <option value="CA">Canada</option>
+          <option value="UK">United Kingdom</option>
+          <option value="AU">Australia</option>
+          <option value="DE">Germany</option>
+          <option value="FR">France</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="interest">Area of Interest:</label>
+        <input
+          type="radio"
+          id="interest-web"
+          name="interest"
+          value="web-development"
+        />
+        <label for="interest-web" style="display: inline; margin-left: 5px"
+          >Web Development</label
+        ><br />
+
+        <input
+          type="radio"
+          id="interest-mobile"
+          name="interest"
+          value="mobile-development"
+        />
+        <label for="interest-mobile" style="display: inline; margin-left: 5px"
+          >Mobile Development</label
+        ><br />
+
+        <input
+          type="radio"
+          id="interest-design"
+          name="interest"
+          value="design"
+        />
+        <label for="interest-design" style="display: inline; margin-left: 5px"
+          >Design</label
+        >
+      </div>
+
+      <div class="form-group">
+        <input type="checkbox" id="newsletter" name="newsletter" value="yes" />
+        <label for="newsletter" style="display: inline; margin-left: 5px"
+          >Subscribe to newsletter</label
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="message">Message:</label>
+        <textarea
+          id="message"
+          name="message"
+          rows="4"
+          placeholder="Tell us about your project..."
+        ></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn">Submit Form</button>
     </form>
-    
-    <div style="margin-top: 30px;">
-        <h2>Test Actions</h2>
-        <button onclick="window.location.href='/test-form.html?ref=test123'">Add Tracking Code</button>
-        <button onclick="trackSpecialEvent()">Track Custom Event</button>
-        <button onclick="window.location.href='/dashboard?ref=test123'">View Dashboard</button>
-        <button onclick="resetTracking()" style="background: #dc3545;">Reset Tracking (New Visitor)</button>
+
+    <div style="margin-top: 30px">
+      <h2>Test Actions</h2>
+      <button onclick="window.location.href='/test-form.html?ref=test123'">
+        Add Tracking Code
+      </button>
+      <button onclick="trackSpecialEvent()">Track Custom Event</button>
+      <button onclick="window.location.href='/dashboard?ref=test123'">
+        View Dashboard
+      </button>
+      <button onclick="resetTracking()" style="background: #dc3545">
+        Reset Tracking (New Visitor)
+      </button>
     </div>
 
     <script>
-        function trackSpecialEvent() {
-            if (window.journeyTracker) {
-                window.journeyTracker.trackAction('custom_test_event', window.location.pathname, {
-                    eventType: 'manual_test',
-                    timestamp: new Date().toISOString()
-                });
-                alert('Custom event tracked!');
-            } else {
-                alert('Journey tracker not initialized');
-            }
+      function trackSpecialEvent() {
+        if (window.journeyTracker) {
+          window.journeyTracker.trackAction(
+            "custom_test_event",
+            window.location.pathname,
+            {
+              eventType: "manual_test",
+              timestamp: new Date().toISOString(),
+            },
+          );
+          alert("Custom event tracked!");
+        } else {
+          alert("Journey tracker not initialized");
         }
-        
-        function resetTracking() {
-            if (window.resetTracking) {
-                window.resetTracking();
-            } else {
-                alert('Reset function not available');
-            }
+      }
+
+      function resetTracking() {
+        if (window.resetTracking) {
+          window.resetTracking();
+        } else {
+          alert("Reset function not available");
         }
-        
-        // Prevent form submission for testing
-        document.getElementById('contact-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Form submitted! Check the tracking in the dashboard.');
+      }
+
+      // Prevent form submission for testing
+      document
+        .getElementById("contact-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          alert("Form submitted! Check the tracking in the dashboard.");
         });
     </script>
-</body>
+  </body>
 </html>

@@ -7,6 +7,7 @@ export interface Props {
   canonical?: string;
   noindex?: boolean;
   nofollow?: boolean;
+  ogType?: string; // default website, can be article for blog posts
 }
 
 const {
@@ -17,6 +18,7 @@ const {
   canonical = Astro.url.href,
   noindex = false,
   nofollow = false,
+  ogType = "website",
 } = Astro.props;
 
 const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
@@ -44,7 +46,7 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
     />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -56,6 +58,13 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Blog RSS"
+      href="/blog/rss.xml"
+    />
+    <slot name="headExtensions" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

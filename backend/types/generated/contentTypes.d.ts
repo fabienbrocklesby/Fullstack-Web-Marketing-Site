@@ -854,6 +854,50 @@ export interface ApiAffiliateAffiliate extends Schema.CollectionType {
   };
 }
 
+export interface ApiBlogpostBlogpost extends Schema.CollectionType {
+  collectionName: "blogposts";
+  info: {
+    singularName: "blogpost";
+    pluralName: "blogposts";
+    displayName: "Blog Post";
+    description: "Articles for the marketing site blog";
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    title: Attribute.String & Attribute.Required;
+    slug: Attribute.UID<"api::blogpost.blogpost", "title"> & Attribute.Required;
+    content: Attribute.RichText;
+    preview: Attribute.Text;
+    author: Attribute.String & Attribute.Required;
+    coverImage: Attribute.Media<"images">;
+    seoTitle: Attribute.String &
+      Attribute.SetMinMaxLength<{
+        maxLength: 60;
+      }>;
+    seoDescription: Attribute.Text &
+      Attribute.SetMinMaxLength<{
+        maxLength: 160;
+      }>;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::blogpost.blogpost",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::blogpost.blogpost",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiCustomerCustomer extends Schema.CollectionType {
   collectionName: "customers";
   info: {
@@ -1261,6 +1305,7 @@ declare module "@strapi/types" {
       "plugin::users-permissions.role": PluginUsersPermissionsRole;
       "plugin::users-permissions.user": PluginUsersPermissionsUser;
       "api::affiliate.affiliate": ApiAffiliateAffiliate;
+      "api::blogpost.blogpost": ApiBlogpostBlogpost;
       "api::customer.customer": ApiCustomerCustomer;
       "api::customer-invite.customer-invite": ApiCustomerInviteCustomerInvite;
       "api::enquiry.enquiry": ApiEnquiryEnquiry;
