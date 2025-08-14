@@ -27,6 +27,7 @@
     "eslint-plugin-astro": "^0.31.0",
     "prettier": "^3.0.0",
     "prettier-plugin-astro": "^0.12.0",
-    "@types/js-cookie": "^3.0.0"
+    "@types/js-cookie": "^3.0.0",
+    "autoprefixer": "^10.4.20"
   }
 }

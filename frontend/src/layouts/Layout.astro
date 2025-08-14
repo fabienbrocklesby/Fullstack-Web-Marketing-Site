@@ -21,9 +21,12 @@ const {
   ogType = "website",
 } = Astro.props;
 
+// @ts-ignore - Astro injects import.meta.env at build time
+import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
 const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
 const imageUrl = new URL(image, siteUrl).href;
-const cmsUrl = "http://localhost:1337"; // Will be replaced by environment variable in production
+// Prefer PUBLIC_CMS_URL from env (Astro public env var) or fallback to localhost
+const cmsUrl = import.meta.env.PUBLIC_CMS_URL || "http://localhost:1337";
 ---
 
 <!doctype html>
@@ -75,7 +78,6 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
     />
 
     <meta name="generator" content={Astro.generator} />
-    <link rel="stylesheet" href="/src/styles/app.css" />
   </head>
   <body>
     <slot />
