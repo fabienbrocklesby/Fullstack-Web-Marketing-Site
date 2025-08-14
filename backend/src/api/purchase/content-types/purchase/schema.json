@@ -57,6 +57,13 @@
       "type": "boolean",
       "default": false
     },
+    "isManual": {
+      "type": "boolean",
+      "default": false
+    },
+    "manualReason": {
+      "type": "text"
+    },
     "metadata": {
       "type": "json"
     }

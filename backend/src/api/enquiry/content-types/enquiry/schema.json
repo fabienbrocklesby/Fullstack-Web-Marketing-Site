@@ -1,0 +1,28 @@
+{
+  "kind": "collectionType",
+  "collectionName": "enquiries",
+  "info": {
+    "singularName": "enquiry",
+    "pluralName": "enquiries",
+    "displayName": "Enquiry"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "fullName": { "type": "string", "required": true },
+    "email": { "type": "email", "required": true },
+    "company": { "type": "string" },
+    "useCase": { "type": "text" },
+    "planInterested": { "type": "string" },
+    "affiliateCode": { "type": "string" },
+    "status": {
+      "type": "enumeration",
+      "enum": ["new", "invited", "closed", "spam"],
+      "default": "new"
+    },
+    "source": { "type": "string" },
+    "notes": { "type": "text" },
+    "metadata": { "type": "json" }
+  }
+}
