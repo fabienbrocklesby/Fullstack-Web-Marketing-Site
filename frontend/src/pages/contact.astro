@@ -2,132 +2,345 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
+
+// Embed Strapi URL at build time (Astro injects import.meta.env)
+// Supports either PUBLIC_STRAPI_URL or PUBLIC_CMS_URL (alias) with localhost fallback
+// @ts-ignore cast for env access
+const STRAPI_URL: string = (
+  ((import.meta as any).env &&
+    ((import.meta as any).env.PUBLIC_STRAPI_URL ||
+      (import.meta as any).env.PUBLIC_CMS_URL)) ||
+  "http://localhost:1337"
+).replace(/\/$/, "");
 ---
 
 <Layout
-  title="Contact - SaaS Boilerplate"
-  description="Get in touch with our team"
+  title="Contact – Lightlane"
+  description="Reach the Lightlane team: support, sales & partnership enquiries."
 >
   <Header />
 
   <main>
-    <section class="py-20">
-      <div class="container mx-auto px-4">
-        <div class="max-w-4xl mx-auto">
-          <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold mb-4">Contact Us</h1>
-            <p class="text-xl text-base-content/70">
-              Have questions? We'd love to hear from you.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <!-- Contact Form -->
-            <div class="card bg-base-200 shadow-lg">
-              <div class="card-body">
-                <h2 class="card-title mb-6">Send us a message</h2>
-                <form class="space-y-4">
-                  <div class="form-control">
-                    <label class="label">
-                      <span class="label-text">Name</span>
-                    </label>
-                    <input type="text" class="input input-bordered" required />
-                  </div>
-                  <div class="form-control">
-                    <label class="label">
-                      <span class="label-text">Email</span>
-                    </label>
-                    <input type="email" class="input input-bordered" required />
-                  </div>
-                  <div class="form-control">
-                    <label class="label">
-                      <span class="label-text">Subject</span>
-                    </label>
-                    <input type="text" class="input input-bordered" required />
-                  </div>
-                  <div class="form-control">
-                    <label class="label">
-                      <span class="label-text">Message</span>
-                    </label>
-                    <textarea class="textarea textarea-bordered h-32" required
-                    ></textarea>
-                  </div>
-                  <button type="submit" class="btn btn-primary w-full">
-                    Send Message
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            <!-- Contact Information -->
-            <div class="space-y-8">
-              <div class="card bg-base-200 shadow-lg">
-                <div class="card-body">
-                  <h3 class="card-title mb-4">Get in Touch</h3>
-                  <div class="space-y-4">
-                    <div class="flex items-center space-x-3">
-                      <div
-                        class="w-8 h-8 bg-primary rounded-full flex items-center justify-center"
-                      >
-                        <span class="text-primary-content text-sm">📧</span>
-                      </div>
-                      <div>
-                        <p class="font-semibold">Email</p>
-                        <p class="text-base-content/70">hello@yoursite.com</p>
-                      </div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                      <div
-                        class="w-8 h-8 bg-primary rounded-full flex items-center justify-center"
-                      >
-                        <span class="text-primary-content text-sm">💬</span>
-                      </div>
-                      <div>
-                        <p class="font-semibold">Support</p>
-                        <p class="text-base-content/70">support@yoursite.com</p>
-                      </div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                      <div
-                        class="w-8 h-8 bg-primary rounded-full flex items-center justify-center"
-                      >
-                        <span class="text-primary-content text-sm">🏢</span>
-                      </div>
-                      <div>
-                        <p class="font-semibold">Business</p>
-                        <p class="text-base-content/70">
-                          business@yoursite.com
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="card bg-base-200 shadow-lg">
-                <div class="card-body">
-                  <h3 class="card-title mb-4">Frequently Asked Questions</h3>
-                  <div class="space-y-2">
-                    <p class="text-sm text-base-content/70">
-                      Check out our <a href="/faq" class="link link-primary"
-                        >FAQ page</a
-                      > for common questions.
-                    </p>
-                    <p class="text-sm text-base-content/70">
-                      For technical support, please use our <a
-                        href="/docs"
-                        class="link link-primary">documentation</a
-                      >.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <!-- Hero / Intro -->
+    <section class="relative overflow-hidden">
+      <div class="absolute inset-0 pointer-events-none opacity-50">
+        <div
+          class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/30 to-primary/0 blur-3xl"
+        >
+        </div>
+        <div
+          class="absolute bottom-0 -right-24 w-[28rem] h-[28rem] rounded-full bg-gradient-to-tr from-accent/30 to-accent/0 blur-3xl"
+        >
+        </div>
+      </div>
+      <div class="container py-24 md:py-28 relative">
+        <div class="max-w-3xl mx-auto text-center space-y-6">
+          <h1
+            class="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight"
+          >
+            <span
+              class="bg-gradient-to-br from-base-content to-base-content/60 bg-clip-text text-transparent"
+              >We’d love to hear from you</span
+            >
+          </h1>
+          <p
+            class="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto"
+          >
+            Questions about early access, licensing, partnerships or the product
+            roadmap? Send a note and the right team will reply shortly.
+          </p>
+          <div
+            class="flex flex-wrap gap-3 justify-center text-xs md:text-sm text-base-content/60"
+          >
+            <span class="badge badge-soft badge-primary"
+              >Support first mindset</span
+            >
+            <span class="badge badge-soft badge-secondary"
+              >Avg response &lt; 24h</span
+            >
+            <span class="badge badge-soft badge-accent">Global team</span>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- Main Grid -->
+    <section class="pb-28 -mt-4">
+      <div class="container">
+        <div
+          class="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1fr)_22rem] max-w-7xl mx-auto"
+        >
+          <!-- Form Card -->
+          <div class="space-y-8">
+            <div
+              class="card bg-base-100/80 backdrop-blur border border-base-300/50 shadow-xl"
+            >
+              <div class="card-body p-8 md:p-10">
+                <h2 class="card-title text-2xl mb-2">Send a message</h2>
+                <p class="text-sm text-base-content/60 mb-6">
+                  Fill out the form below and we’ll route it to the right
+                  person. You’ll get a confirmation email when it lands.
+                </p>
+                <form
+                  id="contact-form"
+                  class="space-y-6"
+                  novalidate
+                  data-strapi-url={STRAPI_URL}
+                >
+                  <div class="space-y-2">
+                    <label for="name" class="text-sm font-medium"
+                      >Full name</label
+                    >
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      required
+                      placeholder="Jane Maker"
+                      class="input input-bordered w-full"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="email" class="text-sm font-medium">Email</label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      placeholder="you@company.com"
+                      class="input input-bordered w-full"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="subject" class="text-sm font-medium"
+                      >Subject</label
+                    >
+                    <input
+                      id="subject"
+                      name="subject"
+                      type="text"
+                      required
+                      placeholder="Licensing question"
+                      class="input input-bordered w-full"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="message" class="text-sm font-medium"
+                      >Message</label
+                    >
+                    <textarea
+                      id="message"
+                      name="message"
+                      required
+                      rows="6"
+                      placeholder="Share any details that help us respond fast…"
+                      class="textarea textarea-bordered w-full"></textarea>
+                  </div>
+                  <div
+                    class="flex flex-col sm:flex-row gap-4 sm:items-center justify-between pt-2"
+                  >
+                    <p
+                      class="text-[11px] leading-relaxed text-base-content/50 sm:flex-1"
+                    >
+                      We typically reply in one business day. For urgent
+                      licensing issues include your license key.
+                    </p>
+                    <button
+                      type="submit"
+                      class="btn btn-primary min-w-[10rem]"
+                      data-submit-btn
+                    >
+                      <span data-btn-label>Send message</span>
+                      <span
+                        class="loading loading-dots loading-sm hidden"
+                        data-btn-loading></span>
+                    </button>
+                  </div>
+                  <div
+                    class="alert alert-success hidden"
+                    data-success
+                    role="status"
+                  >
+                    <span>Message sent! Check your inbox for confirmation.</span
+                    >
+                  </div>
+                  <div class="alert alert-error hidden" data-error role="alert">
+                    <span data-error-text
+                      >Something went wrong. Please retry.</span
+                    >
+                  </div>
+                </form>
+              </div>
+            </div>
+            <!-- Extra assistance card -->
+            <div
+              class="card bg-base-200/70 border border-base-300/60 shadow-md"
+            >
+              <div class="card-body p-6 md:p-8 gap-4">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary"
+                  >
+                    💡
+                  </div>
+                  <h3 class="font-semibold">Need faster support?</h3>
+                </div>
+                <p class="text-sm text-base-content/70">
+                  If you’re an existing customer, include your license or
+                  activation ID so we can prioritise triage.
+                </p>
+                <div class="flex flex-wrap gap-3">
+                  <a href="/pricing#enquire" class="btn btn-soft btn-sm"
+                    >Early access enquiry</a
+                  >
+                  <a href="/#faq" class="btn btn-outline btn-sm">View FAQ</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sidebar -->
+          <aside class="space-y-8 lg:pt-2">
+            <div class="card bg-base-100 border border-base-300/60 shadow">
+              <div class="card-body p-6 md:p-7 gap-5">
+                <h3 class="card-title text-lg">Direct channels</h3>
+                <ul class="space-y-4 text-sm">
+                  <li class="flex gap-3">
+                    <span
+                      class="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-base"
+                      >✉️</span
+                    >
+                    <div>
+                      <p class="font-medium">Support</p>
+                      <a
+                        href="mailto:support@lightlane.app"
+                        class="link link-primary break-all"
+                        >support@lightlane.app</a
+                      >
+                    </div>
+                  </li>
+                  <li class="flex gap-3">
+                    <span
+                      class="w-9 h-9 rounded-full bg-secondary/15 text-secondary flex items-center justify-center text-base"
+                      >🤝</span
+                    >
+                    <div>
+                      <p class="font-medium">Partnerships</p>
+                      <a
+                        href="mailto:partners@lightlane.app"
+                        class="link link-secondary break-all"
+                        >partners@lightlane.app</a
+                      >
+                    </div>
+                  </li>
+                  <li class="flex gap-3">
+                    <span
+                      class="w-9 h-9 rounded-full bg-accent/15 text-accent flex items-center justify-center text-base"
+                      >💼</span
+                    >
+                    <div>
+                      <p class="font-medium">Sales</p>
+                      <a
+                        href="mailto:sales@lightlane.app"
+                        class="link link-accent break-all"
+                        >sales@lightlane.app</a
+                      >
+                    </div>
+                  </li>
+                </ul>
+                <div class="mt-4 text-xs text-base-content/50 leading-relaxed">
+                  <p>Office hours: Mon–Fri 9am–6pm (UTC)</p>
+                  <p>
+                    Lightlane is globally distributed – replies may come from
+                    multiple time zones.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div
+              class="card bg-gradient-to-br from-base-200 to-base-300/60 border border-base-300/60 shadow-sm"
+            >
+              <div class="card-body p-6 md:p-7 gap-4">
+                <h3 class="card-title text-lg">Quick answers</h3>
+                <p class="text-sm text-base-content/70">
+                  Browse our most asked questions before sending a message.
+                </p>
+                <a href="/#faq" class="btn btn-primary btn-sm w-fit">Open FAQ</a
+                >
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <script is:inline>
+    (function () {
+      const form = document.getElementById("contact-form");
+      if (!form) return;
+      const attrUrl = form.getAttribute("data-strapi-url") || "";
+      const STRAPI_URL = attrUrl.replace(/\/$/, "");
+      const btn = form.querySelector("[data-submit-btn]");
+      const labelSpan = form.querySelector("[data-btn-label]");
+      const loader = form.querySelector("[data-btn-loading]");
+      const successEl = form.querySelector("[data-success]");
+      const errorEl = form.querySelector("[data-error]");
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        errorEl.classList.add("hidden");
+        successEl.classList.add("hidden");
+        btn.setAttribute("disabled", "true");
+        loader.classList.remove("hidden");
+        labelSpan.textContent = "Sending…";
+        const nameInput = form.querySelector("#name");
+        const emailInput = form.querySelector("#email");
+        const subjectInput = form.querySelector("#subject");
+        const messageInput = form.querySelector("#message");
+        const payload = {
+          name: nameInput && "value" in nameInput ? nameInput.value.trim() : "",
+          email:
+            emailInput && "value" in emailInput ? emailInput.value.trim() : "",
+          subject:
+            subjectInput && "value" in subjectInput
+              ? subjectInput.value.trim()
+              : "",
+          message:
+            messageInput && "value" in messageInput
+              ? messageInput.value.trim()
+              : "",
+        };
+        try {
+          const res = await fetch(STRAPI_URL + "/api/contact-messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fullName: payload.name,
+              email: payload.email,
+              subject: payload.subject,
+              message: payload.message,
+              source: "contact_page",
+            }),
+          });
+          if (!res.ok) throw new Error("Request failed");
+          successEl.classList.remove("hidden");
+          form.reset();
+        } catch (err) {
+          errorEl.classList.remove("hidden");
+        } finally {
+          btn.removeAttribute("disabled");
+          loader.classList.add("hidden");
+          labelSpan.textContent = "Send message";
+        }
+      });
+    })();
+  </script>
 
   <Footer />
 </Layout>

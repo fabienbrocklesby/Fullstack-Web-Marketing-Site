@@ -898,6 +898,45 @@ export interface ApiBlogpostBlogpost extends Schema.CollectionType {
   };
 }
 
+export interface ApiContactMessageContactMessage extends Schema.CollectionType {
+  collectionName: "contact_messages";
+  info: {
+    singularName: "contact-message";
+    pluralName: "contact-messages";
+    displayName: "Contact Message";
+    description: "Messages sent through public contact form";
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    fullName: Attribute.String & Attribute.Required;
+    email: Attribute.Email & Attribute.Required;
+    subject: Attribute.String;
+    message: Attribute.Text;
+    status: Attribute.Enumeration<
+      ["new", "reviewed", "responded", "archived", "spam"]
+    > &
+      Attribute.DefaultTo<"new">;
+    source: Attribute.String;
+    metadata: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::contact-message.contact-message",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::contact-message.contact-message",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiCustomerCustomer extends Schema.CollectionType {
   collectionName: "customers";
   info: {
@@ -1306,6 +1345,7 @@ declare module "@strapi/types" {
       "plugin::users-permissions.user": PluginUsersPermissionsUser;
       "api::affiliate.affiliate": ApiAffiliateAffiliate;
       "api::blogpost.blogpost": ApiBlogpostBlogpost;
+      "api::contact-message.contact-message": ApiContactMessageContactMessage;
       "api::customer.customer": ApiCustomerCustomer;
       "api::customer-invite.customer-invite": ApiCustomerInviteCustomerInvite;
       "api::enquiry.enquiry": ApiEnquiryEnquiry;
