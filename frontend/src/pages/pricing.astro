@@ -2,7 +2,6 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import BuyButton from "../components/BuyButton.astro";
 ---
 
 <Layout
@@ -70,12 +69,7 @@ import BuyButton from "../components/BuyButton.astro";
                   1 year updates
                 </li>
               </ul>
-              <BuyButton
-                text="Get Starter"
-                priceId="price_starter"
-                variant="ghost"
-                className="w-full"
-              />
+              <button class="btn btn-primary w-full enquiry-btn" data-plan="Starter">Request Early Access</button>
             </div>
           </div>
 
@@ -106,12 +100,7 @@ import BuyButton from "../components/BuyButton.astro";
                   Lifetime updates
                 </li>
               </ul>
-              <BuyButton
-                text="Get Pro"
-                priceId="price_pro"
-                variant="accent"
-                className="w-full"
-              />
+              <button class="btn btn-primary w-full enquiry-btn" data-plan="Pro">Request Early Access</button>
             </div>
           </div>
 
@@ -141,26 +130,83 @@ import BuyButton from "../components/BuyButton.astro";
                   White-label rights
                 </li>
               </ul>
-              <BuyButton
-                text="Get Enterprise"
-                priceId="price_enterprise"
-                variant="ghost"
-                className="w-full"
-              />
+              <button class="btn btn-primary w-full enquiry-btn" data-plan="Enterprise">Request Early Access</button>
             </div>
           </div>
         </div>
       </div>
     </section>
+    <dialog id="enquiry-modal" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">Request Early Access</h3>
+        <form id="enquiry-form" class="mt-4 space-y-4">
+          <input type="hidden" id="planInterested" />
+          <div class="form-control">
+            <label class="label"><span class="label-text">Full Name</span></label>
+            <input id="fullName" type="text" class="input input-bordered" required />
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text">Email</span></label>
+            <input id="email" type="email" class="input input-bordered" required />
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text">Use Case</span></label>
+            <textarea id="useCase" class="textarea textarea-bordered"></textarea>
+          </div>
+          <div class="modal-action">
+            <button type="submit" class="btn btn-primary">Send</button>
+            <button type="button" class="btn" id="enquiry-close">Close</button>
+          </div>
+        </form>
+        <div id="enquiry-success" class="alert alert-success mt-4 hidden">Thanks! We'll be in touch.</div>
+      </div>
+    </dialog>
   </main>
 
   <Footer />
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      console.log(
-        "📊 Pricing page loaded - journey tracker will handle all affiliate tracking automatically",
-      );
+      document.querySelectorAll(".enquiry-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const plan = btn.getAttribute("data-plan") || "";
+          (document.getElementById("planInterested") as HTMLInputElement).value = plan;
+          (document.getElementById("enquiry-modal") as HTMLDialogElement).showModal();
+        });
+      });
+      document.getElementById("enquiry-close")?.addEventListener("click", () => {
+        (document.getElementById("enquiry-modal") as HTMLDialogElement).close();
+      });
+      const form = document.getElementById("enquiry-form");
+      form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+        const affiliateCode =
+          document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("affiliate_code="))
+            ?.split("=")[1] ||
+          localStorage.getItem("affiliate_code") ||
+          undefined;
+        const payload = {
+          fullName: (document.getElementById("fullName") as HTMLInputElement).value,
+          email: (document.getElementById("email") as HTMLInputElement).value,
+          useCase: (document.getElementById("useCase") as HTMLTextAreaElement).value,
+          planInterested: (document.getElementById("planInterested") as HTMLInputElement).value,
+          affiliateCode: affiliateCode,
+        };
+        const res = await fetch(`${cmsUrl}/api/enquiries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          form.classList.add("hidden");
+          document.getElementById("enquiry-success")?.classList.remove("hidden");
+        }
+      });
     });
   </script>
 </Layout>

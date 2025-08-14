@@ -1,0 +1,130 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Join">
+  <main class="hero min-h-screen bg-base-200">
+    <div class="hero-content text-center">
+      <div class="max-w-md w-full">
+        <div class="card w-full shadow-2xl bg-base-100">
+          <div class="card-body" id="step-1">
+            <h1 class="text-2xl font-bold mb-6">Enter Invite Code</h1>
+            <form id="code-form">
+              <div class="form-control">
+                <input id="invite-code" type="text" placeholder="Code" class="input input-bordered" required />
+              </div>
+              <div class="form-control mt-6">
+                <button type="submit" class="btn btn-primary">Continue</button>
+              </div>
+            </form>
+            <div id="code-error" class="alert alert-error mt-4 hidden"><span id="code-error-text"></span></div>
+          </div>
+          <div class="card-body hidden" id="step-2">
+            <h1 class="text-2xl font-bold mb-6">Create Account</h1>
+            <form id="register-form">
+              <input type="hidden" id="code-hidden" />
+              <div class="form-control">
+                <label class="label"><span class="label-text">First Name</span></label>
+                <input id="firstName" type="text" class="input input-bordered" required />
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text">Last Name</span></label>
+                <input id="lastName" type="text" class="input input-bordered" required />
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text">Email</span></label>
+                <input id="email" type="email" class="input input-bordered" required />
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text">Password</span></label>
+                <input id="password" type="password" class="input input-bordered" required />
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text">Confirm Password</span></label>
+                <input id="confirmPassword" type="password" class="input input-bordered" required />
+              </div>
+              <div class="form-control mt-6">
+                <button type="submit" class="btn btn-primary">Create Account</button>
+              </div>
+            </form>
+            <div id="error-message" class="alert alert-error mt-4 hidden"><span id="error-text"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const cmsUrl =
+    document.documentElement.getAttribute("data-cms-url") ||
+    "http://localhost:1337";
+
+  const queryCode = new URLSearchParams(window.location.search).get("code");
+  if (queryCode) {
+    (document.getElementById("invite-code") as HTMLInputElement).value = queryCode;
+  }
+
+  document.getElementById("code-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("invite-code") as HTMLInputElement;
+    const errorDiv = document.getElementById("code-error");
+    const errorText = document.getElementById("code-error-text");
+    if (!input || !errorDiv || !errorText) return;
+    errorDiv.classList.add("hidden");
+    const res = await fetch(`${cmsUrl}/api/invites/validate?code=${input.value}`);
+    const data = await res.json();
+    if (!data.valid) {
+      errorDiv.classList.remove("hidden");
+      errorText.textContent = "Invalid or expired code";
+      return;
+    }
+    (document.getElementById("code-hidden") as HTMLInputElement).value = input.value;
+    document.getElementById("step-1")?.classList.add("hidden");
+    document.getElementById("step-2")?.classList.remove("hidden");
+  });
+
+  document.getElementById("register-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const firstName = (document.getElementById("firstName") as HTMLInputElement)?.value;
+    const lastName = (document.getElementById("lastName") as HTMLInputElement)?.value;
+    const email = (document.getElementById("email") as HTMLInputElement)?.value;
+    const password = (document.getElementById("password") as HTMLInputElement)?.value;
+    const confirm = (document.getElementById("confirmPassword") as HTMLInputElement)?.value;
+    const code = (document.getElementById("code-hidden") as HTMLInputElement)?.value;
+    const errorDiv = document.getElementById("error-message");
+    const errorText = document.getElementById("error-text");
+    if (!errorDiv || !errorText) return;
+    errorDiv.classList.add("hidden");
+    if (password !== confirm) {
+      errorDiv.classList.remove("hidden");
+      errorText.textContent = "Passwords do not match";
+      return;
+    }
+    if (!firstName || !lastName || !email || !password) {
+      errorDiv.classList.remove("hidden");
+      errorText.textContent = "All fields are required";
+      return;
+    }
+    const response = await fetch(`${cmsUrl}/api/invites/redeem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        firstName,
+        lastName,
+        email,
+        password,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      errorDiv.classList.remove("hidden");
+      errorText.textContent = data.error || "Registration failed";
+      return;
+    }
+    localStorage.setItem("customerToken", data.token);
+    localStorage.setItem("customer", JSON.stringify(data.customer));
+    window.location.href = "/customer/dashboard";
+  });
+</script>
