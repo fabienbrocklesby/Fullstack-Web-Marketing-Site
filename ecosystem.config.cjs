@@ -3,9 +3,9 @@ module.exports = {
     {
       name: "strapi-backend",
       cwd: "./backend",
-  // Invoke the Strapi JS entry directly (avoids shell wrapper being parsed by node)
+  // Explicit Node execution of Strapi JS entrypoint (avoid shell shim)
   script: "node",
-  args: "./node_modules/@strapi/strapi/bin/strapi.js start",
+  args: ["./node_modules/@strapi/strapi/bin/strapi.js", "start"],
       env: {
         NODE_ENV: "production"
       },
@@ -19,7 +19,7 @@ module.exports = {
       cwd: "./frontend",
       script: "node",
       // Use the Node adapter's server entry instead of preview (already built)
-      args: "./dist/server/entry.mjs",
+  args: ["./dist/server/entry.mjs"],
       env: {
         NODE_ENV: "production",
         PORT: 4000
