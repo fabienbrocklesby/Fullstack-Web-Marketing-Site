@@ -1,43 +1,51 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import Header from '../../components/Header.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import { getPaginatedPosts, type Post } from "../../lib/strapi";
 
-// This would typically fetch from your CMS
-const posts = [
-  {
-    id: 1,
-    title: 'Getting Started with SaaS Development',
-    slug: 'getting-started-saas-development',
-    excerpt: 'Learn the fundamentals of building a successful SaaS application.',
-    date: '2024-01-15',
-    author: 'John Doe',
-  },
-  {
-    id: 2,
-    title: 'Building Modern Web Applications',
-    slug: 'building-modern-web-applications',
-    excerpt: 'Explore the latest trends and technologies in web development.',
-    date: '2024-01-10',
-    author: 'Jane Smith',
-  },
-  {
-    id: 3,
-    title: 'Payment Integration Best Practices',
-    slug: 'payment-integration-best-practices',
-    excerpt: 'How to implement secure and reliable payment processing.',
-    date: '2024-01-05',
-    author: 'Mike Johnson',
-  },
-];
+const { posts, pagination } = await getPaginatedPosts(1, 9);
 ---
 
 <Layout
   title="Blog - SaaS Boilerplate"
   description="Latest insights and tutorials about SaaS development"
+  canonical={Astro.site ? new URL("/blog", Astro.site).href : Astro.url.href}
+  ogType="website"
 >
+  <fragment slot="headExtensions">
+    {
+      posts.length > 0 && (
+        <script
+          type="application/ld+json"
+          is:inline
+          set:html={JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Blog",
+            name: "Blog - SaaS Boilerplate",
+            url: Astro.site
+              ? new URL("/blog", Astro.site).href
+              : Astro.url.href,
+            description: "Latest insights and tutorials about SaaS development",
+            blogPost: posts.slice(0, 12).map((p, idx) => ({
+              "@type": "BlogPosting",
+              position: idx + 1,
+              headline: p.title,
+              url: Astro.site
+                ? new URL(`/blog/${p.slug}`, Astro.site).href
+                : `/blog/${p.slug}`,
+              datePublished: p.date,
+              author: { "@type": "Person", name: p.author || "Unknown" },
+              image: p.coverImageUrl || undefined,
+              description: p.preview || p.excerpt,
+            })),
+          })}
+        />
+      )
+    }
+  </fragment>
   <Header />
-  
+
   <main>
     <section class="py-20">
       <div class="container mx-auto px-4">
@@ -47,28 +55,110 @@ const posts = [
             Latest insights and tutorials about SaaS development
           </p>
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {posts.map((post) => (
-            <div class="card bg-base-200 shadow-lg">
-              <div class="card-body">
-                <h3 class="card-title text-xl mb-2">
-                  <a href={`/blog/${post.slug}`} class="hover:text-primary">
-                    {post.title}
-                  </a>
-                </h3>
-                <p class="text-base-content/70 mb-4">{post.excerpt}</p>
-                <div class="flex justify-between items-center text-sm text-base-content/60">
-                  <span>{post.author}</span>
-                  <span>{post.date}</span>
-                </div>
-              </div>
+
+        {
+          posts.length === 0 ? (
+            <div class="max-w-xl mx-auto text-center text-base-content/70">
+              <p class="mb-4">
+                No posts were bundled at build time. Loading latest posts…
+              </p>
+              <div
+                id="blog-posts-fallback"
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto w-full"
+              />
             </div>
-          ))}
-        </div>
+          ) : (
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {posts.map((post) => (
+                <a
+                  href={`/blog/${post.slug}`}
+                  class="card bg-base-200 shadow-lg transition hover:shadow-xl overflow-hidden group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={`Read blog post: ${post.title}`}
+                >
+                  {post.coverImageUrl && (
+                    <figure class="w-full h-44 overflow-hidden bg-base-300">
+                      <img
+                        src={post.coverImageUrl}
+                        alt={post.coverImageAlt || post.title}
+                        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        loading="lazy"
+                      />
+                    </figure>
+                  )}
+                  <div class="card-body">
+                    <h3 class="card-title text-xl mb-2 group-hover:text-primary">
+                      {post.title}
+                    </h3>
+                    <p class="text-base-content/70 text-sm leading-relaxed mb-4 line-clamp-4">
+                      {post.preview ||
+                        post.excerpt ||
+                        post.content?.replace(/<[^>]+>/g, " ").slice(0, 140) +
+                          "…"}
+                    </p>
+                    <div class="flex justify-between items-center text-xs text-base-content/60">
+                      <span>{post.author}</span>
+                      <span>{new Date(post.date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )
+        }
+        {
+          pagination.pageCount > 1 && (
+            <div
+              class="mt-16 flex items-center justify-center gap-2 flex-wrap"
+              aria-label="Pagination navigation"
+            >
+              {pagination.page > 1 && (
+                <a
+                  href={
+                    pagination.page - 1 === 1
+                      ? "/blog"
+                      : `/blog/page/${pagination.page - 1}`
+                  }
+                  class="btn btn-sm btn-outline"
+                  rel="prev"
+                >
+                  Previous
+                </a>
+              )}
+              {Array.from({ length: pagination.pageCount })
+                .slice(0, 12)
+                .map((_, i) => {
+                  const p = i + 1;
+                  const href = p === 1 ? "/blog" : `/blog/page/${p}`;
+                  const active = p === pagination.page;
+                  return (
+                    <a
+                      href={href}
+                      class={`btn btn-sm ${active ? "btn-primary" : "btn-soft"}`}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {p}
+                    </a>
+                  );
+                })}
+              {pagination.page < pagination.pageCount && (
+                <a
+                  href={`/blog/page/${pagination.page + 1}`}
+                  class="btn btn-sm btn-outline"
+                  rel="next"
+                >
+                  Next
+                </a>
+              )}
+            </div>
+          )
+        }
       </div>
     </section>
   </main>
-  
+  <script
+    is:inline
+    set:html={`(function(){if(!document.getElementById('blog-posts-fallback')) return;var mount=document.getElementById('blog-posts-fallback');var STRAPI='http://localhost:1337';var API_TOKEN='';try{var envAny=(typeof import!== 'undefined' && import.meta && import.meta.env)?import.meta.env:{};STRAPI=envAny.PUBLIC_STRAPI_URL||envAny.PUBLIC_CMS_URL||STRAPI;API_TOKEN=envAny.PUBLIC_STRAPI_API_TOKEN||'';}catch(e){}async function loadPosts(){try{var endpoints=['blogposts','blogpost','posts','articles'];var json=null;var usedUrl='';for (var i=0;i<endpoints.length;i++){var ep=endpoints[i];var testUrl=STRAPI+'/api/'+ep+'?sort=publishedAt:desc&pagination[page]=1&pagination[pageSize]=9&populate=coverImage';var res=await fetch(testUrl,{headers:API_TOKEN?{'Authorization':'Bearer '+API_TOKEN}:{}});if(!res.ok) continue;var data=await res.json();if(data&&data.data){json=data;usedUrl=testUrl; if(data.data.length||ep==='articles') break;}}if(!json){mount.innerHTML='<p class="col-span-full text-center text-error">No endpoint responded.</p>';return;}if(!json.data||!json.data.length){mount.innerHTML='<p class="col-span-full text-center text-sm opacity-70">No published posts yet.</p>';return;}mount.innerHTML=json.data.map(function(d){var a=d.attributes||{};var title=a.title||'Untitled';var slug=a.slug||d.id;var author=a.author||'Unknown';var date=a.publishedAt||a.updatedAt||a.createdAt||'';var content=(a.content||'').replace(/<script[\\s\\S]*?<\\/script>/gi,'');var preview=(a.preview||'').trim();var text=content.replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ').trim();var baseExcerpt=text.length>160?text.slice(0,160).replace(/\\s+\\S*$/,'')+'…':text;var excerpt=preview||baseExcerpt;var coverUrl='';var coverAttr=a.coverImage&&a.coverImage.data&&a.coverImage.data.attributes; if(coverAttr&&coverAttr.url){coverUrl=coverAttr.url.startsWith('http')?coverAttr.url:STRAPI.replace(/\\/$/,'')+coverAttr.url;}return '\n<a href="/blog/'+slug+'" class="card bg-base-200 shadow-lg transition hover:shadow-xl overflow-hidden group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Read blog post: '+title.replace(/"/g,'&quot;')+'">'+(coverUrl?'<figure class="w-full h-44 overflow-hidden bg-base-300"><img src="'+coverUrl+'" alt="'+title.replace(/"/g,'&quot;')+'" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" loading="lazy" /></figure>':'')+'<div class="card-body"><h3 class="card-title text-xl mb-2 group-hover:text-primary">'+title.replace(/"/g,'&quot;')+'</h3><p class="text-base-content/70 text-sm leading-relaxed mb-4 line-clamp-4">'+excerpt.replace(/</g,'&lt;')+'</p><div class="flex justify-between items-center text-xs text-base-content/60"><span>'+author.replace(/</g,'&lt;')+'</span><span>'+(date?new Date(date).toLocaleDateString():'')+'</span></div></div></a>';}).join('');}catch(e){console.error('[Blog] Runtime fetch failed',e);mount.innerHTML='<p class="col-span-full text-center text-error">Failed to load posts.</p>';}}loadPosts();})();`}
+  />
+
   <Footer />
 </Layout>

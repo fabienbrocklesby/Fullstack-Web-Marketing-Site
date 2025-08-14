@@ -2,9 +2,9 @@ module.exports = ({ env }) => {
   // Use SQLite for local development with in-memory fallback
   return {
     connection: {
-      client: 'sqlite',
+      client: "sqlite",
       connection: {
-        filename: env('DATABASE_FILENAME', ':memory:'),
+        filename: env("DATABASE_FILENAME", ":memory:"),
       },
       useNullAsDefault: true,
       pool: {

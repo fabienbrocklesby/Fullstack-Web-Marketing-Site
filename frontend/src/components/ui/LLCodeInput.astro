@@ -1,0 +1,72 @@
+---
+export interface Props {
+  id?: string;
+  name?: string;
+  length?: number;
+  error?: string;
+  label?: string;
+}
+const {
+  id = "code",
+  name = "code",
+  length = 6,
+  error,
+  label = "Invite Code",
+} = Astro.props as Props;
+---
+
+<div class="form-control" data-field>
+  {
+    label && (
+      <label class="label" for={id}>
+        <span class="label-text font-medium">{label}</span>
+      </label>
+    )
+  }
+  <div class="join w-full" data-code-input>
+    {
+      Array.from({ length }).map((_, i) => (
+        <input
+          type="text"
+          maxlength="1"
+          inputmode="text"
+          class="input input-bordered w-14 text-center join-item code-char"
+          data-idx={i}
+          aria-label={`Character ${i + 1}`}
+        />
+      ))
+    }
+    <input type="hidden" id={id} name={name} />
+  </div>
+  {
+    error && (
+      <p class="mt-2 text-sm text-error" role="alert">
+        {error}
+      </p>
+    )
+  }
+</div>
+<script>
+  const hidden = document.getElementById("{id}") as HTMLInputElement | null;
+  const chars = Array.from(
+    document.querySelectorAll("[data-code-input] .code-char"),
+  ) as HTMLInputElement[];
+  function update() {
+    if (hidden)
+      hidden.value = chars
+        .map((c) => c.value)
+        .join("")
+        .trim();
+  }
+  chars.forEach((c, i) => {
+    c.addEventListener("input", () => {
+      if (c.value && i < chars.length - 1) chars[i + 1].focus();
+      update();
+    });
+    c.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !c.value && i > 0) {
+        chars[i - 1].focus();
+      }
+    });
+  });
+</script>

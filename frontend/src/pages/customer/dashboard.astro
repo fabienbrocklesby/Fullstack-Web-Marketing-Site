@@ -4,7 +4,7 @@ import Layout from "../../layouts/Layout.astro";
 
 <Layout title="Customer Dashboard">
   <main class="min-h-screen bg-base-200">
-    <div class="navbar bg-base-100">
+    <div class="navbar bg-base-100 sticky top-0 z-40 shadow-sm">
       <div class="navbar-start">
         <div class="dropdown">
           <label tabindex="0" class="btn btn-ghost lg:hidden">
@@ -23,14 +23,14 @@ import Layout from "../../layouts/Layout.astro";
           </label>
           <ul
             tabindex="0"
-            class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+            class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 z-50 rounded-box w-52"
           >
             <li><a href="/customer/dashboard">Dashboard</a></li>
             <li><a href="/customer/profile">Profile</a></li>
           </ul>
         </div>
         <a href="/customer/dashboard" class="btn btn-ghost normal-case text-xl"
-          >Customer Portal</a
+          >Lightlane Portal</a
         >
       </div>
       <div class="navbar-center hidden lg:flex">
@@ -41,10 +41,21 @@ import Layout from "../../layouts/Layout.astro";
       </div>
       <div class="navbar-end">
         <div class="dropdown dropdown-end">
-          <label tabindex="0" class="btn btn-ghost">
-            <span id="customer-name">Customer</span>
+          <label tabindex="0" class="gap-2">
+            <div
+              class="md:hidden avatar avatar-placeholder hover:cursor-pointer"
+            >
+              <div class="bg-neutral text-neutral-content rounded-full w-10">
+                <span id="nav-initials">CU</span>
+              </div>
+            </div>
+            <span
+              id="customer-name"
+              class="hidden md:inline max-w-[140px] truncate hover:cursor-pointer"
+              >Customer</span
+            >
             <svg
-              class="w-4 h-4 ml-1"
+              class="w-4 h-4 ml-1 hidden md:inline"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -60,6 +71,9 @@ import Layout from "../../layouts/Layout.astro";
             tabindex="0"
             class="menu menu-compact dropdown-content z-50 mt-3 p-2 shadow bg-base-100 rounded-box w-52"
           >
+            <li class="md:hidden text-xs opacity-60">
+              <span id="customer-name-mobile">Customer</span>
+            </li>
             <li><a href="/customer/profile">Profile</a></li>
             <li><a id="logout-btn">Logout</a></li>
           </ul>
@@ -68,6 +82,38 @@ import Layout from "../../layouts/Layout.astro";
     </div>
 
     <div class="container mx-auto px-4 py-8">
+      <!-- Hero Empty State (hidden until determined no licenses) -->
+      <section id="purchase-hero" class="hidden mb-10">
+        <div class="hero bg-base-100 rounded-2xl shadow-lg">
+          <div class="hero-content flex-col lg:flex-row gap-10">
+            <div class="max-w-xl">
+              <h1 class="text-3xl font-bold mb-4">Get Your First License</h1>
+              <p class="opacity-70 mb-6">
+                Choose a plan and checkout securely. Your license key appears
+                instantly and you can generate an offline activation code tied
+                to your machine.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-4 items-start">
+                <select
+                  id="hero-plan"
+                  class="select select-bordered w-full max-w-xs"
+                >
+                  <option value="price_starter">Starter – $99</option>
+                  <option value="price_pro" selected>Pro – $199</option>
+                  <option value="price_enterprise">Enterprise – $499</option>
+                </select>
+                <button id="hero-buy" class="btn btn-primary"
+                  >Buy with Stripe</button
+                >
+              </div>
+              <p class="mt-3 text-xs opacity-60">
+                One device per license • Instant key issuance • Offline
+                activation supported
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Customer Info Card -->
         <div class="card bg-base-100 shadow-xl">
@@ -75,9 +121,11 @@ import Layout from "../../layouts/Layout.astro";
             <h2 class="card-title">
               <div class="avatar placeholder">
                 <div
-                  class="bg-neutral-focus text-neutral-content rounded-full w-8"
+                  class="bg-neutral-focus text-neutral-content rounded-full w-8 h-8 flex items-center justify-center"
                 >
-                  <span class="text-xs" id="customer-initials">CU</span>
+                  <span class="text-xs leading-none" id="customer-initials"
+                    >CU</span
+                  >
                 </div>
               </div>
               Account Info
@@ -90,10 +138,6 @@ import Layout from "../../layouts/Layout.astro";
               <div>
                 <span class="text-sm opacity-70">Email:</span>
                 <span id="customer-email" class="ml-2">Loading...</span>
-              </div>
-              <div>
-                <span class="text-sm opacity-70">Customer ID:</span>
-                <span id="customer-id" class="ml-2">Loading...</span>
               </div>
             </div>
           </div>
@@ -140,32 +184,309 @@ import Layout from "../../layouts/Layout.astro";
         <div class="card-body">
           <div class="flex justify-between items-center mb-4">
             <h2 class="card-title">Your License Keys</h2>
-            <a href="/pricing" class="btn btn-primary btn-sm">
-              <svg
-                class="w-4 h-4 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              Purchase License
-            </a>
+            <button id="open-purchase" class="btn btn-primary btn-sm"
+              >Buy with Stripe</button
+            >
           </div>
-          <div id="license-keys-container">
-            <div class="text-center py-8">
-              <div class="loading loading-spinner loading-lg"></div>
-              <p class="mt-4">Loading your license keys...</p>
+          <div id="license-keys-container" aria-busy="true">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Skeleton license cards while loading -->
+              <div class="card bg-base-100 border shadow-sm p-6 space-y-4">
+                <div class="flex justify-between">
+                  <div class="space-y-2">
+                    <div class="skeleton h-5 w-40"></div>
+                    <div class="skeleton h-4 w-24"></div>
+                  </div>
+                  <div class="skeleton h-6 w-20"></div>
+                </div>
+                <div class="skeleton h-10 w-full"></div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="skeleton h-4 w-24"></div>
+                  <div class="skeleton h-4 w-24"></div>
+                </div>
+                <div class="flex justify-end gap-2">
+                  <div class="skeleton h-8 w-20"></div>
+                  <div class="skeleton h-8 w-32"></div>
+                </div>
+              </div>
+              <div
+                class="card bg-base-100 border shadow-sm p-6 space-y-4 hidden md:block"
+              >
+                <div class="flex justify-between">
+                  <div class="space-y-2">
+                    <div class="skeleton h-5 w-40"></div>
+                    <div class="skeleton h-4 w-24"></div>
+                  </div>
+                  <div class="skeleton h-6 w-20"></div>
+                </div>
+                <div class="skeleton h-10 w-full"></div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="skeleton h-4 w-24"></div>
+                  <div class="skeleton h-4 w-24"></div>
+                </div>
+                <div class="flex justify-end gap-2">
+                  <div class="skeleton h-8 w-20"></div>
+                  <div class="skeleton h-8 w-32"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </main>
+
+  <dialog id="purchase_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-2">Purchase License</h3>
+      <form id="purchase-form" class="space-y-3">
+        <label class="label">Plan</label>
+        <select id="plan-select" class="select select-bordered w-full">
+          <option value="price_starter">Starter ($99)</option>
+          <option value="price_pro" selected>Pro ($199)</option>
+          <option value="price_enterprise">Enterprise ($499)</option>
+        </select>
+        <button class="btn btn-primary w-full">Checkout</button>
+        <p id="purchase-error" class="text-error text-sm hidden"></p>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- Generate Activation Code Modal -->
+  <dialog id="generate_activation_modal" class="modal">
+    <div class="modal-box max-w-4xl">
+      <h3 class="font-bold text-lg">Generate Activation Code</h3>
+
+      <!-- Step 1: Get MAC Address -->
+      <div id="mac-address-step">
+        <div class="alert alert-info mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path></svg
+          >
+          <span
+            >For security, activation codes are bound to your specific machine.
+            Please get your MAC address first.</span
+          >
+        </div>
+
+        <div class="tabs tabs-boxed mb-4">
+          <a class="tab tab-active" onclick="showMacInstructions('windows')"
+            >Windows</a
+          >
+          <a class="tab" onclick="showMacInstructions('macos')">macOS</a>
+          <a class="tab" onclick="showMacInstructions('linux')">Linux</a>
+        </div>
+
+        <div id="mac-instructions">
+          <!-- Windows Instructions -->
+          <div id="windows-instructions" class="mac-instruction">
+            <h4 class="font-semibold mb-2">Windows Command:</h4>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>getmac /fo csv | findstr /V "Transport Name" | head -n 1</code></pre>
+            </div>
+            <p class="text-sm mb-2">Or use this simpler command:</p>
+            <div class="mockup-code mb-2">
+              <pre data-prefix="$"><code>getmac</code></pre>
+            </div>
+            <button
+              class="btn btn-outline btn-sm"
+              onclick="copyCommand('getmac')">Copy Command</button
+            >
+          </div>
+
+          <!-- macOS Instructions -->
+          <div id="macos-instructions" class="mac-instruction hidden">
+            <h4 class="font-semibold mb-2">macOS Command:</h4>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>ifconfig en0 | grep ether | awk '&#123;print $2&#125;'</code></pre>
+            </div>
+            <p class="text-sm mb-2">
+              Alternative command (if en0 doesn't work):
+            </p>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>networksetup -getmacaddress Wi-Fi | awk '&#123;print $3&#125;'</code></pre>
+            </div>
+            <button
+              class="btn btn-outline btn-sm"
+              onclick="copyCommand('ifconfig en0 | grep ether | awk \'{print $2}\'')"
+              >Copy Command</button
+            >
+          </div>
+
+          <!-- Linux Instructions -->
+          <div id="linux-instructions" class="mac-instruction hidden">
+            <h4 class="font-semibold mb-2">Linux Command:</h4>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>ip link show | grep -A1 -E "^[0-9]+: (eth|wlan|enp)" | grep link/ether | head -n 1 | awk '&#123;print $2&#125;'</code></pre>
+            </div>
+            <p class="text-sm mb-2">Alternative command:</p>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>cat /sys/class/net/*/address | head -n 1</code></pre>
+            </div>
+            <button
+              class="btn btn-outline btn-sm"
+              onclick="copyCommand('ip link show | grep -A1 -E &quot;^[0-9]+: (eth|wlan|enp)&quot; | grep link/ether | head -n 1 | awk \'{print $2}\'')"
+              >Copy Command</button
+            >
+          </div>
+        </div>
+
+        <div class="form-control mt-4">
+          <label class="label">
+            <span class="label-text">Enter Your MAC Address:</span>
+          </label>
+          <input
+            type="text"
+            id="macAddressInput"
+            placeholder="XX:XX:XX:XX:XX:XX"
+            class="input input-bordered w-full"
+            pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
+          />
+          <div class="label">
+            <span class="label-text-alt"
+              >Format: XX:XX:XX:XX:XX:XX (letters can be upper or lowercase)</span
+            >
+          </div>
+        </div>
+
+        <div class="modal-action">
+          <button class="btn btn-primary" onclick="proceedToActivation()"
+            >Generate Activation Code</button
+          >
+          <form method="dialog"><button class="btn">Cancel</button></form>
+        </div>
+      </div>
+
+      <!-- Step 2: Activation Code Display -->
+      <div id="activation-code-step" class="hidden">
+        <div class="alert alert-success mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg
+          >
+          <span
+            >Activation code generated! This code will only work on the machine
+            with the MAC address you provided.</span
+          >
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Your Activation Code:</span>
+          </label>
+          <div class="join w-full">
+            <input
+              type="text"
+              id="activationCodeDisplay"
+              class="input input-bordered join-item flex-1"
+              readonly
+            />
+            <button
+              class="btn btn-primary join-item"
+              onclick="copyActivationCode()">Copy</button
+            >
+          </div>
+        </div>
+
+        <div class="form-control mt-4">
+          <label class="label">
+            <span class="label-text">Bound to MAC Address:</span>
+          </label>
+          <input
+            type="text"
+            id="boundMacDisplay"
+            class="input input-bordered"
+            readonly
+          />
+        </div>
+
+        <div class="alert alert-warning mt-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
+            ></path></svg
+          >
+          <div>
+            <p class="font-semibold">Important Security Notice:</p>
+            <ul class="list-disc list-inside text-sm mt-2">
+              <li>
+                This activation code will ONLY work on the machine with MAC
+                address: <span id="securityMacDisplay" class="font-mono"></span>
+              </li>
+              <li>The code cannot be transferred to other machines</li>
+              <li>This prevents unauthorized license sharing</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="modal-action">
+          <button class="btn btn-outline" onclick="resetActivationModal()"
+            >Generate Another</button
+          >
+          <form method="dialog"><button class="btn">Done</button></form>
+        </div>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- Deactivation Modal -->
+  <dialog id="deactivation_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Offline Deactivation</h3>
+      <p class="py-4">
+        Paste the deactivation code from your application below to deactivate
+        this license.
+      </p>
+      <div class="form-control">
+        <textarea
+          id="deactivation_code_textarea"
+          class="textarea textarea-bordered h-32"
+          placeholder="Paste deactivation code here..."></textarea>
+      </div>
+      <div class="text-center mt-2 hidden" id="deactivation-loading">
+        <span class="loading loading-spinner"></span>
+      </div>
+      <div class="modal-action">
+        <button class="btn btn-primary" onclick="submitDeactivation()"
+          >Submit Deactivation</button
+        >
+        <form method="dialog">
+          <button class="btn">Close</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
 </Layout>
 
 <script>
@@ -227,9 +548,39 @@ import Layout from "../../layouts/Layout.astro";
         }
 
         const licenseData = await licenseResponse.json();
-        displayLicenseKeys(licenseData.licenseKeys);
-        updateStats(licenseData.licenseKeys);
-        updateRecentActivity(customerData.purchases, licenseData.licenseKeys);
+        console.debug("License keys API raw response", licenseData);
+        // Support alternative shapes: { data: [...] } or direct array
+        const keys = Array.isArray(licenseData)
+          ? licenseData
+          : Array.isArray(licenseData.licenseKeys)
+            ? licenseData.licenseKeys
+            : Array.isArray(licenseData.data)
+              ? licenseData.data
+              : [];
+        let finalKeys = keys;
+        if (
+          (!Array.isArray(finalKeys) || finalKeys.length === 0) &&
+          Array.isArray(customerData.licenseKeys) &&
+          customerData.licenseKeys.length
+        ) {
+          console.warn("Using licenseKeys from profile fallback");
+          finalKeys = customerData.licenseKeys.map((k) => ({
+            ...k,
+            isUsed: k.status === "active" || k.isUsed,
+          }));
+        }
+        if (
+          (!finalKeys || finalKeys.length === 0) &&
+          customerData?.purchases?.length
+        ) {
+          console.warn(
+            "No license keys returned but purchases exist",
+            customerData.purchases,
+          );
+        }
+        displayLicenseKeys(finalKeys || []);
+        updateStats(finalKeys || []);
+        updateRecentActivity(customerData.purchases, finalKeys || []);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
         const container = document.getElementById("license-keys-container");
@@ -245,23 +596,29 @@ import Layout from "../../layouts/Layout.astro";
 
     function updateCustomerInfo(customerData) {
       const customerNameElement = document.getElementById("customer-name");
+      const customerNameMobileElement = document.getElementById(
+        "customer-name-mobile",
+      );
       const customerInitialsElement =
         document.getElementById("customer-initials");
+      const navInitialsElement = document.getElementById("nav-initials");
       const customerFullNameElement =
         document.getElementById("customer-full-name");
       const customerEmailElement = document.getElementById("customer-email");
-      const customerIdElement = document.getElementById("customer-id");
 
-      if (customerNameElement) {
-        customerNameElement.textContent =
-          `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
-          "Customer";
-      }
+      const fullName =
+        `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+        "Customer";
+      if (customerNameElement) customerNameElement.textContent = fullName;
+      if (customerNameMobileElement)
+        customerNameMobileElement.textContent = fullName;
 
-      if (customerInitialsElement) {
-        const initials = `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}`;
+      const initials =
+        `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}` ||
+        "CU";
+      if (customerInitialsElement)
         customerInitialsElement.textContent = initials || "CU";
-      }
+      if (navInitialsElement) navInitialsElement.textContent = initials || "CU";
 
       if (customerFullNameElement) {
         customerFullNameElement.textContent =
@@ -273,29 +630,115 @@ import Layout from "../../layouts/Layout.astro";
         customerEmailElement.textContent = customerData.email || "No email";
       }
 
-      if (customerIdElement) {
-        customerIdElement.textContent = customerData.id || "No ID";
-      }
-
       // Update localStorage with fresh data
       localStorage.setItem("customer", JSON.stringify(customerData));
     }
 
-    function displayLicenseKeys(licenseKeys) {
-      const container = document.getElementById("license-keys-container");
-      if (!container) return;
-
-      if (licenseKeys.length === 0) {
-        container.innerHTML = `
-        <div class="text-center py-8">
-          <div class="text-6xl mb-4">🔐</div>
-          <h3 class="text-lg font-semibold mb-2">No License Keys Yet</h3>
-          <p class="text-gray-600">Your license keys will appear here after making a purchase.</p>
-          <a href="/pricing" class="btn btn-primary mt-4">View Products</a>
-        </div>
-      `;
+    const purchaseBtn = document.getElementById(
+      "open-purchase",
+    ) as HTMLButtonElement | null;
+    const purchaseModal = document.getElementById(
+      "purchase_modal",
+    ) as HTMLDialogElement | null;
+    const purchaseForm = document.getElementById(
+      "purchase-form",
+    ) as HTMLFormElement | null;
+    const planSelect = document.getElementById(
+      "plan-select",
+    ) as HTMLSelectElement | null;
+    const purchaseError = document.getElementById(
+      "purchase-error",
+    ) as HTMLElement | null;
+    const heroPlan = document.getElementById(
+      "hero-plan",
+    ) as HTMLSelectElement | null;
+    const heroBuy = document.getElementById(
+      "hero-buy",
+    ) as HTMLButtonElement | null;
+    purchaseBtn?.addEventListener("click", () => purchaseModal?.showModal());
+    purchaseForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      purchaseError?.classList.add("hidden");
+      const priceId = planSelect?.value;
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      if (!priceId) {
+        if (purchaseError) {
+          purchaseError.textContent = "Please select a plan";
+          purchaseError.classList.remove("hidden");
+        }
         return;
       }
+      try {
+        const res = await fetch(`${cmsUrl}/api/customer-checkout`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${customerToken}`,
+          },
+          body: JSON.stringify({
+            priceId,
+            successUrl: window.location.origin + "/customer/success",
+            cancelUrl: window.location.href,
+          }),
+        });
+        const out = await res.json();
+        if (!res.ok) {
+          throw new Error(out?.error || out?.message || res.statusText);
+        }
+        if (out.url) {
+          window.location.href = out.url;
+        } else {
+          throw new Error("No checkout URL returned");
+        }
+      } catch (err) {
+        console.error("Checkout initiation failed:", err);
+        if (purchaseError) {
+          purchaseError.textContent =
+            err instanceof Error ? err.message : "Failed to initiate checkout";
+          purchaseError.classList.remove("hidden");
+        }
+      }
+    });
+    heroBuy?.addEventListener("click", () => {
+      if (heroPlan && planSelect) {
+        planSelect.value = heroPlan.value;
+        purchaseModal?.showModal();
+      } else {
+        purchaseModal?.showModal();
+      }
+    });
+
+    function showHero() {
+      const hero = document.getElementById("purchase-hero");
+      if (hero) hero.classList.remove("hidden");
+      // Hide the license card wrapper (license-keys-container parent card remains for layout, could hide if needed)
+    }
+
+    function displayLicenseKeys(licenseKeys) {
+      // Store license keys for global access
+      currentLicenseKeys = licenseKeys;
+
+      const container = document.getElementById("license-keys-container");
+      if (!container) return;
+      // Defensive: if API shape changed or missing
+      if (!Array.isArray(licenseKeys)) {
+        console.warn("licenseKeys not an array", licenseKeys);
+        container.innerHTML = `<div class="alert alert-error text-sm">Unable to load license keys. Please refresh.</div>`;
+        container.removeAttribute("aria-busy");
+        return;
+      }
+
+      if (licenseKeys.length === 0) {
+        container.removeAttribute("aria-busy");
+        showHero();
+        container.innerHTML = `<div class="p-4 text-sm opacity-70">No license keys yet.</div>`;
+        return;
+      }
+      // Hide hero if licenses exist
+      document.getElementById("purchase-hero")?.classList.add("hidden");
+      container.removeAttribute("aria-busy");
 
       const licenseCardsHTML = licenseKeys
         .map(
@@ -325,8 +768,20 @@ import Layout from "../../layouts/Layout.astro";
           <div class="grid grid-cols-2 gap-4 mt-4">
             <div>
               <span class="text-sm opacity-70">Status:</span>
-              <span class="ml-2 badge ${license.isUsed ? "badge-warning" : "badge-success"}">
-                ${license.isUsed ? "Active" : "Available"}
+              <span class="ml-2 badge ${
+                license.status === "active"
+                  ? "badge-success"
+                  : license.isUsed
+                    ? "badge-warning"
+                    : "badge-info"
+              }">
+                ${
+                  license.status === "active"
+                    ? "Active"
+                    : license.isUsed
+                      ? "Used"
+                      : "Available"
+                }
               </span>
             </div>
             <div>
@@ -336,7 +791,7 @@ import Layout from "../../layouts/Layout.astro";
           </div>
           
           ${
-            license.isUsed
+            license.isUsed || license.status === "active"
               ? `
             <div class="mt-4">
               <span class="text-sm opacity-70">Activated:</span>
@@ -347,9 +802,22 @@ import Layout from "../../layouts/Layout.astro";
           }
           
           <div class="card-actions justify-end mt-4">
-            <button class="btn btn-primary btn-sm" onclick="copyToClipboard('${license.key}')">
-              📋 Copy License Key
+            <button class="btn btn-ghost btn-sm" onclick="copyToClipboard('${license.key}')">
+              📋 Copy Key
             </button>
+            ${
+              license.isUsed || license.status === "active"
+                ? `
+                <button class="btn btn-warning btn-sm" onclick="openDeactivationModal('${license.id}')">
+                  🔌 Offline Deactivate
+                </button>
+                `
+                : `
+                <button class="btn btn-secondary btn-sm" onclick="openGenerateActivationModal('${license.id}')">
+                  ⚡ Offline Activate
+                </button>
+                `
+            }
           </div>
         </div>
       </div>
@@ -381,6 +849,309 @@ import Layout from "../../layouts/Layout.astro";
       if (activeElement) activeElement.textContent = activeLicenses;
       if (availableElement) availableElement.textContent = availableLicenses;
     }
+
+    let currentLicenseId = null;
+    let currentLicenseKeys = []; // Store current license keys
+
+    // Helper function to get current license keys
+    function getCurrentLicenseKeys() {
+      return currentLicenseKeys;
+    }
+
+    (window as any).openGenerateActivationModal = function (licenseId) {
+      // First check if license is already active
+      const licenseKeys = getCurrentLicenseKeys();
+      const license = licenseKeys.find(
+        (l: any) => l.id.toString() === licenseId.toString(),
+      ) as any;
+
+      if (license && (license.isUsed || license.status === "active")) {
+        alert(
+          "This license is already active. Please deactivate it first before generating a new activation code.",
+        );
+        return;
+      }
+
+      currentLicenseId = licenseId;
+      const modal = document.getElementById(
+        "generate_activation_modal",
+      ) as HTMLDialogElement;
+
+      // Reset modal to the MAC address step
+      const macStep = document.getElementById("mac-address-step");
+      const codeStep = document.getElementById("activation-code-step");
+      if (macStep) macStep.classList.remove("hidden");
+      if (codeStep) codeStep.classList.add("hidden");
+
+      // Reset inputs
+      const macInput = document.getElementById(
+        "macAddressInput",
+      ) as HTMLInputElement;
+      const activationCodeDisplay = document.getElementById(
+        "activationCodeDisplay",
+      ) as HTMLInputElement;
+      const boundMacDisplay = document.getElementById(
+        "boundMacDisplay",
+      ) as HTMLInputElement;
+      const securityMacDisplay = document.getElementById("securityMacDisplay");
+
+      if (macInput) macInput.value = "";
+      if (activationCodeDisplay) activationCodeDisplay.value = "";
+      if (boundMacDisplay) boundMacDisplay.value = "";
+      if (securityMacDisplay) securityMacDisplay.textContent = "";
+
+      modal?.showModal();
+    };
+
+    // MAC Address Modal functions
+    (window as any).showMacInstructions = function (os: string) {
+      // Hide all instructions
+      document
+        .querySelectorAll(".mac-instruction")
+        .forEach((el) => el.classList.add("hidden"));
+      // Remove active class from all tabs
+      document
+        .querySelectorAll(".tab")
+        .forEach((el) => el.classList.remove("tab-active"));
+
+      // Show selected instructions
+      const selectedInstructions = document.getElementById(
+        `${os}-instructions`,
+      );
+      if (selectedInstructions) selectedInstructions.classList.remove("hidden");
+
+      // Add active class to clicked tab
+      const tabs = document.querySelectorAll(".tab");
+      const osIndex = os === "windows" ? 0 : os === "macos" ? 1 : 2;
+      if (tabs[osIndex]) tabs[osIndex].classList.add("tab-active");
+    };
+
+    (window as any).copyCommand = function (command: string) {
+      navigator.clipboard
+        .writeText(command)
+        .then(() => {
+          // Show brief success message
+          const btn =
+            (event?.target as HTMLButtonElement) ||
+            (document.activeElement as HTMLButtonElement);
+          if (btn && btn.tagName === "BUTTON") {
+            const originalText = btn.textContent;
+            btn.textContent = "Copied!";
+            btn.classList.add("btn-success");
+            btn.classList.remove("btn-outline");
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove("btn-success");
+              btn.classList.add("btn-outline");
+            }, 2000);
+          }
+        })
+        .catch(() => {
+          alert("Failed to copy command to clipboard");
+        });
+    };
+
+    (window as any).proceedToActivation = function () {
+      const macInput = document.getElementById(
+        "macAddressInput",
+      ) as HTMLInputElement;
+      const macAddress = macInput.value.trim();
+
+      // Validate MAC address format
+      const macPattern = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+      if (!macPattern.test(macAddress)) {
+        alert("Please enter a valid MAC address in format XX:XX:XX:XX:XX:XX");
+        return;
+      }
+
+      // Hide step 1, show step 2
+      const macStep = document.getElementById("mac-address-step");
+      const codeStep = document.getElementById("activation-code-step");
+      if (macStep) macStep.classList.add("hidden");
+      if (codeStep) codeStep.classList.remove("hidden");
+
+      // Store the MAC address and proceed with activation
+      generateActivationCodeWithMac(macAddress);
+    };
+
+    (window as any).resetActivationModal = function () {
+      // Reset to step 1
+      const codeStep = document.getElementById("activation-code-step");
+      const macStep = document.getElementById("mac-address-step");
+      if (codeStep) codeStep.classList.add("hidden");
+      if (macStep) macStep.classList.remove("hidden");
+
+      // Clear inputs
+      const macInput = document.getElementById(
+        "macAddressInput",
+      ) as HTMLInputElement;
+      const activationCodeDisplay = document.getElementById(
+        "activationCodeDisplay",
+      ) as HTMLInputElement;
+      const boundMacDisplay = document.getElementById(
+        "boundMacDisplay",
+      ) as HTMLInputElement;
+      const securityMacDisplay = document.getElementById("securityMacDisplay");
+
+      if (macInput) macInput.value = "";
+      if (activationCodeDisplay) activationCodeDisplay.value = "";
+      if (boundMacDisplay) boundMacDisplay.value = "";
+      if (securityMacDisplay) securityMacDisplay.textContent = "";
+    };
+
+    async function generateActivationCodeWithMac(macAddress: string) {
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+        const response = await fetch(
+          `${cmsUrl}/api/license-keys/${currentLicenseId}/generate-activation-code`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${customerToken}`,
+            },
+            body: JSON.stringify({ machineId: macAddress }),
+          },
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(
+            error.error?.message || "Failed to generate activation code",
+          );
+        }
+
+        const { activationCode } = await response.json();
+
+        // Display the activation code and bound MAC
+        const activationCodeDisplay = document.getElementById(
+          "activationCodeDisplay",
+        ) as HTMLInputElement;
+        const boundMacDisplay = document.getElementById(
+          "boundMacDisplay",
+        ) as HTMLInputElement;
+        const securityMacDisplay =
+          document.getElementById("securityMacDisplay");
+
+        if (activationCodeDisplay) activationCodeDisplay.value = activationCode;
+        if (boundMacDisplay) boundMacDisplay.value = macAddress;
+        if (securityMacDisplay) securityMacDisplay.textContent = macAddress;
+
+        loadDashboardData(); // Refresh data to show license is now "Active"
+      } catch (error) {
+        alert(`Error: ${(error as Error).message}`);
+        const resetFunc = (window as any).resetActivationModal;
+        if (resetFunc) resetFunc();
+      }
+    }
+
+    (window as any).confirmActivation = async function () {
+      // This function is deprecated - keeping for compatibility
+      alert("Please use the new MAC address-based activation system.");
+    };
+
+    (window as any).copyActivationCode = function () {
+      const activationCodeDisplay = document.getElementById(
+        "activationCodeDisplay",
+      ) as HTMLInputElement;
+
+      if (activationCodeDisplay && activationCodeDisplay.value) {
+        navigator.clipboard.writeText(activationCodeDisplay.value).then(() => {
+          // Show brief success message
+          const btn = event?.target as HTMLButtonElement;
+          if (btn) {
+            const originalText = btn.textContent;
+            btn.textContent = "Copied!";
+            btn.classList.add("btn-success");
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove("btn-success");
+            }, 2000);
+          }
+        });
+      } else {
+        // Fallback for old textarea (legacy support)
+        const textarea = document.getElementById(
+          "activation_code_textarea",
+        ) as HTMLTextAreaElement;
+        if (textarea) {
+          navigator.clipboard.writeText(textarea.value).then(() => {
+            alert("Activation code copied to clipboard!");
+          });
+        }
+      }
+    };
+
+    (window as any).copyFromDisplay = function (elementId) {
+      const input = document.getElementById(elementId) as HTMLInputElement;
+      navigator.clipboard.writeText(input.value).then(() => {
+        alert("Copied to clipboard!");
+      });
+    };
+
+    (window as any).openDeactivationModal = function (licenseId) {
+      currentLicenseId = licenseId;
+      const modal = document.getElementById(
+        "deactivation_modal",
+      ) as HTMLDialogElement;
+      const textarea = document.getElementById(
+        "deactivation_code_textarea",
+      ) as HTMLTextAreaElement;
+      textarea.value = "";
+      modal?.showModal();
+    };
+
+    (window as any).submitDeactivation = async function () {
+      const modal = document.getElementById(
+        "deactivation_modal",
+      ) as HTMLDialogElement;
+      const textarea = document.getElementById(
+        "deactivation_code_textarea",
+      ) as HTMLTextAreaElement;
+      const loading = document.getElementById("deactivation-loading");
+      const deactivationCode = textarea.value;
+
+      if (!deactivationCode) {
+        alert("Please paste the deactivation code.");
+        return;
+      }
+
+      if (loading) loading.classList.remove("hidden");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+        const response = await fetch(
+          `${cmsUrl}/api/license-keys/${currentLicenseId}/deactivate-with-code`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${customerToken}`,
+            },
+            body: JSON.stringify({ deactivationCode }),
+          },
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(
+            error.error?.message || "Failed to deactivate license",
+          );
+        }
+
+        alert("License deactivated successfully!");
+        modal?.close();
+        loadDashboardData(); // Refresh data
+      } catch (error) {
+        alert(`Error: ${(error as Error).message}`);
+      } finally {
+        if (loading) loading.classList.add("hidden");
+      }
+    };
 
     function updateRecentActivity(purchases, licenseKeys) {
       const container = document.getElementById("recent-activity");

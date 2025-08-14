@@ -8,7 +8,12 @@ module.exports = createCoreController(
     // Customer registration
     async register(ctx) {
       try {
-        const { email, password, firstName, lastName } = ctx.request.body;
+        const { email, password, firstName, lastName, activationCode } =
+          ctx.request.body;
+
+        if (!activationCode) {
+          return ctx.badRequest("Activation code is required");
+        }
 
         if (!email || !password || !firstName || !lastName) {
           return ctx.badRequest(
@@ -27,6 +32,18 @@ module.exports = createCoreController(
         if (existingCustomer.length > 0) {
           return ctx.badRequest("Customer already exists with this email");
         }
+
+        // Validate activation code exists (one-time use)
+        const codes = await strapi.entityService.findMany(
+          "api::activation-code.activation-code",
+          { filters: { code: activationCode } },
+        );
+
+        if (codes.length === 0) {
+          return ctx.badRequest("Invalid or already used activation code");
+        }
+
+        const activationCodeId = codes[0].id;
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -56,6 +73,21 @@ module.exports = createCoreController(
           process.env.JWT_SECRET || "default-secret",
           { expiresIn: "7d" },
         );
+
+        // Delete activation code so it cannot be reused
+        try {
+          await strapi.entityService.delete(
+            "api::activation-code.activation-code",
+            activationCodeId,
+          );
+        } catch (delErr) {
+          strapi.log.warn(
+            "Failed to delete activation code id=" +
+              activationCodeId +
+              ": " +
+              delErr.message,
+          );
+        }
 
         // Remove password from response
         const { password: _, ...customerData } = customer;

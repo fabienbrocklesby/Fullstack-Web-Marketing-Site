@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "customer_invites",
+  "info": {
+    "singularName": "customer-invite",
+    "pluralName": "customer-invites",
+    "displayName": "CustomerInvite"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "code": { "type": "uid", "targetField": "issuedToEmail", "unique": true },
+    "status": {
+      "type": "enumeration",
+      "enum": ["pending", "redeemed", "expired"],
+      "default": "pending"
+    },
+    "issuedToEmail": { "type": "email" },
+    "affiliate": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::affiliate.affiliate"
+    },
+    "enquiry": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::enquiry.enquiry"
+    },
+    "expiresAt": { "type": "datetime" },
+    "redeemedAt": { "type": "datetime" },
+    "maxUses": { "type": "integer", "default": 1 },
+    "uses": { "type": "integer", "default": 0 },
+    "notes": { "type": "text" },
+    "metadata": { "type": "json" }
+  }
+}

@@ -120,6 +120,8 @@ import Layout from "../layouts/Layout.astro";
         </div>
       </div>
 
+      <!-- Leads section removed (handled by external CRM) -->
+
       <!-- Affiliate Link Generator -->
       <div class="card bg-base-100 shadow-lg mt-6">
         <div class="card-body">
@@ -460,6 +462,8 @@ import Layout from "../layouts/Layout.astro";
         } else {
           console.warn("Failed to load affiliate stats:", statsResponse.status);
         }
+
+        // Leads fetching removed (external CRM now authoritative)
 
         // Calculate stats for the filtered purchases
         const totalSales = purchases.reduce((sum: number, purchase: any) => {

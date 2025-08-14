@@ -20,8 +20,8 @@ module.exports = {
     },
     {
       method: "POST",
-      path: "/license-keys/:id/activate",
-      handler: "license-key.activate",
+      path: "/license-keys/:id/generate-activation-code",
+      handler: "license-key.generateActivationCode",
       config: {
         auth: false,
         middlewares: ["global::customer-auth"],
@@ -29,11 +29,13 @@ module.exports = {
     },
     {
       method: "POST",
-      path: "/license-keys/:id/deactivate",
-      handler: "license-key.deactivate",
+      path: "/license-keys/:id/deactivate-with-code",
+      handler: "license-key.deactivateWithCode",
       config: {
         auth: false,
         middlewares: ["global::customer-auth"],
+        policies: [],
+        bodyParser: true,
       },
     },
   ],

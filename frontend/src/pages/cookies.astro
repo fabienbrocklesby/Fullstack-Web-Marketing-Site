@@ -1,0 +1,182 @@
+---
+import Layout from "../layouts/Layout.astro";
+const today = new Date();
+const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+---
+
+<Layout title="Cookie Policy">
+  <main class="min-h-screen bg-base-200">
+    <section class="max-w-4xl mx-auto px-6 py-12">
+      <h1 class="text-4xl font-bold mb-2">Cookie Policy</h1>
+      <p class="text-sm opacity-70 mb-8">
+        Effective Date: {iso} • Last Updated: {iso}
+      </p>
+
+      <p class="mb-8">
+        Light Lane ("we," "our," "us") operates the website <a
+          href="https://lightlane.app"
+          class="link link-primary"
+          rel="noopener"
+          target="_blank">https://lightlane.app</a
+        > (the "Site") and associated services (the "Services"). This Cookie Policy
+        explains how and why cookies and similar tracking technologies are used when
+        you visit or interact with our Site and Services.
+      </p>
+      <p class="mb-8">
+        By continuing to use our Site or Services, you agree to the use of
+        cookies and similar technologies in accordance with this policy. If you
+        do not agree, adjust your browser settings or discontinue use of our
+        Services.
+      </p>
+
+      <div class="space-y-10">
+        <div>
+          <h2 class="text-2xl font-semibold">1. What Are Cookies?</h2>
+          <p>
+            Cookies are small text files placed on your device (computer,
+            tablet, or mobile) when you visit a website. They store information
+            about your session and preferences to help improve your browsing
+            experience and functionality.
+          </p>
+          <ul class="list-disc list-inside mt-4 ml-4 space-y-1">
+            <li>
+              <strong>Session Cookies:</strong> Automatically deleted when you close
+              your browser.
+            </li>
+            <li>
+              <strong>Persistent Cookies:</strong> Remain on your device until deleted
+              or expired.
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">2. How We Use Cookies</h2>
+          <p class="mb-4">
+            We use cookies and similar technologies for the following purposes:
+          </p>
+          <ol class="list-decimal list-inside ml-4 space-y-2">
+            <li>
+              <strong>Essential Cookies</strong> – Required for the operation of
+              our Site and Services (e.g., authentication, session management, security).
+            </li>
+            <li>
+              <strong>Performance &amp; Analytics Cookies</strong> – Help us understand
+              how users interact with our Site to improve navigation, features, and
+              performance.
+            </li>
+            <li>
+              <strong>Functional Cookies</strong> – Store user preferences and settings
+              to enhance your experience.
+            </li>
+            <li>
+              <strong>Security &amp; Fraud Prevention</strong> – Detect and prevent
+              unauthorized access, fraud, and abuse.
+            </li>
+            <li>
+              <strong>Marketing &amp; Retargeting Cookies</strong> – Deliver relevant
+              content and ads, and measure effectiveness of campaigns (only if/when
+              marketing tracking is introduced).
+            </li>
+          </ol>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">3. Third-Party Cookies</h2>
+          <p>
+            We may allow trusted third parties to place cookies on your device
+            through our Site to:
+          </p>
+          <ul class="list-disc list-inside ml-4 space-y-1 mt-2">
+            <li>
+              Provide analytics (e.g., privacy-aware analytics platforms or
+              Google Analytics if enabled)
+            </li>
+            <li>
+              Deliver targeted advertising (only if explicitly activated in the
+              future)
+            </li>
+            <li>
+              Improve user experience through integrated third-party services
+            </li>
+          </ul>
+          <p class="mt-4">
+            These third parties have their own privacy and cookie policies. We
+            encourage you to review them.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">4. Managing Cookies</h2>
+          <p>
+            You can manage cookies through your browser settings, which may
+            allow you to:
+          </p>
+          <ul class="list-disc list-inside ml-4 space-y-1 mt-2">
+            <li>Block all cookies</li>
+            <li>Block cookies from specific sites</li>
+            <li>Delete existing cookies</li>
+            <li>Receive notifications before a cookie is placed</li>
+          </ul>
+          <p class="mt-4">
+            Disabling certain cookies may impact the functionality and
+            performance of our Site and Services.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">
+            5. Legal Basis for Processing Cookies
+          </h2>
+          <p>We process cookies based on:</p>
+          <ul class="list-disc list-inside ml-4 space-y-1 mt-2">
+            <li>
+              <strong>Legitimate Interests</strong> – For the operation and security
+              of the Services.
+            </li>
+            <li>
+              <strong>Consent</strong> – For non-essential cookies, in compliance
+              with applicable privacy laws.
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">6. International Users</h2>
+          <p>
+            Light Lane operates globally. By using our Site, you acknowledge and
+            consent to the transfer and processing of your information in
+            jurisdictions where privacy laws may differ from your own.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">
+            7. Beta &amp; Invite-Only Access
+          </h2>
+          <p>
+            Light Lane is currently in closed beta and invite-only. Any
+            unauthorized access to our Services, including bypassing invitation
+            requirements, is strictly prohibited and may result in legal action.
+            All data collected during beta is subject to this Cookie Policy and
+            our Privacy Policy.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">
+            8. Changes to This Cookie Policy
+          </h2>
+          <p>
+            We reserve the right to update or amend this Cookie Policy at any
+            time without prior notice. Updates become effective upon posting to
+            the Site.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">9. Contact Us</h2>
+          <p>If you have questions about this Cookie Policy, please contact:</p>
+          <p class="mt-2">
+            <strong>Email:</strong>
+            <a href="mailto:support@lightlane.app" class="link"
+              >support@lightlane.app</a
+            ><br /><strong>Address:</strong> (Insert Company Address)
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>

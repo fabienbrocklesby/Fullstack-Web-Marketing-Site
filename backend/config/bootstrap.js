@@ -6,6 +6,18 @@ module.exports = async ({ strapi }) => {
   }
 
   try {
+    // Verify ZeptoMail SMTP (non-fatal) if credentials present
+    if (process.env.SMTP_USERNAME && process.env.SMTP_PASSWORD) {
+      try {
+        const mailer = require("../src/utils/mailer");
+        mailer.verify();
+      } catch (e) {
+        console.warn("SMTP verify skipped:", e.message);
+      }
+    } else {
+      console.log("SMTP credentials missing; email disabled");
+    }
+
     // Set up permissions for authenticated users
     const pluginStore = strapi.store({
       type: "plugin",

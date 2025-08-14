@@ -1,0 +1,33 @@
+---
+export interface Props {
+  id?: string;
+  name: string;
+  label?: string;
+  checked?: boolean;
+  disabled?: boolean;
+  help?: string;
+}
+const p = Astro.props as Props;
+const id = p.id || p.name;
+---
+
+<div class="form-control" data-field>
+  <label class="label cursor-pointer justify-start gap-3" for={id}>
+    <input
+      id={id}
+      type="checkbox"
+      class="toggle"
+      name={p.name}
+      checked={p.checked}
+      disabled={p.disabled}
+    />
+    <span class="label-text">{p.label}</span>
+  </label>
+  {
+    p.help && (
+      <div class="label -mt-2">
+        <span class="label-text-alt opacity-70">{p.help}</span>
+      </div>
+    )
+  }
+</div>

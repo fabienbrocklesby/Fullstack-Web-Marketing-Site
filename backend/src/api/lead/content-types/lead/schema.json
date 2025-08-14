@@ -1,0 +1,33 @@
+{
+  "collectionName": "leads",
+  "info": {
+    "singularName": "lead",
+    "pluralName": "leads",
+    "displayName": "Lead",
+    "description": "Sales lead captured from enquiries / early access form"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "fullName": { "type": "string", "required": true },
+    "email": { "type": "email", "required": true },
+    "company": { "type": "string" },
+    "useCase": { "type": "text" },
+    "notes": { "type": "text" },
+    "planInterested": { "type": "string" },
+    "affiliateCode": { "type": "string" },
+    "source": { "type": "string" },
+    "status": {
+      "type": "enumeration",
+      "enum": ["new", "contacted", "qualified", "won", "lost"],
+      "default": "new"
+    },
+    "metadata": { "type": "json" },
+    "enquiry": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::enquiry.enquiry"
+    }
+  }
+}

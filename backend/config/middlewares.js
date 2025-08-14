@@ -16,7 +16,14 @@ module.exports = [
   },
   "strapi::poweredBy",
   "strapi::query",
-  "strapi::body",
+  {
+    name: "strapi::body",
+    config: {
+      parserOptions: {
+        jsonLimit: "1mb",
+      },
+    },
+  },
   "strapi::session",
   "strapi::favicon",
   "strapi::public",

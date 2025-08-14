@@ -1,0 +1,24 @@
+{
+  "kind": "collectionType",
+  "collectionName": "contact_messages",
+  "info": {
+    "singularName": "contact-message",
+    "pluralName": "contact-messages",
+    "displayName": "Contact Message",
+    "description": "Messages sent through public contact form"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {
+    "fullName": { "type": "string", "required": true },
+    "email": { "type": "email", "required": true },
+    "subject": { "type": "string" },
+    "message": { "type": "text" },
+    "status": {
+      "type": "enumeration",
+      "enum": ["new", "reviewed", "responded", "archived", "spam"],
+      "default": "new"
+    },
+    "source": { "type": "string" },
+    "metadata": { "type": "json" }
+  }
+}

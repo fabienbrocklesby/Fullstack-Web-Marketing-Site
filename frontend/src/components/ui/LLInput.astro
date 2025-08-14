@@ -1,0 +1,56 @@
+---
+export interface Props {
+  id?: string;
+  name: string;
+  type?: "text" | "email" | "password" | "number" | "search";
+  label?: string;
+  value?: string;
+  placeholder?: string;
+  error?: string;
+  help?: string;
+  required?: boolean;
+  disabled?: boolean;
+  full?: boolean;
+}
+const p = Astro.props as Props;
+const id = p.id || p.name;
+---
+
+<div class={`form-control ${p.full ? "w-full" : ""}`} data-field>
+  {
+    p.label && (
+      <label for={id} class="label">
+        <span class="label-text font-medium">
+          {p.label}
+          {p.required && <span class="text-error ml-0.5">*</span>}
+        </span>
+      </label>
+    )
+  }
+  <input
+    id={id}
+    name={p.name}
+    type={p.type}
+    value={p.value}
+    placeholder={p.placeholder}
+    class={`input input-bordered ${p.error ? "input-error" : ""}`}
+    required={p.required}
+    disabled={p.disabled}
+    aria-invalid={!!p.error}
+    aria-describedby={p.help ? `${id}-help` : undefined}
+  />
+  {
+    p.help && (
+      <div id={`${id}-help`} class="label">
+        <span class="label-text-alt opacity-70">{p.help}</span>
+      </div>
+    )
+  }
+  {
+    p.error && (
+      <p class="mt-1 text-sm text-error" role="alert">
+        {p.error}
+      </p>
+    )
+  }
+</div>

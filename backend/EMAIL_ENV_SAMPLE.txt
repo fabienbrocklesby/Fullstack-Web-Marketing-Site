@@ -1,0 +1,8 @@
+# Copy these into your backend .env (never commit secrets)
+SMTP_HOST=smtp.zeptomail.com.au
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USERNAME=CHANGE_ME_EMAILAPIKEY
+SMTP_PASSWORD=CHANGE_ME_SECRET_KEY
+EMAIL_FROM=noreply@lightlane.app
+EMAIL_REPLY_TO=support@lightlane.app

@@ -7,16 +7,18 @@ export interface Props {
   canonical?: string;
   noindex?: boolean;
   nofollow?: boolean;
+  ogType?: string; // default website, can be article for blog posts
 }
 
 const {
-  title = "SaaS Boilerplate",
-  description = "A production-ready SaaS marketing site boilerplate",
+  title = "Lightlane – Laser Engraving Software",
+  description = "Lightlane is the faster, smarter, gradient-driven laser engraving software: import → preview → engrave in fewer clicks.",
   keywords = "",
-  image = "/og-image.jpg",
+  image = "/og-lightlane.jpg",
   canonical = Astro.url.href,
   noindex = false,
   nofollow = false,
+  ogType = "website",
 } = Astro.props;
 
 const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
@@ -25,11 +27,13 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
 ---
 
 <!doctype html>
-<html lang="en" data-cms-url={cmsUrl}>
+<html lang="en" data-cms-url={cmsUrl} data-theme="lightlane">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="canonical" href={canonical} />
 
     <!-- SEO Meta Tags -->
@@ -42,7 +46,7 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
     />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -54,6 +58,13 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Blog RSS"
+      href="/blog/rss.xml"
+    />
+    <slot name="headExtensions" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -64,6 +75,7 @@ const cmsUrl = "http://localhost:1337"; // Will be replaced by environment varia
     />
 
     <meta name="generator" content={Astro.generator} />
+    <link rel="stylesheet" href="/src/styles/app.css" />
   </head>
   <body>
     <slot />

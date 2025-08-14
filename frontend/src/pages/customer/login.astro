@@ -3,50 +3,165 @@ import Layout from "../../layouts/Layout.astro";
 ---
 
 <Layout title="Customer Login">
-  <main class="hero min-h-screen bg-base-200">
-    <div class="hero-content text-center">
-      <div class="max-w-md">
-        <div class="card w-full max-w-sm shadow-2xl bg-base-100">
-          <div class="card-body">
-            <h1 class="text-2xl font-bold mb-6">Customer Login</h1>
-            <form id="login-form">
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">Email</span>
-                </label>
+  <main class="relative min-h-screen flex items-stretch overflow-hidden">
+    <!-- Decorative / gradient background -->
+    <div class="pointer-events-none absolute inset-0 -z-10">
+      <div
+        class="absolute inset-0 bg-gradient-to-br from-primary/10 via-base-200 to-base-100"
+      >
+      </div>
+      <div
+        class="absolute top-[-20%] left-[-10%] w-[32rem] h-[32rem] rounded-full bg-primary/25 blur-3xl opacity-40"
+      >
+      </div>
+      <div
+        class="absolute bottom-[-25%] right-[-5%] w-[38rem] h-[38rem] rounded-full bg-accent/25 blur-3xl opacity-40"
+      >
+      </div>
+    </div>
+
+    <div
+      class="container mx-auto px-5 py-10 flex flex-col lg:flex-row gap-14 lg:gap-20 items-center"
+    >
+      <!-- Marketing / value prop side -->
+      <div class="w-full max-w-xl space-y-10 text-center lg:text-left">
+        <a
+          href="/"
+          class="btn btn-ghost btn-sm -ml-2 lg:ml-0 inline-flex items-center gap-2"
+        >
+          <span class="text-lg">←</span>
+          <span>Back to Home</span>
+        </a>
+        <div class="space-y-6">
+          <h1
+            class="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight"
+          >
+            <span
+              class="bg-gradient-to-br from-base-content to-base-content/60 bg-clip-text text-transparent"
+              >Login to your Lightlane workspace</span
+            >
+          </h1>
+          <p
+            class="text-base md:text-lg text-base-content/70 max-w-lg mx-auto lg:mx-0"
+          >
+            The fastest laser engraving workflow on the planet. Reclaim minutes
+            every job with smart defaults, instant preview, offline activation
+            and bulletproof streaming reliability.
+          </p>
+          <ul class="grid sm:grid-cols-2 gap-4 text-sm">
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-success badge-soft mt-0.5">Speed</span>
+              <span class="text-base-content/70"
+                >Import ➜ Preview ➜ Engrave in fewer clicks – smooth, resilient
+                pipeline.</span
+              >
+            </li>
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-primary badge-soft mt-0.5"
+                >Precision</span
+              >
+              <span class="text-base-content/70"
+                >Optimised path engine & smart parameter memory reduce waste.</span
+              >
+            </li>
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-accent badge-soft mt-0.5"
+                >Reliability</span
+              >
+              <span class="text-base-content/70"
+                >Offline-first licensing & seamless reconnect logic keep you
+                moving.</span
+              >
+            </li>
+            <li
+              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+            >
+              <span class="badge badge-secondary badge-soft mt-0.5">Scale</span>
+              <span class="text-base-content/70"
+                >Reusable templates & materials database standardise production.</span
+              >
+            </li>
+          </ul>
+          <div
+            class="flex flex-wrap gap-3 justify-center lg:justify-start text-xs text-base-content/60"
+          >
+            <span class="badge badge-soft badge-success">Avg setup time ↓</span>
+            <span class="badge badge-soft badge-info">Offline Activation</span>
+            <span class="badge badge-soft badge-warning">Path Optimiser</span>
+            <span class="badge badge-soft badge-error">Safe Streaming</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Login card -->
+      <div class="w-full max-w-sm">
+        <div
+          class="card shadow-2xl bg-base-100/90 backdrop-blur border border-base-300/60"
+        >
+          <div class="card-body p-8 space-y-6">
+            <div class="space-y-2 text-center">
+              <h2 class="text-2xl font-bold tracking-tight">Welcome back</h2>
+              <p class="text-sm text-base-content/60">
+                Access your licenses, activations & workflow history.
+              </p>
+            </div>
+            <form id="login-form" class="space-y-5" novalidate>
+              <div class="form-control gap-2">
+                <label class="text-sm font-medium" for="email">Email</label>
                 <input
                   type="email"
                   id="email"
-                  placeholder="email@example.com"
-                  class="input input-bordered"
+                  placeholder="you@company.com"
+                  class="input input-bordered w-full"
                   required
                 />
               </div>
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">Password</span>
-                </label>
+              <div class="form-control gap-2">
+                <label class="text-sm font-medium" for="password"
+                  >Password</label
+                >
                 <input
                   type="password"
                   id="password"
-                  placeholder="password"
-                  class="input input-bordered"
+                  placeholder="••••••••"
+                  class="input input-bordered w-full"
                   required
                 />
               </div>
-              <div class="form-control mt-6">
-                <button type="submit" class="btn btn-primary">Login</button>
-              </div>
+              <button
+                type="submit"
+                class="btn btn-primary w-full"
+                data-login-btn
+              >
+                <span data-btn-label>Login</span>
+                <span
+                  class="loading loading-dots loading-sm hidden"
+                  data-btn-loading></span>
+              </button>
             </form>
-            <div id="error-message" class="alert alert-error mt-4 hidden">
+            <div
+              id="error-message"
+              class="alert alert-error hidden"
+              role="alert"
+            >
               <span id="error-text"></span>
             </div>
-            <p class="text-center mt-4">
-              Don't have an account? <a
-                href="/customer/register"
-                class="link link-primary">Register here</a
-              >
-            </p>
+            <div
+              class="pt-2 text-center text-[11px] leading-relaxed text-base-content/50"
+            >
+              <p>
+                Having trouble logging in? Contact <a
+                  href="mailto:support@lightlane.app"
+                  class="link link-primary">support</a
+                >.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -84,21 +199,35 @@ import Layout from "../../layouts/Layout.astro";
             .find((row) => row.startsWith("affiliate_code="))
             ?.split("=")[1] || localStorage.getItem("affiliate_code");
 
-        const response = await fetch(`${cmsUrl}/api/customers/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        const response = await fetch(
+          `${cmsUrl.replace(/\/$/, "")}/api/customers/login`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: emailInput.value,
+              password: passwordInput.value,
+            }),
           },
-          body: JSON.stringify({
-            email: emailInput.value,
-            password: passwordInput.value,
-          }),
-        });
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Login failed");
+          let message = "Login failed";
+          const err = data?.error;
+          if (err) {
+            if (typeof err === "string") message = err;
+            else if (typeof err.message === "string") message = err.message;
+            else if (Array.isArray(err) && err[0]?.message)
+              message = err[0].message;
+            else if (err.details?.errors?.length) {
+              message = err.details.errors[0].message || message;
+            }
+          }
+          throw new Error(message);
         }
 
         // Store the customer token
@@ -150,7 +279,11 @@ import Layout from "../../layouts/Layout.astro";
       } catch (error) {
         errorDiv.classList.remove("hidden");
         errorText.textContent =
-          error instanceof Error ? error.message : "Login failed";
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : "Login failed";
       }
     });
 </script>

@@ -1,249 +1,311 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Affiliate Tracking Test</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .test-result {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        .success { background: #d4edda; border-color: #c3e6cb; }
-        .error { background: #f8d7da; border-color: #f5c6cb; }
-        .info { background: #d1ecf1; border-color: #bee5eb; }
-        .log {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-result {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+      }
+      .success {
+        background: #d4edda;
+        border-color: #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        border-color: #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        border-color: #bee5eb;
+      }
+      .log {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Affiliate Tracking Test</h1>
-    
+
     <div class="test-result info">
-        <h3>Current Page Info</h3>
-        <p><strong>URL:</strong> <span id="current-url"></span></p>
-        <p><strong>Search Params:</strong> <span id="search-params"></span></p>
-        <p><strong>Ref Parameter:</strong> <span id="ref-param"></span></p>
+      <h3>Current Page Info</h3>
+      <p><strong>URL:</strong> <span id="current-url"></span></p>
+      <p><strong>Search Params:</strong> <span id="search-params"></span></p>
+      <p><strong>Ref Parameter:</strong> <span id="ref-param"></span></p>
     </div>
 
     <div class="test-result info">
-        <h3>Journey Tracker Status</h3>
-        <p><strong>Tracker Loaded:</strong> <span id="tracker-status"></span></p>
-        <p><strong>Visitor ID:</strong> <span id="visitor-id"></span></p>
-        <p><strong>Session ID:</strong> <span id="session-id"></span></p>
-        <p><strong>Affiliate Code:</strong> <span id="affiliate-code"></span></p>
+      <h3>Journey Tracker Status</h3>
+      <p><strong>Tracker Loaded:</strong> <span id="tracker-status"></span></p>
+      <p><strong>Visitor ID:</strong> <span id="visitor-id"></span></p>
+      <p><strong>Session ID:</strong> <span id="session-id"></span></p>
+      <p><strong>Affiliate Code:</strong> <span id="affiliate-code"></span></p>
     </div>
 
     <div class="test-result info">
-        <h3>Storage Check</h3>
-        <p><strong>Cookie affiliate_code:</strong> <span id="cookie-check"></span></p>
-        <p><strong>LocalStorage affiliate_code:</strong> <span id="localstorage-check"></span></p>
-        <p><strong>SessionStorage affiliate_code:</strong> <span id="sessionstorage-check"></span></p>
+      <h3>Storage Check</h3>
+      <p>
+        <strong>Cookie affiliate_code:</strong> <span id="cookie-check"></span>
+      </p>
+      <p>
+        <strong>LocalStorage affiliate_code:</strong>
+        <span id="localstorage-check"></span>
+      </p>
+      <p>
+        <strong>SessionStorage affiliate_code:</strong>
+        <span id="sessionstorage-check"></span>
+      </p>
     </div>
 
     <div>
-        <h3>Test Actions</h3>
-        <button onclick="testAffiliateDetection()">Test Affiliate Detection</button>
-        <button onclick="testButtonTracking()">Test Button Tracking</button>
-        <button onclick="testPageView()">Test Page View</button>
-        <button onclick="clearStorage()">Clear All Storage</button>
-        <button onclick="refreshStatus()">Refresh Status</button>
+      <h3>Test Actions</h3>
+      <button onclick="testAffiliateDetection()">
+        Test Affiliate Detection
+      </button>
+      <button onclick="testButtonTracking()">Test Button Tracking</button>
+      <button onclick="testPageView()">Test Page View</button>
+      <button onclick="clearStorage()">Clear All Storage</button>
+      <button onclick="refreshStatus()">Refresh Status</button>
     </div>
 
     <div>
-        <h3>Test Links</h3>
-        <a href="/?ref=homepage_test" target="_blank">Test Homepage with ref=homepage_test</a><br>
-        <a href="/pricing?ref=pricing_test" target="_blank">Test Pricing with ref=pricing_test</a><br>
-        <a href="/test-affiliate-tracking.html?ref=refresh_test">Refresh this page with ref=refresh_test</a><br>
+      <h3>Test Links</h3>
+      <a href="/?ref=homepage_test" target="_blank"
+        >Test Homepage with ref=homepage_test</a
+      ><br />
+      <a href="/pricing?ref=pricing_test" target="_blank"
+        >Test Pricing with ref=pricing_test</a
+      ><br />
+      <a href="/test-affiliate-tracking.html?ref=refresh_test"
+        >Refresh this page with ref=refresh_test</a
+      ><br />
     </div>
 
     <div class="test-result">
-        <h3>Console Log</h3>
-        <div id="console-log" class="log"></div>
+      <h3>Console Log</h3>
+      <div id="console-log" class="log"></div>
     </div>
 
     <script src="/journey-tracker.js"></script>
     <script>
-        // Override console.log to capture output
-        const originalLog = console.log;
-        const originalWarn = console.warn;
-        const originalError = console.error;
-        
-        function logToDisplay(type, ...args) {
-            const logDiv = document.getElementById('console-log');
-            const timestamp = new Date().toLocaleTimeString();
-            const message = `[${timestamp}] ${type.toUpperCase()}: ${args.join(' ')}\n`;
-            logDiv.textContent += message;
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
-        
-        console.log = function(...args) {
-            originalLog.apply(console, args);
-            logToDisplay('log', ...args);
-        };
-        
-        console.warn = function(...args) {
-            originalWarn.apply(console, args);
-            logToDisplay('warn', ...args);
-        };
-        
-        console.error = function(...args) {
-            originalError.apply(console, args);
-            logToDisplay('error', ...args);
-        };
+      // Override console.log to capture output
+      const originalLog = console.log;
+      const originalWarn = console.warn;
+      const originalError = console.error;
 
-        function updateStatus() {
-            // Current page info
-            document.getElementById('current-url').textContent = window.location.href;
-            document.getElementById('search-params').textContent = window.location.search || 'None';
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const refParam = urlParams.get('ref');
-            document.getElementById('ref-param').textContent = refParam || 'None';
-            
-            // Journey tracker status
-            const trackerLoaded = !!window.journeyTracker;
-            document.getElementById('tracker-status').textContent = trackerLoaded ? 'Yes' : 'No';
-            
-            if (trackerLoaded) {
-                document.getElementById('visitor-id').textContent = window.journeyTracker.visitorId || 'Not available';
-                document.getElementById('session-id').textContent = window.journeyTracker.sessionId || 'Not available';
-                document.getElementById('affiliate-code').textContent = window.journeyTracker.affiliateCode || 'None';
-            } else {
-                document.getElementById('visitor-id').textContent = 'Tracker not loaded';
-                document.getElementById('session-id').textContent = 'Tracker not loaded';
-                document.getElementById('affiliate-code').textContent = 'Tracker not loaded';
-            }
-            
-            // Storage check
-            const cookies = document.cookie.split('; ').find(row => row.startsWith('affiliate_code='));
-            document.getElementById('cookie-check').textContent = cookies ? cookies.split('=')[1] : 'None';
-            document.getElementById('localstorage-check').textContent = localStorage.getItem('affiliate_code') || 'None';
-            document.getElementById('sessionstorage-check').textContent = sessionStorage.getItem('affiliate_code') || 'None';
-        }
+      function logToDisplay(type, ...args) {
+        const logDiv = document.getElementById("console-log");
+        const timestamp = new Date().toLocaleTimeString();
+        const message = `[${timestamp}] ${type.toUpperCase()}: ${args.join(" ")}\n`;
+        logDiv.textContent += message;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
 
-        function testAffiliateDetection() {
-            console.log('=== TESTING AFFILIATE DETECTION ===');
-            
-            if (!window.journeyTracker) {
-                console.error('Journey tracker not available!');
-                return;
-            }
-            
-            // Test URL parameter detection
-            const urlParams = new URLSearchParams(window.location.search);
-            const refParam = urlParams.get('ref');
-            console.log('URL ref parameter:', refParam);
-            
-            // Test tracker's affiliate code
-            const trackerAffiliateCode = window.journeyTracker.affiliateCode;
-            console.log('Tracker affiliate code:', trackerAffiliateCode);
-            
-            // Test storage
-            console.log('Cookie affiliate_code:', document.cookie.split('; ').find(row => row.startsWith('affiliate_code=')));
-            console.log('LocalStorage affiliate_code:', localStorage.getItem('affiliate_code'));
-            console.log('SessionStorage affiliate_code:', sessionStorage.getItem('affiliate_code'));
-            
-            if (refParam) {
-                if (trackerAffiliateCode === refParam) {
-                    console.log('✅ SUCCESS: URL parameter correctly detected and stored');
-                } else {
-                    console.error('❌ FAILED: URL parameter not correctly stored in tracker');
-                }
-            } else {
-                console.log('ℹ️ No ref parameter in URL to test');
-            }
-            
-            updateStatus();
+      console.log = function (...args) {
+        originalLog.apply(console, args);
+        logToDisplay("log", ...args);
+      };
+
+      console.warn = function (...args) {
+        originalWarn.apply(console, args);
+        logToDisplay("warn", ...args);
+      };
+
+      console.error = function (...args) {
+        originalError.apply(console, args);
+        logToDisplay("error", ...args);
+      };
+
+      function updateStatus() {
+        // Current page info
+        document.getElementById("current-url").textContent =
+          window.location.href;
+        document.getElementById("search-params").textContent =
+          window.location.search || "None";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const refParam = urlParams.get("ref");
+        document.getElementById("ref-param").textContent = refParam || "None";
+
+        // Journey tracker status
+        const trackerLoaded = !!window.journeyTracker;
+        document.getElementById("tracker-status").textContent = trackerLoaded
+          ? "Yes"
+          : "No";
+
+        if (trackerLoaded) {
+          document.getElementById("visitor-id").textContent =
+            window.journeyTracker.visitorId || "Not available";
+          document.getElementById("session-id").textContent =
+            window.journeyTracker.sessionId || "Not available";
+          document.getElementById("affiliate-code").textContent =
+            window.journeyTracker.affiliateCode || "None";
+        } else {
+          document.getElementById("visitor-id").textContent =
+            "Tracker not loaded";
+          document.getElementById("session-id").textContent =
+            "Tracker not loaded";
+          document.getElementById("affiliate-code").textContent =
+            "Tracker not loaded";
         }
 
-        function testButtonTracking() {
-            console.log('=== TESTING BUTTON TRACKING ===');
-            
-            if (!window.journeyTracker) {
-                console.error('Journey tracker not available!');
-                return;
-            }
-            
-            window.journeyTracker.trackAction('button_click', window.location.pathname, {
-                buttonText: 'Test Button',
-                buttonId: 'test-button',
-                timestamp: new Date().toISOString()
-            }).then(() => {
-                console.log('✅ Button tracking successful');
-            }).catch(error => {
-                console.error('❌ Button tracking failed:', error);
-            });
+        // Storage check
+        const cookies = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("affiliate_code="));
+        document.getElementById("cookie-check").textContent = cookies
+          ? cookies.split("=")[1]
+          : "None";
+        document.getElementById("localstorage-check").textContent =
+          localStorage.getItem("affiliate_code") || "None";
+        document.getElementById("sessionstorage-check").textContent =
+          sessionStorage.getItem("affiliate_code") || "None";
+      }
+
+      function testAffiliateDetection() {
+        console.log("=== TESTING AFFILIATE DETECTION ===");
+
+        if (!window.journeyTracker) {
+          console.error("Journey tracker not available!");
+          return;
         }
 
-        function testPageView() {
-            console.log('=== TESTING PAGE VIEW TRACKING ===');
-            
-            if (!window.journeyTracker) {
-                console.error('Journey tracker not available!');
-                return;
-            }
-            
-            window.journeyTracker.trackAction('page_view', '/test-page-view', {
-                title: 'Test Page View',
-                timestamp: new Date().toISOString()
-            }).then(() => {
-                console.log('✅ Page view tracking successful');
-            }).catch(error => {
-                console.error('❌ Page view tracking failed:', error);
-            });
+        // Test URL parameter detection
+        const urlParams = new URLSearchParams(window.location.search);
+        const refParam = urlParams.get("ref");
+        console.log("URL ref parameter:", refParam);
+
+        // Test tracker's affiliate code
+        const trackerAffiliateCode = window.journeyTracker.affiliateCode;
+        console.log("Tracker affiliate code:", trackerAffiliateCode);
+
+        // Test storage
+        console.log(
+          "Cookie affiliate_code:",
+          document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("affiliate_code=")),
+        );
+        console.log(
+          "LocalStorage affiliate_code:",
+          localStorage.getItem("affiliate_code"),
+        );
+        console.log(
+          "SessionStorage affiliate_code:",
+          sessionStorage.getItem("affiliate_code"),
+        );
+
+        if (refParam) {
+          if (trackerAffiliateCode === refParam) {
+            console.log(
+              "✅ SUCCESS: URL parameter correctly detected and stored",
+            );
+          } else {
+            console.error(
+              "❌ FAILED: URL parameter not correctly stored in tracker",
+            );
+          }
+        } else {
+          console.log("ℹ️ No ref parameter in URL to test");
         }
 
-        function clearStorage() {
-            localStorage.removeItem('affiliate_code');
-            sessionStorage.removeItem('affiliate_code');
-            document.cookie = 'affiliate_code=; path=/; max-age=0';
-            console.log('🧹 Cleared all affiliate storage');
-            updateStatus();
+        updateStatus();
+      }
+
+      function testButtonTracking() {
+        console.log("=== TESTING BUTTON TRACKING ===");
+
+        if (!window.journeyTracker) {
+          console.error("Journey tracker not available!");
+          return;
         }
 
-        function refreshStatus() {
-            updateStatus();
-            console.log('🔄 Status refreshed');
+        window.journeyTracker
+          .trackAction("button_click", window.location.pathname, {
+            buttonText: "Test Button",
+            buttonId: "test-button",
+            timestamp: new Date().toISOString(),
+          })
+          .then(() => {
+            console.log("✅ Button tracking successful");
+          })
+          .catch((error) => {
+            console.error("❌ Button tracking failed:", error);
+          });
+      }
+
+      function testPageView() {
+        console.log("=== TESTING PAGE VIEW TRACKING ===");
+
+        if (!window.journeyTracker) {
+          console.error("Journey tracker not available!");
+          return;
         }
 
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('📄 Test page loaded');
-            updateStatus();
-            
-            // Wait a bit for the journey tracker to initialize
-            setTimeout(() => {
-                console.log('🔍 Running initial affiliate detection test...');
-                testAffiliateDetection();
-            }, 1000);
-        });
+        window.journeyTracker
+          .trackAction("page_view", "/test-page-view", {
+            title: "Test Page View",
+            timestamp: new Date().toISOString(),
+          })
+          .then(() => {
+            console.log("✅ Page view tracking successful");
+          })
+          .catch((error) => {
+            console.error("❌ Page view tracking failed:", error);
+          });
+      }
+
+      function clearStorage() {
+        localStorage.removeItem("affiliate_code");
+        sessionStorage.removeItem("affiliate_code");
+        document.cookie = "affiliate_code=; path=/; max-age=0";
+        console.log("🧹 Cleared all affiliate storage");
+        updateStatus();
+      }
+
+      function refreshStatus() {
+        updateStatus();
+        console.log("🔄 Status refreshed");
+      }
+
+      // Initialize when page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        console.log("📄 Test page loaded");
+        updateStatus();
+
+        // Wait a bit for the journey tracker to initialize
+        setTimeout(() => {
+          console.log("🔍 Running initial affiliate detection test...");
+          testAffiliateDetection();
+        }, 1000);
+      });
     </script>
-</body>
+  </body>
 </html>

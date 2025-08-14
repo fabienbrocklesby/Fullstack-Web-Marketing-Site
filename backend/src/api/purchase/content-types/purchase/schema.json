@@ -17,6 +17,18 @@
       "required": true,
       "unique": true
     },
+    "isManual": {
+      "type": "boolean",
+      "default": false
+    },
+    "manualReason": {
+      "type": "text"
+    },
+    "createdByAdmin": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
     "amount": {
       "type": "decimal",
       "required": true
