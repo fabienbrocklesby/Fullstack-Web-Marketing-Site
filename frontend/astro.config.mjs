@@ -1,7 +1,12 @@
 import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
+// Add the Node adapter so Astro can produce a runnable server build under PM2
+// If you only need a fully static site behind Nginx, you can instead set: output: 'static' and remove the adapter.
+import node from "@astrojs/node";
 
 export default defineConfig({
-  site: "https://yoursite.pages.dev",
+  site: "https://lightlane.app",
   integrations: [sitemap()],
+  output: "server", // switch to 'static' if you prefer a pure static export
+  adapter: node({ mode: "standalone" }), // standalone bundles deps for simpler deployment
 });
