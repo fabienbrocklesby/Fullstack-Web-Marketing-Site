@@ -18,14 +18,28 @@ const REMOTE_LOGO_URL =
 let transporter; // lazy init
 function getTransporter() {
   if (!transporter) {
+    const enableDebug = (process.env.MAIL_DEBUG || "false") === "true";
+    const host = process.env.SMTP_HOST || "smtp.zeptomail.com.au";
+    const port = parseInt(process.env.SMTP_PORT || "587", 10);
+    const secure = (process.env.SMTP_SECURE || "false") === "true";
+    const user = process.env.SMTP_USERNAME;
+    const passPresent = !!process.env.SMTP_PASSWORD;
+    if (typeof strapi !== "undefined") {
+      strapi.log.info(
+        `📮 Initialising SMTP transporter host=${host} port=${port} secure=${secure} user=${user} debug=${enableDebug}`,
+      );
+    } else {
+      console.log(
+        `📮 Initialising SMTP transporter host=${host} port=${port} secure=${secure} user=${user} debug=${enableDebug}`,
+      );
+    }
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.zeptomail.com.au",
-      port: parseInt(process.env.SMTP_PORT || "587", 10),
-      secure: (process.env.SMTP_SECURE || "false") === "true",
-      auth: {
-        user: process.env.SMTP_USERNAME,
-        pass: process.env.SMTP_PASSWORD,
-      },
+      host,
+      port,
+      secure,
+      auth: { user, pass: process.env.SMTP_PASSWORD },
+      logger: enableDebug,
+      debug: enableDebug,
     });
   }
   return transporter;
@@ -145,7 +159,11 @@ module.exports = {
       subject,
       text: text || undefined,
       html: html || undefined,
-      replyTo: replyTo || process.env.DEFAULT_REPLY_TO || undefined,
+      replyTo:
+        replyTo ||
+        process.env.DEFAULT_REPLY_TO ||
+        process.env.EMAIL_REPLY_TO ||
+        undefined,
     };
     try {
       const info = await getTransporter().sendMail(mail);
