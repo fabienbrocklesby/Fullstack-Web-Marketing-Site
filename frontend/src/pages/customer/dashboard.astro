@@ -23,7 +23,7 @@ import Layout from "../../layouts/Layout.astro";
           </label>
           <ul
             tabindex="0"
-            class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+            class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 z-50 rounded-box w-52"
           >
             <li><a href="/customer/dashboard">Dashboard</a></li>
             <li><a href="/customer/profile">Profile</a></li>
@@ -170,65 +170,204 @@ import Layout from "../../layouts/Layout.astro";
 
   <!-- Generate Activation Code Modal -->
   <dialog id="generate_activation_modal" class="modal">
-    <div class="modal-box">
-      <h3 class="font-bold text-lg">Your Activation Code</h3>
-      <div id="activation-confirmation-step">
-        <p class="py-4">
-          Activating this license will lock it to one machine. You will need to
-          deactivate it from that machine before you can use it on another.
-          <br /><br />
-          <strong>This code will only be shown once.</strong> Please copy it carefully.
-        </p>
-        <div class="modal-action">
-          <button class="btn btn-primary" onclick="confirmActivation()">
-            I Understand, Generate Code
-          </button>
-          <form method="dialog">
-            <button class="btn">Cancel</button>
-          </form>
-        </div>
-      </div>
+    <div class="modal-box max-w-4xl">
+      <h3 class="font-bold text-lg">Generate Activation Code</h3>
 
-      <div id="activation-code-step" class="hidden">
-        <p class="py-4">
-          Copy the details below and paste them into your application to
-          activate it offline.
-        </p>
-        <div class="form-control">
-          <label class="label"
-            ><span class="label-text">License Key</span></label
+      <!-- Step 1: Get MAC Address -->
+      <div id="mac-address-step">
+        <div class="alert alert-info mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path></svg
           >
-          <div class="input-group">
-            <input
-              id="license_key_display"
-              type="text"
-              class="input input-bordered w-full"
-              readonly
-            />
-            <button class="btn" onclick="copyFromDisplay('license_key_display')"
-              >Copy</button
+          <span
+            >For security, activation codes are bound to your specific machine.
+            Please get your MAC address first.</span
+          >
+        </div>
+
+        <div class="tabs tabs-boxed mb-4">
+          <a class="tab tab-active" onclick="showMacInstructions('windows')"
+            >Windows</a
+          >
+          <a class="tab" onclick="showMacInstructions('macos')">macOS</a>
+          <a class="tab" onclick="showMacInstructions('linux')">Linux</a>
+        </div>
+
+        <div id="mac-instructions">
+          <!-- Windows Instructions -->
+          <div id="windows-instructions" class="mac-instruction">
+            <h4 class="font-semibold mb-2">Windows Command:</h4>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>getmac /fo csv | findstr /V "Transport Name" | head -n 1</code></pre>
+            </div>
+            <p class="text-sm mb-2">Or use this simpler command:</p>
+            <div class="mockup-code mb-2">
+              <pre data-prefix="$"><code>getmac</code></pre>
+            </div>
+            <button
+              class="btn btn-outline btn-sm"
+              onclick="copyCommand('getmac')">Copy Command</button
+            >
+          </div>
+
+          <!-- macOS Instructions -->
+          <div id="macos-instructions" class="mac-instruction hidden">
+            <h4 class="font-semibold mb-2">macOS Command:</h4>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>ifconfig en0 | grep ether | awk '&#123;print $2&#125;'</code></pre>
+            </div>
+            <p class="text-sm mb-2">
+              Alternative command (if en0 doesn't work):
+            </p>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>networksetup -getmacaddress Wi-Fi | awk '&#123;print $3&#125;'</code></pre>
+            </div>
+            <button
+              class="btn btn-outline btn-sm"
+              onclick="copyCommand('ifconfig en0 | grep ether | awk \'{print $2}\'')"
+              >Copy Command</button
+            >
+          </div>
+
+          <!-- Linux Instructions -->
+          <div id="linux-instructions" class="mac-instruction hidden">
+            <h4 class="font-semibold mb-2">Linux Command:</h4>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>ip link show | grep -A1 -E "^[0-9]+: (eth|wlan|enp)" | grep link/ether | head -n 1 | awk '&#123;print $2&#125;'</code></pre>
+            </div>
+            <p class="text-sm mb-2">Alternative command:</p>
+            <div class="mockup-code mb-2">
+              <pre
+                data-prefix="$"><code>cat /sys/class/net/*/address | head -n 1</code></pre>
+            </div>
+            <button
+              class="btn btn-outline btn-sm"
+              onclick="copyCommand('ip link show | grep -A1 -E &quot;^[0-9]+: (eth|wlan|enp)&quot; | grep link/ether | head -n 1 | awk \'{print $2}\'')"
+              >Copy Command</button
             >
           </div>
         </div>
+
         <div class="form-control mt-4">
-          <label class="label"
-            ><span class="label-text">Activation Code</span></label
-          >
-          <textarea
-            id="activation_code_textarea"
-            class="textarea textarea-bordered h-32"
-            readonly></textarea>
+          <label class="label">
+            <span class="label-text">Enter Your MAC Address:</span>
+          </label>
+          <input
+            type="text"
+            id="macAddressInput"
+            placeholder="XX:XX:XX:XX:XX:XX"
+            class="input input-bordered w-full"
+            pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
+          />
+          <div class="label">
+            <span class="label-text-alt"
+              >Format: XX:XX:XX:XX:XX:XX (letters can be upper or lowercase)</span
+            >
+          </div>
         </div>
-        <div class="text-center mt-2 hidden" id="activation-loading">
-          <span class="loading loading-spinner"></span>
-        </div>
+
         <div class="modal-action">
-          <button class="btn btn-primary" onclick="copyActivationCode()">
-            Copy Activation Code
-          </button>
-          <form method="dialog">
-            <button class="btn">Close</button>
-          </form>
+          <button class="btn btn-primary" onclick="proceedToActivation()"
+            >Generate Activation Code</button
+          >
+          <form method="dialog"><button class="btn">Cancel</button></form>
+        </div>
+      </div>
+
+      <!-- Step 2: Activation Code Display -->
+      <div id="activation-code-step" class="hidden">
+        <div class="alert alert-success mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg
+          >
+          <span
+            >Activation code generated! This code will only work on the machine
+            with the MAC address you provided.</span
+          >
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Your Activation Code:</span>
+          </label>
+          <div class="join w-full">
+            <input
+              type="text"
+              id="activationCodeDisplay"
+              class="input input-bordered join-item flex-1"
+              readonly
+            />
+            <button
+              class="btn btn-primary join-item"
+              onclick="copyActivationCode()">Copy</button
+            >
+          </div>
+        </div>
+
+        <div class="form-control mt-4">
+          <label class="label">
+            <span class="label-text">Bound to MAC Address:</span>
+          </label>
+          <input
+            type="text"
+            id="boundMacDisplay"
+            class="input input-bordered"
+            readonly
+          />
+        </div>
+
+        <div class="alert alert-warning mt-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
+            ></path></svg
+          >
+          <div>
+            <p class="font-semibold">Important Security Notice:</p>
+            <ul class="list-disc list-inside text-sm mt-2">
+              <li>
+                This activation code will ONLY work on the machine with MAC
+                address: <span id="securityMacDisplay" class="font-mono"></span>
+              </li>
+              <li>The code cannot be transferred to other machines</li>
+              <li>This prevents unauthorized license sharing</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="modal-action">
+          <button class="btn btn-outline" onclick="resetActivationModal()"
+            >Generate Another</button
+          >
+          <form method="dialog"><button class="btn">Done</button></form>
         </div>
       </div>
     </div>
@@ -379,6 +518,9 @@ import Layout from "../../layouts/Layout.astro";
     }
 
     function displayLicenseKeys(licenseKeys) {
+      // Store license keys for global access
+      currentLicenseKeys = licenseKeys;
+
       const container = document.getElementById("license-keys-container");
       if (!container) return;
 
@@ -422,8 +564,20 @@ import Layout from "../../layouts/Layout.astro";
           <div class="grid grid-cols-2 gap-4 mt-4">
             <div>
               <span class="text-sm opacity-70">Status:</span>
-              <span class="ml-2 badge ${license.isUsed ? "badge-warning" : "badge-success"}">
-                ${license.isUsed ? "Active" : "Available"}
+              <span class="ml-2 badge ${
+                license.status === "active"
+                  ? "badge-success"
+                  : license.isUsed
+                    ? "badge-warning"
+                    : "badge-info"
+              }">
+                ${
+                  license.status === "active"
+                    ? "Active"
+                    : license.isUsed
+                      ? "Used"
+                      : "Available"
+                }
               </span>
             </div>
             <div>
@@ -433,7 +587,7 @@ import Layout from "../../layouts/Layout.astro";
           </div>
           
           ${
-            license.isUsed
+            license.isUsed || license.status === "active"
               ? `
             <div class="mt-4">
               <span class="text-sm opacity-70">Activated:</span>
@@ -448,7 +602,7 @@ import Layout from "../../layouts/Layout.astro";
               📋 Copy Key
             </button>
             ${
-              license.isUsed
+              license.isUsed || license.status === "active"
                 ? `
                 <button class="btn btn-warning btn-sm" onclick="openDeactivationModal('${license.id}')">
                   🔌 Offline Deactivate
@@ -493,44 +647,155 @@ import Layout from "../../layouts/Layout.astro";
     }
 
     let currentLicenseId = null;
+    let currentLicenseKeys = []; // Store current license keys
+
+    // Helper function to get current license keys
+    function getCurrentLicenseKeys() {
+      return currentLicenseKeys;
+    }
 
     (window as any).openGenerateActivationModal = function (licenseId) {
+      // First check if license is already active
+      const licenseKeys = getCurrentLicenseKeys();
+      const license = licenseKeys.find(
+        (l: any) => l.id.toString() === licenseId.toString(),
+      ) as any;
+
+      if (license && (license.isUsed || license.status === "active")) {
+        alert(
+          "This license is already active. Please deactivate it first before generating a new activation code.",
+        );
+        return;
+      }
+
       currentLicenseId = licenseId;
       const modal = document.getElementById(
         "generate_activation_modal",
       ) as HTMLDialogElement;
 
-      // Reset modal to the confirmation step
-      const confirmStep = document.getElementById(
-        "activation-confirmation-step",
-      );
+      // Reset modal to the MAC address step
+      const macStep = document.getElementById("mac-address-step");
       const codeStep = document.getElementById("activation-code-step");
-      if (confirmStep) confirmStep.classList.remove("hidden");
+      if (macStep) macStep.classList.remove("hidden");
       if (codeStep) codeStep.classList.add("hidden");
+
+      // Reset inputs
+      const macInput = document.getElementById(
+        "macAddressInput",
+      ) as HTMLInputElement;
+      const activationCodeDisplay = document.getElementById(
+        "activationCodeDisplay",
+      ) as HTMLInputElement;
+      const boundMacDisplay = document.getElementById(
+        "boundMacDisplay",
+      ) as HTMLInputElement;
+      const securityMacDisplay = document.getElementById("securityMacDisplay");
+
+      if (macInput) macInput.value = "";
+      if (activationCodeDisplay) activationCodeDisplay.value = "";
+      if (boundMacDisplay) boundMacDisplay.value = "";
+      if (securityMacDisplay) securityMacDisplay.textContent = "";
 
       modal?.showModal();
     };
 
-    (window as any).confirmActivation = async function () {
-      const confirmStep = document.getElementById(
-        "activation-confirmation-step",
-      );
-      const codeStep = document.getElementById("activation-code-step");
-      const textarea = document.getElementById(
-        "activation_code_textarea",
-      ) as HTMLTextAreaElement;
-      const licenseKeyDisplay = document.getElementById(
-        "license_key_display",
-      ) as HTMLInputElement;
-      const loading = document.getElementById("activation-loading");
+    // MAC Address Modal functions
+    (window as any).showMacInstructions = function (os: string) {
+      // Hide all instructions
+      document
+        .querySelectorAll(".mac-instruction")
+        .forEach((el) => el.classList.add("hidden"));
+      // Remove active class from all tabs
+      document
+        .querySelectorAll(".tab")
+        .forEach((el) => el.classList.remove("tab-active"));
 
-      if (confirmStep) confirmStep.classList.add("hidden");
+      // Show selected instructions
+      const selectedInstructions = document.getElementById(
+        `${os}-instructions`,
+      );
+      if (selectedInstructions) selectedInstructions.classList.remove("hidden");
+
+      // Add active class to clicked tab
+      const tabs = document.querySelectorAll(".tab");
+      const osIndex = os === "windows" ? 0 : os === "macos" ? 1 : 2;
+      if (tabs[osIndex]) tabs[osIndex].classList.add("tab-active");
+    };
+
+    (window as any).copyCommand = function (command: string) {
+      navigator.clipboard
+        .writeText(command)
+        .then(() => {
+          // Show brief success message
+          const btn =
+            (event?.target as HTMLButtonElement) ||
+            (document.activeElement as HTMLButtonElement);
+          if (btn && btn.tagName === "BUTTON") {
+            const originalText = btn.textContent;
+            btn.textContent = "Copied!";
+            btn.classList.add("btn-success");
+            btn.classList.remove("btn-outline");
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove("btn-success");
+              btn.classList.add("btn-outline");
+            }, 2000);
+          }
+        })
+        .catch(() => {
+          alert("Failed to copy command to clipboard");
+        });
+    };
+
+    (window as any).proceedToActivation = function () {
+      const macInput = document.getElementById(
+        "macAddressInput",
+      ) as HTMLInputElement;
+      const macAddress = macInput.value.trim();
+
+      // Validate MAC address format
+      const macPattern = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+      if (!macPattern.test(macAddress)) {
+        alert("Please enter a valid MAC address in format XX:XX:XX:XX:XX:XX");
+        return;
+      }
+
+      // Hide step 1, show step 2
+      const macStep = document.getElementById("mac-address-step");
+      const codeStep = document.getElementById("activation-code-step");
+      if (macStep) macStep.classList.add("hidden");
       if (codeStep) codeStep.classList.remove("hidden");
 
-      textarea.value = "";
-      licenseKeyDisplay.value = "";
-      if (loading) loading.classList.remove("hidden");
+      // Store the MAC address and proceed with activation
+      generateActivationCodeWithMac(macAddress);
+    };
 
+    (window as any).resetActivationModal = function () {
+      // Reset to step 1
+      const codeStep = document.getElementById("activation-code-step");
+      const macStep = document.getElementById("mac-address-step");
+      if (codeStep) codeStep.classList.add("hidden");
+      if (macStep) macStep.classList.remove("hidden");
+
+      // Clear inputs
+      const macInput = document.getElementById(
+        "macAddressInput",
+      ) as HTMLInputElement;
+      const activationCodeDisplay = document.getElementById(
+        "activationCodeDisplay",
+      ) as HTMLInputElement;
+      const boundMacDisplay = document.getElementById(
+        "boundMacDisplay",
+      ) as HTMLInputElement;
+      const securityMacDisplay = document.getElementById("securityMacDisplay");
+
+      if (macInput) macInput.value = "";
+      if (activationCodeDisplay) activationCodeDisplay.value = "";
+      if (boundMacDisplay) boundMacDisplay.value = "";
+      if (securityMacDisplay) securityMacDisplay.textContent = "";
+    };
+
+    async function generateActivationCodeWithMac(macAddress: string) {
       try {
         const cmsUrl =
           document.documentElement.getAttribute("data-cms-url") ||
@@ -540,8 +805,10 @@ import Layout from "../../layouts/Layout.astro";
           {
             method: "POST",
             headers: {
+              "Content-Type": "application/json",
               Authorization: `Bearer ${customerToken}`,
             },
+            body: JSON.stringify({ machineId: macAddress }),
           },
         );
 
@@ -552,28 +819,65 @@ import Layout from "../../layouts/Layout.astro";
           );
         }
 
-        const { activationCode, licenseKey } = await response.json();
-        textarea.value = activationCode;
-        licenseKeyDisplay.value = licenseKey;
+        const { activationCode } = await response.json();
+
+        // Display the activation code and bound MAC
+        const activationCodeDisplay = document.getElementById(
+          "activationCodeDisplay",
+        ) as HTMLInputElement;
+        const boundMacDisplay = document.getElementById(
+          "boundMacDisplay",
+        ) as HTMLInputElement;
+        const securityMacDisplay =
+          document.getElementById("securityMacDisplay");
+
+        if (activationCodeDisplay) activationCodeDisplay.value = activationCode;
+        if (boundMacDisplay) boundMacDisplay.value = macAddress;
+        if (securityMacDisplay) securityMacDisplay.textContent = macAddress;
+
         loadDashboardData(); // Refresh data to show license is now "Active"
       } catch (error) {
         alert(`Error: ${(error as Error).message}`);
-        const modal = document.getElementById(
-          "generate_activation_modal",
-        ) as HTMLDialogElement;
-        modal?.close();
-      } finally {
-        if (loading) loading.classList.add("hidden");
+        const resetFunc = (window as any).resetActivationModal;
+        if (resetFunc) resetFunc();
       }
+    }
+
+    (window as any).confirmActivation = async function () {
+      // This function is deprecated - keeping for compatibility
+      alert("Please use the new MAC address-based activation system.");
     };
 
     (window as any).copyActivationCode = function () {
-      const textarea = document.getElementById(
-        "activation_code_textarea",
-      ) as HTMLTextAreaElement;
-      navigator.clipboard.writeText(textarea.value).then(() => {
-        alert("Activation code copied to clipboard!");
-      });
+      const activationCodeDisplay = document.getElementById(
+        "activationCodeDisplay",
+      ) as HTMLInputElement;
+
+      if (activationCodeDisplay && activationCodeDisplay.value) {
+        navigator.clipboard.writeText(activationCodeDisplay.value).then(() => {
+          // Show brief success message
+          const btn = event?.target as HTMLButtonElement;
+          if (btn) {
+            const originalText = btn.textContent;
+            btn.textContent = "Copied!";
+            btn.classList.add("btn-success");
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove("btn-success");
+            }, 2000);
+          }
+        });
+      } else {
+        // Fallback for old textarea (legacy support)
+        const textarea = document.getElementById(
+          "activation_code_textarea",
+        ) as HTMLTextAreaElement;
+        if (textarea) {
+          navigator.clipboard.writeText(textarea.value).then(() => {
+            alert("Activation code copied to clipboard!");
+          });
+        }
+      }
     };
 
     (window as any).copyFromDisplay = function (elementId) {

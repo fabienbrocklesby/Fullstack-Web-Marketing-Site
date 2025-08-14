@@ -94,15 +94,41 @@ module.exports = createCoreController(
     /**
      * Generates a single-use, encrypted activation code for a license key.
      * This "locks" the key until it is deactivated.
+     * Creates a short activation code that is cryptographically bound to both the license key AND machine ID.
      */
     async generateActivationCode(ctx) {
       try {
         const { id } = ctx.params;
         const customerId = ctx.state.customer?.id;
+        const { machineId } = ctx.request.body;
 
         if (!customerId) {
           return ctx.unauthorized("Not authenticated");
         }
+
+        if (!machineId) {
+          return ctx.badRequest("Machine ID is required for secure activation");
+        }
+
+        // Normalize MAC address format
+        const normalizeMacAddress = (mac) => {
+          if (!mac) throw new Error("Machine ID is required");
+
+          // Remove any non-hex characters and convert to lowercase
+          const cleaned = mac.replace(/[^a-fA-F0-9]/g, "").toLowerCase();
+
+          // Ensure it's 12 characters (6 bytes)
+          if (cleaned.length !== 12) {
+            throw new Error(
+              "Invalid machine ID format. Expected 12 hex characters (MAC address).",
+            );
+          }
+
+          // Format as aa:bb:cc:dd:ee:ff
+          return cleaned.match(/.{2}/g).join(":");
+        };
+
+        const normalizedMachineId = normalizeMacAddress(machineId);
 
         const licenseKey = await strapi.entityService.findOne(
           "api::license-key.license-key",
@@ -126,54 +152,56 @@ module.exports = createCoreController(
           );
         }
 
-        // Create a unique, single-use token for this activation
-        const activationNonce = crypto.randomBytes(16).toString("hex");
+        // Generate a 4-byte random nonce for activation
+        const activationNonce = crypto.randomBytes(4);
         const hashedNonce = crypto
           .createHash("sha256")
           .update(activationNonce)
           .digest("hex");
 
-        // --- Create a compact BINARY payload FIRST (before database update) ---
-        // We need 2 bytes for product ID, 8 bytes for expiry, 16 for nonce. Total 26 bytes.
-        const payloadBuffer = Buffer.alloc(26);
+        // Create payload that includes both license key hash and machine ID hash
+        // Structure: 4 bytes license key hash + 4 bytes machine ID hash + 4 bytes nonce = 12 bytes total
+        const licenseKeyHash = crypto
+          .createHash("sha256")
+          .update(licenseKey.key)
+          .digest();
+        const machineIdHash = crypto
+          .createHash("sha256")
+          .update(normalizedMachineId)
+          .digest();
+        const payloadBuffer = Buffer.alloc(12);
 
-        // 1. Product ID (2 bytes, UInt16BE)
-        // Using purchase ID as a stand-in. A more robust system might map product names to IDs.
-        const productId = licenseKey.purchase?.id || 0;
-        payloadBuffer.writeUInt16BE(productId, 0);
+        // First 4 bytes: truncated hash of license key (for verification)
+        licenseKeyHash.copy(payloadBuffer, 0, 0, 4);
 
-        // 2. Expiry Timestamp (8 bytes, BigUInt64BE)
-        // For offline activation codes, set to "never expires" (year 2100)
-        const neverExpires = new Date("2100-01-01").getTime();
-        const expiresAt = licenseKey.expiresAt
-          ? new Date(licenseKey.expiresAt).getTime()
-          : neverExpires;
-        payloadBuffer.writeBigUInt64BE(BigInt(expiresAt), 2);
+        // Next 4 bytes: truncated hash of machine ID (for machine binding)
+        machineIdHash.copy(payloadBuffer, 4, 0, 4);
 
-        // 3. Activation Nonce (16 bytes)
-        const nonceBuffer = Buffer.from(activationNonce, "hex");
-        nonceBuffer.copy(payloadBuffer, 10); // 2 (product) + 8 (expiry) = 10
+        // Last 4 bytes: activation nonce
+        activationNonce.copy(payloadBuffer, 8);
 
-        // Encrypt the binary payload
-        const algorithm = "aes-256-cbc";
-        const key = crypto.createHash("sha256").update(licenseKey.key).digest();
-        const iv = crypto.randomBytes(16);
-
-        const cipher = crypto.createCipheriv(algorithm, key, iv);
-        const encryptedPayload = Buffer.concat([
-          cipher.update(payloadBuffer),
-          cipher.final(),
+        // Create XOR cipher using different parts of both hashes
+        // Use bytes 4-7 from license key hash and bytes 8-15 from machine ID hash for XOR key
+        const xorKey = Buffer.concat([
+          licenseKeyHash.slice(4, 8), // 4 bytes from license hash
+          machineIdHash.slice(8, 16), // 8 bytes from machine hash (but we only use 8 total)
         ]);
 
-        // Combine IV and encrypted payload, then encode with bs58 for a compact string
-        const finalBuffer = Buffer.concat([iv, encryptedPayload]);
-        const activationCode = bs58.encode(finalBuffer);
+        // XOR encrypt the payload
+        const encryptedPayload = Buffer.alloc(12);
+        for (let i = 0; i < 12; i++) {
+          encryptedPayload[i] = payloadBuffer[i] ^ xorKey[i];
+        }
+
+        // Encode to base58 for a compact, user-friendly string (~16 chars)
+        const activationCode = bs58.encode(encryptedPayload);
 
         // ONLY update the database AFTER successful code generation
         await strapi.entityService.update("api::license-key.license-key", id, {
           data: {
             status: "active", // Mark as active only after successful code generation
             activationNonce: hashedNonce,
+            machineId: normalizedMachineId, // Store the machine ID this license is bound to
             activatedAt: new Date().toISOString(),
           },
         });
@@ -181,13 +209,16 @@ module.exports = createCoreController(
         ctx.body = {
           activationCode,
           licenseKey: licenseKey.key,
-          // Note: deactivationCode (activationNonce) is stored securely on the server
-          // and will be provided by the offline app when deactivating
+          machineId: normalizedMachineId,
         };
       } catch (error) {
         console.error("Generate activation code error:", error);
         ctx.status = 500;
-        ctx.body = { error: { message: "Failed to generate activation code" } };
+        ctx.body = {
+          error: {
+            message: error.message || "Failed to generate activation code",
+          },
+        };
       }
     },
 
@@ -204,10 +235,18 @@ module.exports = createCoreController(
         }
 
         const { deactivationCode } = ctx.request.body;
+        console.log("Deactivation request received:", {
+          licenseId: id,
+          customerId,
+          deactivationCode: deactivationCode?.substring(0, 50) + "...",
+        });
+
         if (!deactivationCode) {
-          return ctx.badRequest({
+          ctx.status = 400;
+          ctx.body = {
             error: { message: "Deactivation code is required." },
-          });
+          };
+          return;
         }
 
         const licenseKey = await strapi.entityService.findOne(
@@ -227,7 +266,13 @@ module.exports = createCoreController(
         }
 
         if (licenseKey.status !== "active") {
-          return ctx.badRequest("This license is not currently active.");
+          ctx.status = 400;
+          ctx.body = {
+            error: {
+              message: "This license is not currently active.",
+            },
+          };
+          return;
         }
 
         if (!licenseKey.activationNonce) {
@@ -239,26 +284,143 @@ module.exports = createCoreController(
           });
         }
 
-        const receivedNonce = deactivationCode;
+        // Parse deactivation code (expecting format: {base64_payload}.{checksum})
+        let deactivationPayload;
+        try {
+          console.log("Attempting to parse structured deactivation code...");
+          const parts = deactivationCode.split(".");
+          if (parts.length !== 2) {
+            throw new Error(
+              "Invalid deactivation code format - expected 2 parts separated by '.'",
+            );
+          }
+
+          const [base64Payload, checksum] = parts;
+          console.log("Deactivation code parts:", {
+            base64Length: base64Payload.length,
+            checksum,
+          });
+
+          // Decode the base64 payload
+          const jsonPayload = Buffer.from(base64Payload, "base64").toString(
+            "utf8",
+          );
+          console.log("Decoded JSON payload:", jsonPayload);
+          deactivationPayload = JSON.parse(jsonPayload);
+
+          // Verify required fields
+          if (
+            !deactivationPayload.license_key ||
+            !deactivationPayload.machine_id ||
+            !deactivationPayload.nonce ||
+            !deactivationPayload.timestamp
+          ) {
+            throw new Error("Missing required fields in deactivation code");
+          }
+
+          // Verify the license key matches
+          if (deactivationPayload.license_key !== licenseKey.key) {
+            throw new Error("Deactivation code is for a different license key");
+          }
+
+          // Verify the machine ID matches (if stored)
+          if (
+            licenseKey.machineId &&
+            deactivationPayload.machine_id !== licenseKey.machineId
+          ) {
+            throw new Error("Deactivation code is from a different machine");
+          }
+
+          // Verify timestamp is within reasonable window (48 hours)
+          const now = Math.floor(Date.now() / 1000);
+          const codeTimestamp = deactivationPayload.timestamp;
+          const timeDiff = now - codeTimestamp;
+
+          if (timeDiff > 48 * 60 * 60 || timeDiff < -60 * 60) {
+            // 48 hours future, 1 hour past
+            throw new Error(
+              "Deactivation code has expired or has invalid timestamp",
+            );
+          }
+        } catch (parseError) {
+          // Fallback: try the old simple nonce format for backwards compatibility
+          console.log(
+            "Failed to parse structured deactivation code, trying legacy format:",
+            parseError.message,
+          );
+          console.log("License key details:", {
+            key: licenseKey.key,
+            status: licenseKey.status,
+            activationNonce: licenseKey.activationNonce ? "present" : "missing",
+          });
+
+          const receivedNonce = deactivationCode;
+          const hashedNonceFromCode = crypto
+            .createHash("sha256")
+            .update(receivedNonce, "hex")
+            .digest("hex");
+
+          console.log("Nonce comparison:", {
+            received: hashedNonceFromCode,
+            stored: licenseKey.activationNonce,
+          });
+
+          if (hashedNonceFromCode !== licenseKey.activationNonce) {
+            ctx.status = 400;
+            ctx.body = {
+              error: {
+                message:
+                  "Invalid deactivation code. Please make sure the code is correct and was generated for this license key.",
+              },
+            };
+            return;
+          }
+
+          // Legacy format worked, proceed with deactivation
+          await strapi.entityService.update(
+            "api::license-key.license-key",
+            id,
+            {
+              data: {
+                status: "unused",
+                activationNonce: null,
+                activatedAt: null,
+                machineId: null,
+              },
+            },
+          );
+
+          ctx.body = {
+            message:
+              "License deactivated successfully. You can now use it on another machine.",
+          };
+          return;
+        }
+
+        // For structured deactivation codes, verify the nonce matches
         const hashedNonceFromCode = crypto
           .createHash("sha256")
-          .update(receivedNonce)
+          .update(deactivationPayload.nonce, "hex")
           .digest("hex");
 
         if (hashedNonceFromCode !== licenseKey.activationNonce) {
-          return ctx.badRequest({
+          ctx.status = 400;
+          ctx.body = {
             error: {
               message:
-                "Invalid deactivation code. Please make sure the code is correct and was generated for this license key.",
+                "Invalid deactivation code nonce. Please make sure the code was generated from the correct activated license.",
             },
-          });
+          };
+          return;
         }
 
+        // All validations passed, deactivate the license
         await strapi.entityService.update("api::license-key.license-key", id, {
           data: {
             status: "unused",
             activationNonce: null,
             activatedAt: null,
+            machineId: null,
           },
         });
 
