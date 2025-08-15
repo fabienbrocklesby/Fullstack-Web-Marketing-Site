@@ -1,6 +1,6 @@
 module.exports = {
   apps: [
-    {
+  {
       name: "strapi-backend",
       cwd: "./backend",
   // Explicit Node execution of Strapi JS entrypoint (avoid shell shim)
@@ -22,7 +22,7 @@ module.exports = {
   args: ["./dist/server/entry.mjs"],
       env: {
         NODE_ENV: "production",
-        PORT: 4000
+        PORT: 4321
       },
       watch: false
     }
