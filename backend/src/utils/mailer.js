@@ -24,13 +24,29 @@ function getTransporter() {
     const secure = (process.env.SMTP_SECURE || "false") === "true";
     const user = process.env.SMTP_USERNAME;
     const passPresent = !!process.env.SMTP_PASSWORD;
+    // Optional fine‑grained timeout / TLS controls (can be set via env)
+    const connectionTimeout = parseInt(
+      process.env.SMTP_CONN_TIMEOUT_MS || "10000",
+      10,
+    ); // time to establish socket
+    const greetingTimeout = parseInt(
+      process.env.SMTP_GREETING_TIMEOUT_MS || "10000",
+      10,
+    ); // time waiting for initial greeting
+    const socketTimeout = parseInt(
+      process.env.SMTP_SOCKET_TIMEOUT_MS || "20000",
+      10,
+    ); // inactivity timeout during data transfer
+    const requireTLS = (process.env.SMTP_REQUIRE_TLS || "false") === "true";
+    const tlsMinVersion = process.env.SMTP_TLS_MIN_VERSION || undefined; // e.g. 'TLSv1.2'
+    const forceIPv4 = (process.env.SMTP_FORCE_IPV4 || "false") === "true";
     if (typeof strapi !== "undefined") {
       strapi.log.info(
-        `📮 Initialising SMTP transporter host=${host} port=${port} secure=${secure} user=${user} debug=${enableDebug}`,
+        `📮 Initialising SMTP transporter host=${host} port=${port} secure=${secure} user=${user} debug=${enableDebug} connTimeout=${connectionTimeout}ms greetTimeout=${greetingTimeout}ms socketTimeout=${socketTimeout}ms requireTLS=${requireTLS}`,
       );
     } else {
       console.log(
-        `📮 Initialising SMTP transporter host=${host} port=${port} secure=${secure} user=${user} debug=${enableDebug}`,
+        `📮 Initialising SMTP transporter host=${host} port=${port} secure=${secure} user=${user} debug=${enableDebug} connTimeout=${connectionTimeout}ms greetTimeout=${greetingTimeout}ms socketTimeout=${socketTimeout}ms requireTLS=${requireTLS}`,
       );
     }
     transporter = nodemailer.createTransport({
@@ -40,7 +56,30 @@ function getTransporter() {
       auth: { user, pass: process.env.SMTP_PASSWORD },
       logger: enableDebug,
       debug: enableDebug,
+      connectionTimeout,
+      greetingTimeout,
+      socketTimeout,
+      requireTLS,
+      tls: tlsMinVersion ? { minVersion: tlsMinVersion } : undefined,
+      family: forceIPv4 ? 4 : undefined,
     });
+
+    // Attach diagnostic listeners
+    try {
+      transporter.on?.("error", (err) => {
+        if (typeof strapi !== "undefined")
+          strapi.log.error(
+            `SMTP transporter error stage=runtime err=${err.message}`,
+          );
+        else console.error("SMTP transporter error", err);
+      });
+      transporter.on?.("log", (log) => {
+        if (!enableDebug) return; // only emit when debug true
+        const msg = `[SMTP:${log.type}] ${log.message || ""}`;
+        if (typeof strapi !== "undefined") strapi.log.info(msg);
+        else console.log(msg);
+      });
+    } catch (_) {}
   }
   return transporter;
 }
