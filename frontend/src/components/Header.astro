@@ -66,13 +66,18 @@
       </ul>
     </div>
     <a href="/" class="flex items-center gap-2 px-2">
-      <img
-        src="/LogoHorizontalSVG.svg"
-        alt="Lightlane"
-        class="h-10 w-auto"
-        loading="eager"
-        decoding="async"
-      />
+      <picture class="h-10 flex items-center">
+        <!-- WebP first -->
+        <source srcset="/LogoHorizontal.webp" type="image/webp" />
+        <!-- SVG fallback -->
+        <img
+          src="/LogoHorizontalSVG.svg"
+          alt="Lightlane"
+          class="h-10 w-auto"
+          loading="eager"
+          decoding="async"
+        />
+      </picture>
     </a>
   </div>
 
