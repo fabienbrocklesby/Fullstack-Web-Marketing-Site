@@ -16,6 +16,73 @@ const REMOTE_LOGO_URL =
   "https://publicassets.lightlane.app/LogoHorizontal.svg";
 
 let transporter; // lazy init
+const API_TRANSPORT_ENABLED =
+  (process.env.MAIL_TRANSPORT || "").toLowerCase() === "api" ||
+  !!process.env.ZEPTOMAIL_API_KEY ||
+  !!process.env.ZEPTO_API_KEY;
+
+/**
+ * Send via ZeptoMail HTTP API instead of SMTP
+ * Env:
+ *   ZEPTOMAIL_API_KEY or ZEPTO_API_KEY (authorization token)
+ *   ZEPTO_API_BASE (default https://api.zeptomail.com.au)
+ */
+async function sendViaApi({ to, subject, html, text, from, replyTo }) {
+  const apiKey =
+    process.env.ZEPTOMAIL_API_KEY || process.env.ZEPTO_API_KEY || "";
+  if (!apiKey) throw new Error("Missing ZEPTOMAIL_API_KEY for API mail");
+  const base = process.env.ZEPTO_API_BASE || "https://api.zeptomail.com.au";
+  const endpoint = base.replace(/\/$/, "") + "/v1.1/email";
+  const recipients = Array.isArray(to) ? to : [to];
+  const payload = {
+    from: {
+      address: from || process.env.EMAIL_FROM || "noreply@lightlane.app",
+    },
+    to: recipients.map((r) => ({ email_address: { address: r } })),
+    subject,
+    ...(html ? { htmlbody: html } : {}),
+    ...(text ? { textbody: text } : {}),
+  };
+  if (replyTo) payload.reply_to = { address: replyTo };
+  const tStart = Date.now();
+  try {
+    if (typeof strapi !== "undefined")
+      strapi.log.info(
+        `🌐 (API) Sending mail to ${recipients.join(",")} subject="${subject}" endpoint=${endpoint}`,
+      );
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Zoho-enczapikey ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = json.message || json.error || res.statusText;
+      throw new Error(`API ${res.status} ${msg}`);
+    }
+    const messageId =
+      json.data?.message_id || json.messageId || json.request_id || "api-mail";
+    if (typeof strapi !== "undefined") {
+      strapi.log.info(
+        `📧 (API) Sent mail to ${recipients.join(",")} subject="${subject}" id=${messageId}`,
+      );
+      strapi.log.info(
+        `⏱️ (API) Mail send duration ${Date.now() - tStart}ms to=${recipients.join(",")}`,
+      );
+    }
+    return { success: true, id: messageId, transport: "api" };
+  } catch (e) {
+    if (typeof strapi !== "undefined")
+      strapi.log.error(
+        `Email send failed (API) to=${recipients.join(",")} subject="${subject}" err=${e.message}`,
+      );
+    return { success: false, error: e.message, transport: "api" };
+  }
+}
 function getTransporter() {
   if (!transporter) {
     const enableDebug = (process.env.MAIL_DEBUG || "false") === "true";
@@ -192,6 +259,41 @@ module.exports = {
     if (!to) throw new Error("to required");
     if (!subject) throw new Error("subject required");
     if (!html && !text) throw new Error("html or text required");
+    // API-first path with SMTP fallback
+    if (API_TRANSPORT_ENABLED) {
+      if (typeof strapi !== "undefined")
+        strapi.log.info(
+          `🔀 Mail transport preference: API first (ZEPTOMAIL_API_KEY present=$${!!process
+            .env
+            .ZEPTOMAIL_API_KEY} MAIL_TRANSPORT=${(process.env.MAIL_TRANSPORT || "").toLowerCase()})`,
+        );
+      const apiResult = await sendViaApi({
+        to,
+        subject,
+        html,
+        text,
+        from,
+        replyTo,
+      });
+      if (apiResult.success) return apiResult;
+      const canFallbackSMTP =
+        process.env.SMTP_USERNAME &&
+        process.env.SMTP_PASSWORD &&
+        (process.env.MAIL_DISABLE_SMTP_FALLBACK || "false") !== "true";
+      if (canFallbackSMTP) {
+        if (typeof strapi !== "undefined")
+          strapi.log.warn(
+            `📨 API email failed (err=${apiResult.error}); attempting SMTP fallback`,
+          );
+        // continue to SMTP build below
+      } else {
+        if (typeof strapi !== "undefined")
+          strapi.log.error(
+            `❌ API email failed with no SMTP fallback available err=${apiResult.error}`,
+          );
+        return apiResult; // no fallback available
+      }
+    }
     const mail = {
       from: from || process.env.EMAIL_FROM || "noreply@lightlane.app",
       to,
