@@ -8,5 +8,6 @@ export default defineConfig({
   site: "https://lightlane.app",
   integrations: [sitemap()],
   output: "server", // switch to 'static' if you prefer a pure static export
+  server: { host: true }, // allow remote access in dev (binds 0.0.0.0)
   adapter: node({ mode: "standalone" }), // standalone bundles deps for simpler deployment
 });

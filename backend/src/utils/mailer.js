@@ -166,7 +166,22 @@ module.exports = {
         undefined,
     };
     try {
-      const info = await getTransporter().sendMail(mail);
+      const tStart = Date.now();
+      if (typeof strapi !== "undefined")
+        strapi.log.info(
+          `📤 Sending mail to ${to} subject="${subject}" (timeout=${
+            process.env.MAIL_TIMEOUT_MS || 15000
+          }ms)`,
+        );
+      const timeoutMs = parseInt(process.env.MAIL_TIMEOUT_MS || "15000", 10);
+      const sendPromise = getTransporter().sendMail(mail);
+      const result = await Promise.race([
+        sendPromise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("SMTP_SEND_TIMEOUT")), timeoutMs),
+        ),
+      ]);
+      const info = result; // if not timeout
       if (typeof strapi !== "undefined") {
         strapi.log.info(
           `📧 Sent mail to ${to} subject=\"${subject}\" id=${info.messageId}`,
@@ -176,10 +191,16 @@ module.exports = {
           `📧 Sent mail to ${to} subject=\"${subject}\" id=${info.messageId}`,
         );
       }
+      if (typeof strapi !== "undefined")
+        strapi.log.info(
+          `⏱️ Mail send duration ${Date.now() - tStart}ms to=${to}`,
+        );
       return { success: true, id: info.messageId };
     } catch (e) {
       if (typeof strapi !== "undefined")
-        strapi.log.error("Email send failed", e);
+        strapi.log.error(
+          `Email send failed to=${to} subject=\"${subject}\" err=${e.message}`,
+        );
       else console.error("Email send failed", e);
       return { success: false, error: e.message };
     }
