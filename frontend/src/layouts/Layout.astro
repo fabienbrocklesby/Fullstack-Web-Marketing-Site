@@ -34,9 +34,16 @@ const cmsUrl = import.meta.env.PUBLIC_CMS_URL || "http://localhost:1337";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Favicons -->
+    <link rel="icon" href="/AppIcon.ico" sizes="any" />
+    <link rel="shortcut icon" href="/AppIcon.ico" />
+    <!-- Apple Touch Icon (keep existing PNG if present; generate 180x180 PNG from AppIcon if not) -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Web App Manifest -->
     <link rel="manifest" href="/site.webmanifest" />
+    <!-- Optional: Safari pinned tab (provide a monochrome SVG named safari-pinned-tab.svg if available) -->
+    <!-- <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#0F172A" /> -->
+    <meta name="theme-color" content="#ffffff" />
     <link rel="canonical" href={canonical} />
 
     <!-- SEO Meta Tags -->
