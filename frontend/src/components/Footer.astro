@@ -8,13 +8,16 @@
       <!-- Brand / About -->
       <div class="space-y-3">
         <a href="/" class="inline-flex items-center gap-2">
-          <img
-            src="/LogoHorizontalSVG.svg"
-            alt="Lightlane"
-            class="h-10 w-auto"
-            loading="lazy"
-            decoding="async"
-          />
+          <picture class="h-10 flex items-center">
+            <source srcset="/LogoHorizontal.webp" type="image/webp" />
+            <img
+              src="/LogoHorizontalSVG.svg"
+              alt="Lightlane"
+              class="h-10 w-auto"
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
         </a>
         <p class="text-sm leading-relaxed max-w-xs">
           Lightlane streamlines software licensing & activation so you can ship
@@ -38,7 +41,8 @@
           </li>
           <li>
             <a href="/customer/register" class="link link-hover"
-              >Customer Register</a>
+              >Customer Register</a
+            >
           </li>
           <li>
             <a href="/customer/login" class="link link-hover">Customer Login</a>
