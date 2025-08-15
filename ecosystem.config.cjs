@@ -3,9 +3,9 @@ module.exports = {
   {
       name: "strapi-backend",
       cwd: "./backend",
-  // Explicit Node execution of Strapi JS entrypoint (avoid shell shim)
-  script: "node",
-  args: ["./node_modules/@strapi/strapi/bin/strapi.js", "start"],
+  // Run build then start via pnpm scripts (user-requested flow)
+  script: "bash",
+  args: ["-c", "pnpm build && pnpm start"],
       env: {
         NODE_ENV: "production"
       },
@@ -17,9 +17,9 @@ module.exports = {
     {
       name: "astro-frontend",
       cwd: "./frontend",
-      script: "node",
-      // Use the Node adapter's server entry instead of preview (already built)
-  args: ["./dist/server/entry.mjs"],
+      // Run build then preview (static/SSR preview as requested)
+      script: "bash",
+      args: ["-c", "pnpm build && pnpm preview"],
       env: {
         NODE_ENV: "production",
         PORT: 4321
