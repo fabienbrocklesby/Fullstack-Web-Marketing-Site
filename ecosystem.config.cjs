@@ -17,9 +17,10 @@ module.exports = {
     {
       name: "astro-frontend",
       cwd: "./frontend",
-      // Run build then preview (static/SSR preview as requested)
+      // Build then run the SSR server entry directly (preferred for production)
+      // NOTE: For faster restarts you can remove the build step once stable and deploy with a manual build.
       script: "bash",
-      args: ["-c", "pnpm build && pnpm preview"],
+      args: ["-c", "pnpm build && node ./dist/server/entry.mjs"],
       env: {
         NODE_ENV: "production",
         PORT: 4321
