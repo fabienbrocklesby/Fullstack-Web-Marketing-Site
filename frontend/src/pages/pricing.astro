@@ -588,7 +588,8 @@ import { enquirySchema } from "../lib/validation/enquiry";
   <Footer />
 
   <script type="module">
-    import { enquirySchema } from "/src/lib/validation/enquiry.ts";
+    // Lightweight inline script (no external imports) so modal works reliably in dev & production.
+    // Replaces previous zod-based validation with simple manual checks.
     const modal = document.getElementById("enquiry_modal");
     const form = document.getElementById("enquiry-form");
     const successMsg = document.getElementById("enquiry-success");
@@ -659,23 +660,24 @@ import { enquirySchema } from "../lib/validation/enquiry";
       errorSummary?.classList.add("hidden");
       errorSummary.textContent = "";
       const fd = Object.fromEntries(new FormData(form));
-      const parsed = enquirySchema.safeParse(fd);
+      // Basic validation rules (mirrors previous zod schema intent)
+      const errors = {};
+      if (!fd.fullName || String(fd.fullName).trim().length < 2)
+        errors.fullName = "Full name required";
+      if (!fd.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(fd.email)))
+        errors.email = "Valid email required";
+      if (!fd.useCase || String(fd.useCase).trim().length < 5)
+        errors.useCase = "Tell us a bit more";
+      if (!fd.planInterested || String(fd.planInterested).trim().length === 0)
+        errors.planInterested = "Select a plan";
       form
         .querySelectorAll("[name]")
         .forEach((i) => setFieldError(i.getAttribute("name"), undefined));
-      if (!parsed.success) {
-        const errs = parsed.error.flatten().fieldErrors;
-        const list = [];
-        for (const k in errs) {
-          if (errs[k]?.[0]) {
-            setFieldError(k, errs[k][0]);
-            list.push(errs[k][0]);
-          }
-        }
-        if (list.length) {
-          errorSummary?.classList.remove("hidden");
-          errorSummary.textContent = "Please fix the highlighted fields.";
-        }
+      const errorKeys = Object.keys(errors);
+      if (errorKeys.length) {
+        errorKeys.forEach((k) => setFieldError(k, errors[k]));
+        errorSummary?.classList.remove("hidden");
+        errorSummary.textContent = "Please fix the highlighted fields.";
         return;
       }
       const submitBtn = form.querySelector("#submit-enquiry");
@@ -715,13 +717,13 @@ import { enquirySchema } from "../lib/validation/enquiry";
               }
             })(),
         cms,
-        payload: parsed.data,
+        payload: fd,
       });
       try {
         const res = await fetch(`${cms.replace(/\/$/, "")}/api/enquiries`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(parsed.data),
+          body: JSON.stringify(fd),
         });
         console.log("[enquiry] Response status", res.status);
         if (res.ok) {
