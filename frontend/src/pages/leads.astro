@@ -29,6 +29,9 @@ import Layout from "../layouts/Layout.astro";
       <div class="card bg-base-100 shadow-lg">
         <div class="card-body">
           <h2 class="card-title">Leads</h2>
+          <div class="flex justify-end mb-4">
+            <button class="btn btn-primary" id="add-lead-btn">Add Lead</button>
+          </div>
           <div class="overflow-x-auto">
             <table class="table" id="leads-table">
               <thead>
@@ -46,6 +49,37 @@ import Layout from "../layouts/Layout.astro";
         </div>
       </div>
     </div>
+    <dialog id="lead-modal" class="modal">
+      <form id="lead-form" class="modal-box">
+        <h3 class="font-bold text-lg">Lead</h3>
+        <div class="form-control">
+          <label class="label">Full Name</label>
+          <input id="lead-name" class="input input-bordered" required />
+        </div>
+        <div class="form-control mt-2">
+          <label class="label">Email</label>
+          <input
+            id="lead-email"
+            type="email"
+            class="input input-bordered"
+            required
+          />
+        </div>
+        <div class="form-control mt-2">
+          <label class="label">Status</label>
+          <input id="lead-status" class="input input-bordered" />
+        </div>
+        <div class="modal-action">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn" onclick="leadModal.close()">
+            Cancel
+          </button>
+        </div>
+      </form>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
   </main>
 </Layout>
 
@@ -67,6 +101,48 @@ import Layout from "../layouts/Layout.astro";
     const cmsUrl =
       document.documentElement.getAttribute("data-cms-url") ||
       "http://localhost:1337";
+    const leadModal = document.getElementById("lead-modal");
+    const leadForm = document.getElementById("lead-form");
+    const nameInput = document.getElementById("lead-name");
+    const emailInput = document.getElementById("lead-email");
+    const statusInput = document.getElementById("lead-status");
+    let editingId = null;
+
+    document
+      .getElementById("add-lead-btn")
+      ?.addEventListener("click", () => {
+        editingId = null;
+        if (nameInput) nameInput.value = "";
+        if (emailInput) emailInput.value = "";
+        if (statusInput) statusInput.value = "";
+        leadModal?.showModal();
+      });
+
+    leadForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        data: {
+          fullName: nameInput?.value || "",
+          email: emailInput?.value || "",
+          status: statusInput?.value || "",
+        },
+      };
+      const url = editingId
+        ? `${cmsUrl}/api/leads/${editingId}`
+        : `${cmsUrl}/api/leads`;
+      const method = editingId ? "PUT" : "POST";
+      await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      leadModal?.close();
+      loadLeads();
+    });
+
     async function loadLeads() {
       const res = await fetch(`${cmsUrl}/api/leads?populate=assignedTo`, {
         headers: { Authorization: `Bearer ${jwt}` },
@@ -86,19 +162,46 @@ import Layout from "../layouts/Layout.astro";
           <td>${assigned}</td>
           <td></td>
         `;
+        const actions = document.createElement("div");
+        actions.className = "flex gap-2";
         if (!assigned) {
-          const btn = document.createElement("button");
-          btn.className = "btn btn-sm btn-primary";
-          btn.textContent = "Claim";
-          btn.addEventListener("click", async () => {
+          const claimBtn = document.createElement("button");
+          claimBtn.className = "btn btn-sm btn-primary";
+          claimBtn.textContent = "Claim";
+          claimBtn.addEventListener("click", async () => {
             await fetch(`${cmsUrl}/api/leads/${item.id}/claim`, {
               method: "POST",
               headers: { Authorization: `Bearer ${jwt}` },
             });
             loadLeads();
           });
-          tr.lastElementChild?.appendChild(btn);
+          actions.appendChild(claimBtn);
         }
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-sm";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => {
+          editingId = item.id;
+          if (nameInput) nameInput.value = lead.fullName || "";
+          if (emailInput) emailInput.value = lead.email || "";
+          if (statusInput) statusInput.value = lead.status || "";
+          leadModal?.showModal();
+        });
+        actions.appendChild(editBtn);
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn btn-sm btn-error";
+        delBtn.textContent = "Delete";
+        delBtn.addEventListener("click", async () => {
+          if (confirm("Delete this lead?")) {
+            await fetch(`${cmsUrl}/api/leads/${item.id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${jwt}` },
+            });
+            loadLeads();
+          }
+        });
+        actions.appendChild(delBtn);
+        tr.lastElementChild?.appendChild(actions);
         body.appendChild(tr);
       });
     }
