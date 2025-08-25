@@ -28,6 +28,16 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::enquiry.enquiry"
+    },
+    "assignedTo": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "communications": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::communication.communication"
     }
   }
 }

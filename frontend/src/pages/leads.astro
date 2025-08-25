@@ -1,0 +1,281 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="CRM Leads">
+  <main class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100 shadow-md">
+      <div class="flex-1">
+        <a class="btn btn-ghost text-xl" href="/dashboard">CRM Leads</a>
+      </div>
+      <div class="flex-none gap-2">
+        <a href="/dashboard" class="btn btn-outline">Dashboard</a>
+        <a href="/site-editor" class="btn btn-outline">Site Editor</a>
+        <div class="dropdown dropdown-end">
+          <label tabindex="0" class="btn btn-ghost">
+            <span id="user-email">Loading...</span>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            <li><a id="logout-btn">Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container mx-auto p-6">
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h2 class="card-title">Leads</h2>
+          <div class="flex justify-end mb-4">
+            <button class="btn btn-primary" id="add-lead-btn">Add Lead</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra w-full" id="leads-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Company</th>
+                  <th>Use Case</th>
+                  <th>Plan</th>
+                  <th>Affiliate Code</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                  <th>Assigned To</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="leads-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <dialog id="lead-modal" class="modal">
+      <form id="lead-form" class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Lead</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label">Full Name</label>
+            <input id="lead-name" class="input input-bordered" required />
+          </div>
+          <div class="form-control">
+            <label class="label">Email</label>
+            <input
+              id="lead-email"
+              type="email"
+              class="input input-bordered"
+              required
+            />
+          </div>
+          <div class="form-control">
+            <label class="label">Company</label>
+            <input id="lead-company" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Use Case</label>
+            <textarea id="lead-useCase" class="textarea textarea-bordered"></textarea>
+          </div>
+          <div class="form-control">
+            <label class="label">Plan Interested</label>
+            <input id="lead-plan" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Affiliate Code</label>
+            <input id="lead-affiliate" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Source</label>
+            <input id="lead-source" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Status</label>
+            <select id="lead-status" class="select select-bordered">
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="qualified">Qualified</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </div>
+          <div class="form-control md:col-span-2">
+            <label class="label">Notes</label>
+            <textarea id="lead-notes" class="textarea textarea-bordered"></textarea>
+          </div>
+        </div>
+        <div class="modal-action">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn" onclick="leadModal.close()">
+            Cancel
+          </button>
+        </div>
+      </form>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
+  </main>
+</Layout>
+
+<script>
+  const jwt = localStorage.getItem("jwt");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  if (!jwt || !user.id) {
+    window.location.href = "/login";
+  } else {
+    const userEmailElement = document.getElementById("user-email");
+    if (userEmailElement) {
+      userEmailElement.textContent = user.email || "User";
+    }
+    document.getElementById("logout-btn")?.addEventListener("click", () => {
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    });
+    const cmsUrl =
+      document.documentElement.getAttribute("data-cms-url") ||
+      "http://localhost:1337";
+    const leadModal = document.getElementById("lead-modal");
+    const leadForm = document.getElementById("lead-form");
+    const nameInput = document.getElementById("lead-name");
+    const emailInput = document.getElementById("lead-email");
+    const companyInput = document.getElementById("lead-company");
+    const useCaseInput = document.getElementById("lead-useCase");
+    const planInput = document.getElementById("lead-plan");
+    const affiliateInput = document.getElementById("lead-affiliate");
+    const sourceInput = document.getElementById("lead-source");
+    const statusSelect = document.getElementById("lead-status");
+    const notesInput = document.getElementById("lead-notes");
+    let editingId = null;
+
+    document
+      .getElementById("add-lead-btn")
+      ?.addEventListener("click", () => {
+        editingId = null;
+        if (nameInput) nameInput.value = "";
+        if (emailInput) emailInput.value = "";
+        if (companyInput) companyInput.value = "";
+        if (useCaseInput) useCaseInput.value = "";
+        if (planInput) planInput.value = "";
+        if (affiliateInput) affiliateInput.value = "";
+        if (sourceInput) sourceInput.value = "";
+        if (statusSelect) statusSelect.value = "new";
+        if (notesInput) notesInput.value = "";
+        leadModal?.showModal();
+      });
+
+    leadForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        data: {
+          fullName: nameInput?.value || "",
+          email: emailInput?.value || "",
+          company: companyInput?.value || "",
+          useCase: useCaseInput?.value || "",
+          planInterested: planInput?.value || "",
+          affiliateCode: affiliateInput?.value || "",
+          source: sourceInput?.value || "",
+          status: statusSelect?.value || "",
+          notes: notesInput?.value || "",
+        },
+      };
+      const url = editingId
+        ? `${cmsUrl}/api/leads/${editingId}`
+        : `${cmsUrl}/api/leads`;
+      const method = editingId ? "PUT" : "POST";
+      await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      leadModal?.close();
+      loadLeads();
+    });
+
+    async function loadLeads() {
+      const res = await fetch(`${cmsUrl}/api/leads?populate=assignedTo`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      const data = await res.json();
+      const body = document.getElementById("leads-body");
+      if (!body) return;
+      body.innerHTML = "";
+      (data.data || []).forEach((item) => {
+        const lead = item.attributes;
+        const assigned =
+          lead.assignedTo?.data?.attributes?.email ||
+          lead.assignedTo?.data?.attributes?.username ||
+          "";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${lead.fullName || ""}</td>
+          <td>${lead.email || ""}</td>
+          <td>${lead.company || ""}</td>
+          <td>${lead.useCase || ""}</td>
+          <td>${lead.planInterested || ""}</td>
+          <td>${lead.affiliateCode || ""}</td>
+          <td>${lead.source || ""}</td>
+          <td>${lead.status || ""}</td>
+          <td>${assigned}</td>
+          <td>${lead.notes || ""}</td>
+          <td></td>
+        `;
+        const actions = document.createElement("div");
+        actions.className = "flex gap-2";
+        if (!assigned) {
+          const claimBtn = document.createElement("button");
+          claimBtn.className = "btn btn-sm btn-primary";
+          claimBtn.textContent = "Claim";
+          claimBtn.addEventListener("click", async () => {
+            await fetch(`${cmsUrl}/api/leads/${item.id}/claim`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${jwt}` },
+            });
+            loadLeads();
+          });
+          actions.appendChild(claimBtn);
+        }
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-sm";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => {
+          editingId = item.id;
+          if (nameInput) nameInput.value = lead.fullName || "";
+          if (emailInput) emailInput.value = lead.email || "";
+          if (companyInput) companyInput.value = lead.company || "";
+          if (useCaseInput) useCaseInput.value = lead.useCase || "";
+          if (planInput) planInput.value = lead.planInterested || "";
+          if (affiliateInput) affiliateInput.value = lead.affiliateCode || "";
+          if (sourceInput) sourceInput.value = lead.source || "";
+          if (statusSelect) statusSelect.value = lead.status || "new";
+          if (notesInput) notesInput.value = lead.notes || "";
+          leadModal?.showModal();
+        });
+        actions.appendChild(editBtn);
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn btn-sm btn-error";
+        delBtn.textContent = "Delete";
+        delBtn.addEventListener("click", async () => {
+          if (confirm("Delete this lead?")) {
+            await fetch(`${cmsUrl}/api/leads/${item.id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${jwt}` },
+            });
+            loadLeads();
+          }
+        });
+        actions.appendChild(delBtn);
+        tr.lastElementChild?.appendChild(actions);
+        body.appendChild(tr);
+      });
+    }
+    loadLeads();
+  }
+</script>
