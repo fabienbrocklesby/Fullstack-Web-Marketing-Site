@@ -33,13 +33,19 @@ import Layout from "../layouts/Layout.astro";
             <button class="btn btn-primary" id="add-lead-btn">Add Lead</button>
           </div>
           <div class="overflow-x-auto">
-            <table class="table" id="leads-table">
+            <table class="table table-zebra w-full" id="leads-table">
               <thead>
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
+                  <th>Company</th>
+                  <th>Use Case</th>
+                  <th>Plan</th>
+                  <th>Affiliate Code</th>
+                  <th>Source</th>
                   <th>Status</th>
                   <th>Assigned To</th>
+                  <th>Notes</th>
                   <th></th>
                 </tr>
               </thead>
@@ -51,23 +57,55 @@ import Layout from "../layouts/Layout.astro";
     </div>
     <dialog id="lead-modal" class="modal">
       <form id="lead-form" class="modal-box">
-        <h3 class="font-bold text-lg">Lead</h3>
-        <div class="form-control">
-          <label class="label">Full Name</label>
-          <input id="lead-name" class="input input-bordered" required />
-        </div>
-        <div class="form-control mt-2">
-          <label class="label">Email</label>
-          <input
-            id="lead-email"
-            type="email"
-            class="input input-bordered"
-            required
-          />
-        </div>
-        <div class="form-control mt-2">
-          <label class="label">Status</label>
-          <input id="lead-status" class="input input-bordered" />
+        <h3 class="font-bold text-lg mb-4">Lead</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label">Full Name</label>
+            <input id="lead-name" class="input input-bordered" required />
+          </div>
+          <div class="form-control">
+            <label class="label">Email</label>
+            <input
+              id="lead-email"
+              type="email"
+              class="input input-bordered"
+              required
+            />
+          </div>
+          <div class="form-control">
+            <label class="label">Company</label>
+            <input id="lead-company" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Use Case</label>
+            <textarea id="lead-useCase" class="textarea textarea-bordered"></textarea>
+          </div>
+          <div class="form-control">
+            <label class="label">Plan Interested</label>
+            <input id="lead-plan" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Affiliate Code</label>
+            <input id="lead-affiliate" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Source</label>
+            <input id="lead-source" class="input input-bordered" />
+          </div>
+          <div class="form-control">
+            <label class="label">Status</label>
+            <select id="lead-status" class="select select-bordered">
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="qualified">Qualified</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </div>
+          <div class="form-control md:col-span-2">
+            <label class="label">Notes</label>
+            <textarea id="lead-notes" class="textarea textarea-bordered"></textarea>
+          </div>
         </div>
         <div class="modal-action">
           <button type="submit" class="btn btn-primary">Save</button>
@@ -105,7 +143,13 @@ import Layout from "../layouts/Layout.astro";
     const leadForm = document.getElementById("lead-form");
     const nameInput = document.getElementById("lead-name");
     const emailInput = document.getElementById("lead-email");
-    const statusInput = document.getElementById("lead-status");
+    const companyInput = document.getElementById("lead-company");
+    const useCaseInput = document.getElementById("lead-useCase");
+    const planInput = document.getElementById("lead-plan");
+    const affiliateInput = document.getElementById("lead-affiliate");
+    const sourceInput = document.getElementById("lead-source");
+    const statusSelect = document.getElementById("lead-status");
+    const notesInput = document.getElementById("lead-notes");
     let editingId = null;
 
     document
@@ -114,7 +158,13 @@ import Layout from "../layouts/Layout.astro";
         editingId = null;
         if (nameInput) nameInput.value = "";
         if (emailInput) emailInput.value = "";
-        if (statusInput) statusInput.value = "";
+        if (companyInput) companyInput.value = "";
+        if (useCaseInput) useCaseInput.value = "";
+        if (planInput) planInput.value = "";
+        if (affiliateInput) affiliateInput.value = "";
+        if (sourceInput) sourceInput.value = "";
+        if (statusSelect) statusSelect.value = "new";
+        if (notesInput) notesInput.value = "";
         leadModal?.showModal();
       });
 
@@ -124,7 +174,13 @@ import Layout from "../layouts/Layout.astro";
         data: {
           fullName: nameInput?.value || "",
           email: emailInput?.value || "",
-          status: statusInput?.value || "",
+          company: companyInput?.value || "",
+          useCase: useCaseInput?.value || "",
+          planInterested: planInput?.value || "",
+          affiliateCode: affiliateInput?.value || "",
+          source: sourceInput?.value || "",
+          status: statusSelect?.value || "",
+          notes: notesInput?.value || "",
         },
       };
       const url = editingId
@@ -153,13 +209,22 @@ import Layout from "../layouts/Layout.astro";
       body.innerHTML = "";
       (data.data || []).forEach((item) => {
         const lead = item.attributes;
-        const assigned = lead.assignedTo?.data?.attributes?.email || "";
+        const assigned =
+          lead.assignedTo?.data?.attributes?.email ||
+          lead.assignedTo?.data?.attributes?.username ||
+          "";
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${lead.fullName || ""}</td>
           <td>${lead.email || ""}</td>
+          <td>${lead.company || ""}</td>
+          <td>${lead.useCase || ""}</td>
+          <td>${lead.planInterested || ""}</td>
+          <td>${lead.affiliateCode || ""}</td>
+          <td>${lead.source || ""}</td>
           <td>${lead.status || ""}</td>
           <td>${assigned}</td>
+          <td>${lead.notes || ""}</td>
           <td></td>
         `;
         const actions = document.createElement("div");
@@ -184,7 +249,13 @@ import Layout from "../layouts/Layout.astro";
           editingId = item.id;
           if (nameInput) nameInput.value = lead.fullName || "";
           if (emailInput) emailInput.value = lead.email || "";
-          if (statusInput) statusInput.value = lead.status || "";
+          if (companyInput) companyInput.value = lead.company || "";
+          if (useCaseInput) useCaseInput.value = lead.useCase || "";
+          if (planInput) planInput.value = lead.planInterested || "";
+          if (affiliateInput) affiliateInput.value = lead.affiliateCode || "";
+          if (sourceInput) sourceInput.value = lead.source || "";
+          if (statusSelect) statusSelect.value = lead.status || "new";
+          if (notesInput) notesInput.value = lead.notes || "";
           leadModal?.showModal();
         });
         actions.appendChild(editBtn);
