@@ -9,6 +9,8 @@ export default [
       "**/node_modules/**",
       "**/.tmp/**",
       "**/public/**",
+      "**/.astro/**",
+      "**/package.json",
     ],
   },
   {
@@ -46,12 +48,6 @@ export default [
       "no-console": "off", // Allow console in backend
       "no-unused-vars": "warn",
       "no-case-declarations": "off",
-    },
-  },
-  {
-    files: ["**/*.json"],
-    rules: {
-      // Disable all rules for JSON files
     },
   },
 ];

@@ -1,0 +1,107 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="CRM Leads">
+  <main class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100 shadow-md">
+      <div class="flex-1">
+        <a class="btn btn-ghost text-xl" href="/dashboard">CRM Leads</a>
+      </div>
+      <div class="flex-none gap-2">
+        <a href="/dashboard" class="btn btn-outline">Dashboard</a>
+        <a href="/site-editor" class="btn btn-outline">Site Editor</a>
+        <div class="dropdown dropdown-end">
+          <label tabindex="0" class="btn btn-ghost">
+            <span id="user-email">Loading...</span>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            <li><a id="logout-btn">Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container mx-auto p-6">
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h2 class="card-title">Leads</h2>
+          <div class="overflow-x-auto">
+            <table class="table" id="leads-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                  <th>Assigned To</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="leads-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const jwt = localStorage.getItem("jwt");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  if (!jwt || !user.id) {
+    window.location.href = "/login";
+  } else {
+    const userEmailElement = document.getElementById("user-email");
+    if (userEmailElement) {
+      userEmailElement.textContent = user.email || "User";
+    }
+    document.getElementById("logout-btn")?.addEventListener("click", () => {
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    });
+    const cmsUrl =
+      document.documentElement.getAttribute("data-cms-url") ||
+      "http://localhost:1337";
+    async function loadLeads() {
+      const res = await fetch(`${cmsUrl}/api/leads?populate=assignedTo`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      const data = await res.json();
+      const body = document.getElementById("leads-body");
+      if (!body) return;
+      body.innerHTML = "";
+      (data.data || []).forEach((item) => {
+        const lead = item.attributes;
+        const assigned = lead.assignedTo?.data?.attributes?.email || "";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${lead.fullName || ""}</td>
+          <td>${lead.email || ""}</td>
+          <td>${lead.status || ""}</td>
+          <td>${assigned}</td>
+          <td></td>
+        `;
+        if (!assigned) {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-sm btn-primary";
+          btn.textContent = "Claim";
+          btn.addEventListener("click", async () => {
+            await fetch(`${cmsUrl}/api/leads/${item.id}/claim`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${jwt}` },
+            });
+            loadLeads();
+          });
+          tr.lastElementChild?.appendChild(btn);
+        }
+        body.appendChild(tr);
+      });
+    }
+    loadLeads();
+  }
+</script>
