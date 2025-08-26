@@ -1,0 +1,2308 @@
+{
+  "name": "Fullstack-Web",
+  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web",
+  "type": "directory",
+  "children": [
+    {
+      "name": ".github",
+      "type": "directory",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.github",
+      "children": [
+        {
+          "name": "workflows",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.github/workflows",
+          "children": [
+            {
+              "name": "deploy.yml",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.github/workflows/deploy.yml",
+              "icon": "⚙️"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "copilot-instructions.md",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.github/copilot-instructions.md",
+          "icon": "📝"
+        }
+      ],
+      "icon": "📁"
+    },
+    {
+      "name": ".husky",
+      "type": "directory",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.husky",
+      "children": [
+        {
+          "name": "pre-commit",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.husky/pre-commit",
+          "icon": "📄"
+        }
+      ],
+      "icon": "📁"
+    },
+    {
+      "name": "backend",
+      "type": "directory",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend",
+      "children": [
+        {
+          "name": ".strapi",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/.strapi",
+          "children": [
+            {
+              "name": "client",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/.strapi/client",
+              "children": [
+                {
+                  "name": "app.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/.strapi/client/app.js",
+                  "icon": "📄"
+                },
+                {
+                  "name": "index.html",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/.strapi/client/index.html",
+                  "icon": "🌐"
+                }
+              ],
+              "icon": "📁"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "config",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config",
+          "children": [
+            {
+              "name": "policies",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/policies",
+              "children": [
+                {
+                  "name": "is-authenticated.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/policies/is-authenticated.js",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "admin.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/admin.js",
+              "icon": "📄"
+            },
+            {
+              "name": "bootstrap.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/bootstrap.js",
+              "icon": "📄"
+            },
+            {
+              "name": "database.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/database.js",
+              "icon": "📄"
+            },
+            {
+              "name": "middlewares.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/middlewares.js",
+              "icon": "📄"
+            },
+            {
+              "name": "plugins.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/plugins.js",
+              "icon": "📄"
+            },
+            {
+              "name": "server.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/config/server.js",
+              "icon": "📄"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "database",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/database",
+          "children": [
+            {
+              "name": "migrations",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/database/migrations",
+              "children": [],
+              "icon": "📁"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "keys",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/keys",
+          "children": [
+            {
+              "name": "private.pem",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/keys/private.pem",
+              "icon": "📄"
+            },
+            {
+              "name": "public.pem",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/keys/public.pem",
+              "icon": "📄"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "public",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/public",
+          "children": [
+            {
+              "name": "favicon.ico",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/public/favicon.ico",
+              "icon": "🖼️"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "scripts",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/scripts",
+          "children": [
+            {
+              "name": "reset-license.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/scripts/reset-license.js",
+              "icon": "📄"
+            },
+            {
+              "name": "seed-data.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/scripts/seed-data.js",
+              "icon": "📄"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "src",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src",
+          "children": [
+            {
+              "name": "api",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api",
+              "children": [
+                {
+                  "name": "activation-code",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/activation-code",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/activation-code/content-types",
+                      "children": [
+                        {
+                          "name": "activation-code",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/activation-code/content-types/activation-code",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/activation-code/content-types/activation-code/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "affiliate",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/content-types",
+                      "children": [
+                        {
+                          "name": "affiliate",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/content-types/affiliate",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/content-types/affiliate/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/controllers",
+                      "children": [
+                        {
+                          "name": "affiliate.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/controllers/affiliate.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/routes",
+                      "children": [
+                        {
+                          "name": "affiliate.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/routes/affiliate.js",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "custom.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/routes/custom.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "services",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/services",
+                      "children": [
+                        {
+                          "name": "affiliate.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/affiliate/services/affiliate.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "blogpost",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/content-types",
+                      "children": [
+                        {
+                          "name": "blogpost",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/content-types/blogpost",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/content-types/blogpost/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/controllers",
+                      "children": [
+                        {
+                          "name": "blogpost.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/controllers/blogpost.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/routes",
+                      "children": [
+                        {
+                          "name": "blogpost.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/routes/blogpost.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "services",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/services",
+                      "children": [
+                        {
+                          "name": "blogpost.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/blogpost/services/blogpost.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "contact-message",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message/content-types",
+                      "children": [
+                        {
+                          "name": "contact-message",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message/content-types/contact-message",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message/content-types/contact-message/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message/controllers",
+                      "children": [
+                        {
+                          "name": "contact-message.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message/controllers/contact-message.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message/routes",
+                      "children": [
+                        {
+                          "name": "contact-message.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/contact-message/routes/contact-message.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "custom",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/custom",
+                  "children": [
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/custom/controllers",
+                      "children": [
+                        {
+                          "name": "custom.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/custom/controllers/custom.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/custom/routes",
+                      "children": [
+                        {
+                          "name": "custom.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/custom/routes/custom.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "customer",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer/content-types",
+                      "children": [
+                        {
+                          "name": "customer",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer/content-types/customer",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer/content-types/customer/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer/controllers",
+                      "children": [
+                        {
+                          "name": "customer.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer/controllers/customer.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer/routes",
+                      "children": [
+                        {
+                          "name": "customer.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer/routes/customer.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "customer-invite",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite/content-types",
+                      "children": [
+                        {
+                          "name": "customer-invite",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite/content-types/customer-invite",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite/content-types/customer-invite/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite/controllers",
+                      "children": [
+                        {
+                          "name": "customer-invite.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite/controllers/customer-invite.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite/routes",
+                      "children": [
+                        {
+                          "name": "customer-invite.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/customer-invite/routes/customer-invite.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "enquiry",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry/content-types",
+                      "children": [
+                        {
+                          "name": "enquiry",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry/content-types/enquiry",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry/content-types/enquiry/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry/controllers",
+                      "children": [
+                        {
+                          "name": "enquiry.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry/controllers/enquiry.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry/routes",
+                      "children": [
+                        {
+                          "name": "enquiry.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/enquiry/routes/enquiry.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "journey-tracker",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/journey-tracker",
+                  "children": [
+                    {
+                      "name": "services",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/journey-tracker/services",
+                      "children": [
+                        {
+                          "name": "journey-tracker.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/journey-tracker/services/journey-tracker.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "lead",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/lead",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/lead/content-types",
+                      "children": [
+                        {
+                          "name": "lead",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/lead/content-types/lead",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/lead/content-types/lead/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "license",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license/content-types",
+                      "children": [
+                        {
+                          "name": "license",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license/content-types/license",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license/content-types/license/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license/controllers",
+                      "children": [
+                        {
+                          "name": "license.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license/controllers/license.js",
+                          "icon": "📜"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license/routes",
+                      "children": [
+                        {
+                          "name": "license.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license/routes/license.js",
+                          "icon": "📜"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "license-key",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key/content-types",
+                      "children": [
+                        {
+                          "name": "license-key",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key/content-types/license-key",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key/content-types/license-key/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key/controllers",
+                      "children": [
+                        {
+                          "name": "license-key.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key/controllers/license-key.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key/routes",
+                      "children": [
+                        {
+                          "name": "license-key.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-key/routes/license-key.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "license-portal",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-portal",
+                  "children": [
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-portal/controllers",
+                      "children": [
+                        {
+                          "name": "license-portal.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-portal/controllers/license-portal.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-portal/routes",
+                      "children": [
+                        {
+                          "name": "license-portal.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/license-portal/routes/license-portal.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "page",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/content-types",
+                      "children": [
+                        {
+                          "name": "page",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/content-types/page",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/content-types/page/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/controllers",
+                      "children": [
+                        {
+                          "name": "page.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/controllers/page.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/routes",
+                      "children": [
+                        {
+                          "name": "page.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/routes/page.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "services",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/services",
+                      "children": [
+                        {
+                          "name": "page.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/page/services/page.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "purchase",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase",
+                  "children": [
+                    {
+                      "name": "content-types",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/content-types",
+                      "children": [
+                        {
+                          "name": "purchase",
+                          "type": "directory",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/content-types/purchase",
+                          "children": [
+                            {
+                              "name": "schema.json",
+                              "type": "file",
+                              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/content-types/purchase/schema.json",
+                              "icon": "📄"
+                            }
+                          ],
+                          "icon": "📁"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/controllers",
+                      "children": [
+                        {
+                          "name": "purchase.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/controllers/purchase.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/routes",
+                      "children": [
+                        {
+                          "name": "purchase.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/routes/purchase.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "services",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/services",
+                      "children": [
+                        {
+                          "name": "purchase.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/purchase/services/purchase.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "team",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/team",
+                  "children": [
+                    {
+                      "name": "controllers",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/team/controllers",
+                      "children": [
+                        {
+                          "name": "team.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/team/controllers/team.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "routes",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/team/routes",
+                      "children": [
+                        {
+                          "name": "team.js",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/api/team/routes/team.js",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    }
+                  ],
+                  "icon": "📁"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "components",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components",
+              "children": [
+                {
+                  "name": "blocks",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/blocks",
+                  "children": [
+                    {
+                      "name": "content.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/blocks/content.json",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "cta.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/blocks/cta.json",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "feature-grid.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/blocks/feature-grid.json",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "hero.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/blocks/hero.json",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "pricing.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/blocks/pricing.json",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "testimonial.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/blocks/testimonial.json",
+                      "icon": "📄"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "components",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/components",
+                  "children": [],
+                  "icon": "📁"
+                },
+                {
+                  "name": "elements",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/elements",
+                  "children": [
+                    {
+                      "name": "feature-item.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/elements/feature-item.json",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "pricing-plan.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/elements/pricing-plan.json",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "testimonial-item.json",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/components/elements/testimonial-item.json",
+                      "icon": "📄"
+                    }
+                  ],
+                  "icon": "📁"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "middlewares",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/middlewares",
+              "children": [
+                {
+                  "name": "auth-debug.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/middlewares/auth-debug.js",
+                  "icon": "📄"
+                },
+                {
+                  "name": "customer-auth.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/middlewares/customer-auth.js",
+                  "icon": "📄"
+                },
+                {
+                  "name": "invite-rate-limit.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/middlewares/invite-rate-limit.js",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "policies",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/policies",
+              "children": [
+                {
+                  "name": "is-authenticated.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/policies/is-authenticated.js",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "utils",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/utils",
+              "children": [
+                {
+                  "name": "mailer.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/utils/mailer.js",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "index.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/src/index.js",
+              "icon": "📄"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "types",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/types",
+          "children": [
+            {
+              "name": "generated",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/types/generated",
+              "children": [
+                {
+                  "name": "components.d.ts",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/types/generated/components.d.ts",
+                  "icon": "📄"
+                },
+                {
+                  "name": "contentTypes.d.ts",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/types/generated/contentTypes.d.ts",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": ".dockerignore",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/.dockerignore",
+          "icon": "📄"
+        },
+        {
+          "name": ".env.example",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/.env.example",
+          "icon": "📄"
+        },
+        {
+          "name": "Dockerfile",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/Dockerfile",
+          "icon": "🐳"
+        },
+        {
+          "name": "EMAIL_ENV_SAMPLE.txt",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/EMAIL_ENV_SAMPLE.txt",
+          "icon": "📄"
+        },
+        {
+          "name": "add-starter-licenses.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/add-starter-licenses.js",
+          "icon": "📄"
+        },
+        {
+          "name": "clear-visitor-data.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/clear-visitor-data.js",
+          "icon": "📄"
+        },
+        {
+          "name": "create-activation-codes.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/create-activation-codes.js",
+          "icon": "📄"
+        },
+        {
+          "name": "create-licenses.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/create-licenses.js",
+          "icon": "📄"
+        },
+        {
+          "name": "create-short-licenses.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/create-short-licenses.js",
+          "icon": "📄"
+        },
+        {
+          "name": "create-test-affiliate.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/create-test-affiliate.js",
+          "icon": "📄"
+        },
+        {
+          "name": "favicon.ico",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/favicon.ico",
+          "icon": "🖼️"
+        },
+        {
+          "name": "generate-keys.sh",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/generate-keys.sh",
+          "icon": "🐚"
+        },
+        {
+          "name": "package.json",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/package.json",
+          "icon": "📄"
+        },
+        {
+          "name": "simple-seed.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/simple-seed.js",
+          "icon": "📄"
+        },
+        {
+          "name": "test-data-seeder.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/test-data-seeder.js",
+          "icon": "📄"
+        },
+        {
+          "name": "test-starter-license.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/backend/test-starter-license.js",
+          "icon": "📄"
+        }
+      ],
+      "icon": "📁"
+    },
+    {
+      "name": "frontend",
+      "type": "directory",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend",
+      "children": [
+        {
+          "name": ".astro",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro",
+          "children": [
+            {
+              "name": "collections",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro/collections",
+              "children": [],
+              "icon": "📁"
+            },
+            {
+              "name": "content-assets.mjs",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro/content-assets.mjs",
+              "icon": "📄"
+            },
+            {
+              "name": "content-modules.mjs",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro/content-modules.mjs",
+              "icon": "📄"
+            },
+            {
+              "name": "content.d.ts",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro/content.d.ts",
+              "icon": "📄"
+            },
+            {
+              "name": "data-store.json",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro/data-store.json",
+              "icon": "📄"
+            },
+            {
+              "name": "settings.json",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro/settings.json",
+              "icon": "📄"
+            },
+            {
+              "name": "types.d.ts",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.astro/types.d.ts",
+              "icon": "📄"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "public",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public",
+          "children": [
+            {
+              "name": "landing",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/landing",
+              "children": [
+                {
+                  "name": "basicscreen.png",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/landing/basicscreen.png",
+                  "icon": "🖼️"
+                },
+                {
+                  "name": "drag&drop.mp4",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/landing/drag&drop.mp4",
+                  "icon": "📄"
+                },
+                {
+                  "name": "materials.mp4",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/landing/materials.mp4",
+                  "icon": "📄"
+                },
+                {
+                  "name": "preview.mp4",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/landing/preview.mp4",
+                  "icon": "📄"
+                },
+                {
+                  "name": "stream.mp4",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/landing/stream.mp4",
+                  "icon": "📄"
+                },
+                {
+                  "name": "templates.mp4",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/landing/templates.mp4",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "AppIcon.ico",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/AppIcon.ico",
+              "icon": "🖼️"
+            },
+            {
+              "name": "LogoHorizontal.webp",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/LogoHorizontal.webp",
+              "icon": "🖼️"
+            },
+            {
+              "name": "LogoHorizontalNoBackground.png",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/LogoHorizontalNoBackground.png",
+              "icon": "🖼️"
+            },
+            {
+              "name": "LogoHorizontalSVG.svg",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/LogoHorizontalSVG.svg",
+              "icon": "🖼️"
+            },
+            {
+              "name": "api-test.html",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/api-test.html",
+              "icon": "🌐"
+            },
+            {
+              "name": "auth-guard.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/auth-guard.js",
+              "icon": "📄"
+            },
+            {
+              "name": "dashboard-test.html",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/dashboard-test.html",
+              "icon": "🌐"
+            },
+            {
+              "name": "favicon.svg",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/favicon.svg",
+              "icon": "🖼️"
+            },
+            {
+              "name": "journey-tracker.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/journey-tracker.js",
+              "icon": "📄"
+            },
+            {
+              "name": "robots.txt",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/robots.txt",
+              "icon": "📄"
+            },
+            {
+              "name": "simple-test.html",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/simple-test.html",
+              "icon": "🌐"
+            },
+            {
+              "name": "test-affiliate-debug.js",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/test-affiliate-debug.js",
+              "icon": "📄"
+            },
+            {
+              "name": "test-affiliate-tracking.html",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/test-affiliate-tracking.html",
+              "icon": "🌐"
+            },
+            {
+              "name": "test-form.html",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/test-form.html",
+              "icon": "🌐"
+            },
+            {
+              "name": "test-journey.html",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/test-journey.html",
+              "icon": "🌐"
+            },
+            {
+              "name": "test-tracking.html",
+              "type": "file",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/public/test-tracking.html",
+              "icon": "🌐"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": "src",
+          "type": "directory",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src",
+          "children": [
+            {
+              "name": "components",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components",
+              "children": [
+                {
+                  "name": "site-builder",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder",
+                  "children": [
+                    {
+                      "name": "CTASection.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder/CTASection.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "ContentSection.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder/ContentSection.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "FeatureGridSection.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder/FeatureGridSection.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "HeroSection.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder/HeroSection.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "PageRenderer.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder/PageRenderer.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "PricingSection.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder/PricingSection.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "TestimonialSection.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/site-builder/TestimonialSection.astro",
+                      "icon": "📄"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "ui",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui",
+                  "children": [
+                    {
+                      "name": "LLButton.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLButton.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "LLCheckbox.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLCheckbox.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "LLCodeInput.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLCodeInput.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "LLInput.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLInput.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "LLRadio.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLRadio.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "LLSelect.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLSelect.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "LLTextarea.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLTextarea.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "LLToggle.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/ui/LLToggle.astro",
+                      "icon": "📄"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "BuyButton.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/BuyButton.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "Footer.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/Footer.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "Header.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/components/Header.astro",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "layouts",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/layouts",
+              "children": [
+                {
+                  "name": "Layout.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/layouts/Layout.astro",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "lib",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/lib",
+              "children": [
+                {
+                  "name": "validation",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/lib/validation",
+                  "children": [
+                    {
+                      "name": "enquiry.ts",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/lib/validation/enquiry.ts",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "invite.ts",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/lib/validation/invite.ts",
+                      "icon": "📄"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "strapi.ts",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/lib/strapi.ts",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "pages",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages",
+              "children": [
+                {
+                  "name": "api",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/api",
+                  "children": [],
+                  "icon": "📁"
+                },
+                {
+                  "name": "blog",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/blog",
+                  "children": [
+                    {
+                      "name": "page",
+                      "type": "directory",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/blog/page",
+                      "children": [
+                        {
+                          "name": "[page].astro",
+                          "type": "file",
+                          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/blog/page/[page].astro",
+                          "icon": "📄"
+                        }
+                      ],
+                      "icon": "📁"
+                    },
+                    {
+                      "name": "[slug].astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/blog/[slug].astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "index.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/blog/index.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "rss.xml.ts",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/blog/rss.xml.ts",
+                      "icon": "📄"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "customer",
+                  "type": "directory",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/customer",
+                  "children": [
+                    {
+                      "name": "dashboard.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/customer/dashboard.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "login.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/customer/login.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "profile.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/customer/profile.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "register.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/customer/register.astro",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "success.astro",
+                      "type": "file",
+                      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/customer/success.astro",
+                      "icon": "📄"
+                    }
+                  ],
+                  "icon": "📁"
+                },
+                {
+                  "name": "404.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/404.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "[slug].astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/[slug].astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "contact.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/contact.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "cookies.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/cookies.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "dashboard.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/dashboard.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "eula.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/eula.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "index.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/index.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "join.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/join.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "license-portal.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/license-portal.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "login.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/login.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "pricing.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/pricing.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "privacy.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/privacy.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "register.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/register.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "site-editor-new.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/site-editor-new.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "site-editor.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/site-editor.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "success.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/success.astro",
+                  "icon": "📄"
+                },
+                {
+                  "name": "terms.astro",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/pages/terms.astro",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "styles",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/styles",
+              "children": [
+                {
+                  "name": "app.css",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/styles/app.css",
+                  "icon": "🎨"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "types",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/types",
+              "children": [
+                {
+                  "name": "site-editor.ts",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/types/site-editor.ts",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            },
+            {
+              "name": "utils",
+              "type": "directory",
+              "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/utils",
+              "children": [
+                {
+                  "name": "api-helpers.ts",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/utils/api-helpers.ts",
+                  "icon": "📄"
+                },
+                {
+                  "name": "auth-guard.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/utils/auth-guard.js",
+                  "icon": "📄"
+                },
+                {
+                  "name": "component-registry.ts",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/utils/component-registry.ts",
+                  "icon": "📄"
+                },
+                {
+                  "name": "journey-tracker.js",
+                  "type": "file",
+                  "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/src/utils/journey-tracker.js",
+                  "icon": "📄"
+                }
+              ],
+              "icon": "📁"
+            }
+          ],
+          "icon": "📁"
+        },
+        {
+          "name": ".env.example",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.env.example",
+          "icon": "📄"
+        },
+        {
+          "name": ".eslintrc.js",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/.eslintrc.js",
+          "icon": "📄"
+        },
+        {
+          "name": "astro.config.cloudflare.mjs",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/astro.config.cloudflare.mjs",
+          "icon": "📄"
+        },
+        {
+          "name": "astro.config.mjs",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/astro.config.mjs",
+          "icon": "📄"
+        },
+        {
+          "name": "package.json",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/package.json",
+          "icon": "📄"
+        },
+        {
+          "name": "postcss.config.cjs",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/postcss.config.cjs",
+          "icon": "📄"
+        },
+        {
+          "name": "tailwind.config.mjs",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/tailwind.config.mjs",
+          "icon": "📄"
+        },
+        {
+          "name": "wrangler.toml",
+          "type": "file",
+          "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/frontend/wrangler.toml",
+          "icon": "⚙️"
+        }
+      ],
+      "icon": "📁"
+    },
+    {
+      "name": "scripts",
+      "type": "directory",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/scripts",
+      "children": [],
+      "icon": "📁"
+    },
+    {
+      "name": ".eslintrc.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.eslintrc.js",
+      "icon": "📄"
+    },
+    {
+      "name": ".eslintrc.json",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.eslintrc.json",
+      "icon": "📄"
+    },
+    {
+      "name": ".gitignore",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.gitignore",
+      "icon": "🚫"
+    },
+    {
+      "name": ".prettierrc.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.prettierrc.js",
+      "icon": "📄"
+    },
+    {
+      "name": ".prettierrc.json",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/.prettierrc.json",
+      "icon": "📄"
+    },
+    {
+      "name": "AFFILIATE_TRACKING_DEBUG.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/AFFILIATE_TRACKING_DEBUG.md",
+      "icon": "📝"
+    },
+    {
+      "name": "COMPLETE_GUIDE.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/COMPLETE_GUIDE.md",
+      "icon": "📝"
+    },
+    {
+      "name": "DEMO_SETUP.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/DEMO_SETUP.md",
+      "icon": "📝"
+    },
+    {
+      "name": "DEPLOYMENT.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/DEPLOYMENT.md",
+      "icon": "📝"
+    },
+    {
+      "name": "DEPLOY_FRONTEND.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/DEPLOY_FRONTEND.md",
+      "icon": "📝"
+    },
+    {
+      "name": "DEVELOPMENT.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/DEVELOPMENT.md",
+      "icon": "📝"
+    },
+    {
+      "name": "FEATURES.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/FEATURES.md",
+      "icon": "📝"
+    },
+    {
+      "name": "INTEGRATION_GUIDE.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/INTEGRATION_GUIDE.md",
+      "icon": "📝"
+    },
+    {
+      "name": "PROJECT_SUMMARY.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/PROJECT_SUMMARY.md",
+      "icon": "📝"
+    },
+    {
+      "name": "README.md",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/README.md",
+      "icon": "📖"
+    },
+    {
+      "name": "decrypt-deactivation-code.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/decrypt-deactivation-code.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "decrypt-deactivation-code.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/decrypt-deactivation-code.js",
+      "icon": "📄"
+    },
+    {
+      "name": "demo-seeder.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/demo-seeder.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "demo-seeder.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/demo-seeder.js",
+      "icon": "📄"
+    },
+    {
+      "name": "demo-verify.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/demo-verify.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "ecosystem.config.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/ecosystem.config.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "eslint.config.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/eslint.config.js",
+      "icon": "📄"
+    },
+    {
+      "name": "launch-codes.csv",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/launch-codes.csv",
+      "icon": "📄"
+    },
+    {
+      "name": "list-pending-users.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/list-pending-users.js",
+      "icon": "📄"
+    },
+    {
+      "name": "package.json",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/package.json",
+      "icon": "📄"
+    },
+    {
+      "name": "pnpm-lock.yaml",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/pnpm-lock.yaml",
+      "icon": "⚙️"
+    },
+    {
+      "name": "pnpm-workspace.yaml",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/pnpm-workspace.yaml",
+      "icon": "⚙️"
+    },
+    {
+      "name": "quick-test-license.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/quick-test-license.js",
+      "icon": "📄"
+    },
+    {
+      "name": "quick-test.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/quick-test.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "reset-license-10.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/reset-license-10.js",
+      "icon": "📄"
+    },
+    {
+      "name": "setup-integration.sh",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/setup-integration.sh",
+      "icon": "🐚"
+    },
+    {
+      "name": "setup.sh",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/setup.sh",
+      "icon": "🐚"
+    },
+    {
+      "name": "test-activation-complete.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-activation-complete.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "test-activation-complete.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-activation-complete.js",
+      "icon": "📄"
+    },
+    {
+      "name": "test-activation-endpoint.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-activation-endpoint.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "test-activation-endpoint.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-activation-endpoint.js",
+      "icon": "📄"
+    },
+    {
+      "name": "test-activation.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-activation.js",
+      "icon": "📄"
+    },
+    {
+      "name": "test-affiliate-login.html",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-affiliate-login.html",
+      "icon": "🌐"
+    },
+    {
+      "name": "test-affiliate-tracking.sh",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-affiliate-tracking.sh",
+      "icon": "🐚"
+    },
+    {
+      "name": "test-integration.sh",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-integration.sh",
+      "icon": "🐚"
+    },
+    {
+      "name": "test-login.html",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-login.html",
+      "icon": "🌐"
+    },
+    {
+      "name": "test-offline-activation.html",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-offline-activation.html",
+      "icon": "🌐"
+    },
+    {
+      "name": "test-security-fix.cjs",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/test-security-fix.cjs",
+      "icon": "📄"
+    },
+    {
+      "name": "unblock-user.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/unblock-user.js",
+      "icon": "📄"
+    },
+    {
+      "name": "verify-deactivation.js",
+      "type": "file",
+      "path": "/Volumes/Samsung T7/Personal Dev/Fullstack-Web/verify-deactivation.js",
+      "icon": "📄"
+    }
+  ],
+  "generated": "2025-08-26T20:33:35.481Z",
+  "generator": "FileTree Pro Extension",
+  "note": "Common build folders, dependencies, and temporary files are automatically excluded.",
+  "showIcons": true
+}
