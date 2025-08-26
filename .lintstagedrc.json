@@ -1,0 +1,4 @@
+{
+  "*.{js,mjs,cjs,ts,tsx}": ["pnpm dlx eslint@^9 --fix"],
+  "*.{js,mjs,cjs,ts,tsx,css,md,json}": ["pnpm dlx prettier@^3 --write"]
+}

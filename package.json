@@ -1,59 +1,15 @@
 {
-  "name": "fullstack-saas-boilerplate",
-  "type": "module",
+  "name": "lightlane",
   "private": true,
-  "description": "Full-stack SaaS marketing site with Astro frontend and Strapi backend",
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "pnpm --parallel -r dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "format": "pnpm -r format",
-    "reset": "pnpm run reset:db && pnpm run restart",
-    "reset:db": "rm -rf backend/.tmp && rm -rf backend/build && rm -rf backend/dist",
-    "reset:hard": "pnpm run reset:db && rm -rf node_modules && rm -rf */node_modules && pnpm install",
-    "restart": "pkill -f 'strapi develop' || true && pnpm run dev",
-    "backend:admin": "cd backend && pnpm strapi admin:create-user",
-    "backend:reset": "cd backend && rm -rf .tmp build dist && pnpm strapi develop",
-    "setup": "pnpm install && pnpm run reset:db && echo 'Setup complete! Run: pnpm dev'",
-    "demo:setup": "pnpm run demo:reset && node demo-seeder.cjs",
-    "demo:reset": "pkill -f 'strapi develop' || true && rm -rf backend/.tmp && rm -rf backend/build && rm -rf backend/dist && rm -rf backend/public/uploads/* && cd backend && pnpm install",
-    "demo:start": "echo '🌱 Starting with demo data...' && SEED_DATA=true pnpm run dev",
-    "demo:complete": "echo '🚀 Setting up complete demo environment...' && pnpm run demo:reset && pnpm run demo:build && pnpm run demo:seed && echo '✅ Demo ready! Run: pnpm demo:start'",
-    "demo:build": "echo '📦 Building backend for demo...' && cd backend && pnpm install && pnpm build",
-    "demo:seed": "echo '🌱 Seeding demo data...' && node demo-seeder.cjs",
-    "demo:quick": "echo '⚡ Quick demo setup (assumes backend is built)...' && pnpm run demo:seed && echo '✅ Demo data ready! Run: pnpm dev'",
-    "demo:verify": "echo '🔍 Verifying demo data...' && node demo-verify.cjs",
-    "decrypt": "node decrypt-deactivation-code.cjs",
-    "team:list": "echo '📋 Listing pending team registrations...' && node list-pending-users.js",
-    "team:unblock": "echo '🔓 Usage: pnpm team:unblock <email>' && echo 'Example: pnpm team:unblock john@example.com'"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "eslint": "^9.0.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.0.0",
-    "prettier": "^3.0.0",
-    "prettier-plugin-astro": "^0.12.3"
-  },
-  "lint-staged": {
-    "**/*.{js,jsx}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "**/*.{json,md}": [
-      "prettier --write"
-    ],
-    "**/*.astro": [
-      "prettier --write"
-    ]
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  },
-  "dependencies": {
-    "node-fetch": "^3.3.2"
+    "dev": "pnpm -r --parallel --filter ./apps/** dev",
+    "build": "pnpm -r --filter ./apps/** build",
+    "start": "pm2 start ecosystem.config.js && pm2 logs",
+    "lint": "pnpm -r lint"
   }
 }
