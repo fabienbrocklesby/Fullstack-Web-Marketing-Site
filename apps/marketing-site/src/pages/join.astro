@@ -1,0 +1,141 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import LLCodeInput from "../components/ui/LLCodeInput.astro";
+import LLInput from "../components/ui/LLInput.astro";
+import LLButton from "../components/ui/LLButton.astro";
+import { inviteCodeSchema, redeemSchema } from "../lib/validation/invite.js";
+---
+
+<Layout
+  title="Join Lightlane"
+  description="Enter your Lightlane invite code to access the beta"
+>
+  <Header />
+  <main class="py-16">
+    <div class="container max-w-xl">
+      <div class="card bg-base-200 shadow-xl">
+        <div class="card-body" id="step-code">
+          <h1 class="card-title mb-2 text-ll-gradient">
+            Enter Your Lightlane Code
+          </h1>
+          <p class="text-sm opacity-70 mb-2">
+            6 characters from your Early Access email.
+          </p>
+          <form id="code-form" class="space-y-5" novalidate aria-live="polite">
+            <LLCodeInput />
+            <div
+              id="code-error"
+              class="alert alert-error hidden text-sm"
+              role="alert"
+            >
+              Invalid or expired code
+            </div>
+            <LLButton type="submit" full id="validate-btn">Continue</LLButton>
+          </form>
+        </div>
+        <div class="card-body hidden" id="step-account">
+          <h2 class="card-title mb-2">Create Your Account</h2>
+          <form id="account-form" novalidate class="space-y-4">
+            <input type="hidden" name="code" id="code-hidden" />
+            <LLInput name="firstName" label="First Name" required />
+            <LLInput name="lastName" label="Last Name" required />
+            <LLInput name="email" type="email" label="Email" required />
+            <LLInput
+              name="password"
+              type="password"
+              label="Password"
+              required
+              help="Minimum 8 characters"
+            />
+            <div
+              id="acct-error"
+              class="alert alert-error hidden text-sm"
+              role="alert"
+            >
+            </div>
+            <LLButton type="submit" full>Create Account</LLButton>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+  <Footer />
+  <script type="module">
+    import {
+      inviteCodeSchema,
+      redeemSchema,
+    } from "/src/lib/validation/invite.js";
+    const codeForm = document.getElementById("code-form");
+    const accountForm = document.getElementById("account-form");
+    const stepCode = document.getElementById("step-code");
+    const stepAcct = document.getElementById("step-account");
+    const codeHidden = document.getElementById("code-hidden");
+    const codeError = document.getElementById("code-error");
+    const acctError = document.getElementById("acct-error");
+    function gatherCode() {
+      return Array.from(
+        document.querySelectorAll("[data-code-input] .code-char"),
+      )
+        .map((c) => c.value)
+        .join("");
+    }
+    const urlCode = new URLSearchParams(location.search).get("code");
+    if (urlCode) {
+      const chars = document.querySelectorAll("[data-code-input] .code-char");
+      [...urlCode]
+        .slice(0, chars.length)
+        .forEach((ch, i) => (chars[i].value = ch));
+    }
+    codeForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      codeError?.classList.add("hidden");
+      const code = gatherCode();
+      const parsed = inviteCodeSchema.safeParse({ code });
+      if (!parsed.success) {
+        codeError?.classList.remove("hidden");
+        codeError.textContent = "Code format invalid";
+        return;
+      }
+      const res = await fetch(
+        `/api/invites/validate?code=${encodeURIComponent(code)}`,
+      );
+      const out = await res.json();
+      if (out.valid) {
+        stepCode?.classList.add("hidden");
+        stepAcct?.classList.remove("hidden");
+        if (codeHidden) codeHidden.value = code;
+      } else {
+        codeError?.classList.remove("hidden");
+        codeError.textContent = out.reason || "Invalid or expired code";
+      }
+    });
+    accountForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      acctError?.classList.add("hidden");
+      const fd = Object.fromEntries(new FormData(accountForm));
+      const parsed = redeemSchema.safeParse(fd);
+      if (!parsed.success) {
+        acctError?.classList.remove("hidden");
+        acctError.textContent = "Please fix the fields.";
+        return;
+      }
+      const btn = accountForm.querySelector('button[type="submit"]');
+      btn?.setAttribute("disabled", "true");
+      const res = await fetch("/api/invites/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed.data),
+      });
+      if (res.ok) {
+        location.href = "/customer/dashboard";
+      } else {
+        const t = await res.text();
+        acctError?.classList.remove("hidden");
+        acctError.textContent = "Failed: " + t;
+        btn?.removeAttribute("disabled");
+      }
+    });
+  </script>
+</Layout>
