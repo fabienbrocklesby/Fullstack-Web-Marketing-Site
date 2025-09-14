@@ -885,6 +885,45 @@ export interface ApiAffiliateAffiliate extends Schema.CollectionType {
   };
 }
 
+export interface ApiBannerBanner extends Schema.CollectionType {
+  collectionName: "banners";
+  info: {
+    singularName: "banner";
+    pluralName: "banners";
+    displayName: "Banner";
+    description: "Site-wide top banners configurable from CMS";
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    enabled: Attribute.Boolean & Attribute.DefaultTo<true>;
+    message: Attribute.Text & Attribute.Required;
+    severity: Attribute.Enumeration<["info", "success", "warning", "error"]> &
+      Attribute.DefaultTo<"info">;
+    linkUrl: Attribute.String;
+    dismissible: Attribute.Boolean & Attribute.DefaultTo<true>;
+    startAt: Attribute.DateTime;
+    endAt: Attribute.DateTime;
+    metadata: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::banner.banner",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::banner.banner",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiBlogpostBlogpost extends Schema.CollectionType {
   collectionName: "blogposts";
   info: {
@@ -1376,6 +1415,7 @@ declare module "@strapi/types" {
       "plugin::users-permissions.user": PluginUsersPermissionsUser;
       "api::activation-code.activation-code": ApiActivationCodeActivationCode;
       "api::affiliate.affiliate": ApiAffiliateAffiliate;
+      "api::banner.banner": ApiBannerBanner;
       "api::blogpost.blogpost": ApiBlogpostBlogpost;
       "api::contact-message.contact-message": ApiContactMessageContactMessage;
       "api::customer.customer": ApiCustomerCustomer;

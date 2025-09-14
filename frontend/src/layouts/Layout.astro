@@ -26,7 +26,10 @@ import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
 const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
 const imageUrl = new URL(image, siteUrl).href;
 // Prefer PUBLIC_CMS_URL from env (Astro public env var) or fallback to localhost
-const cmsUrl = import.meta.env.PUBLIC_CMS_URL || "http://localhost:1337";
+// @ts-ignore Astro injects import.meta.env at build time
+const cmsUrl =
+  (import.meta as any).env.PUBLIC_CMS_URL || "http://localhost:1337";
+import TopBanner from "../components/TopBanner.astro";
 ---
 
 <!doctype html>
@@ -87,6 +90,8 @@ const cmsUrl = import.meta.env.PUBLIC_CMS_URL || "http://localhost:1337";
     <meta name="generator" content={Astro.generator} />
   </head>
   <body>
+    <!-- CMS-driven Top Banner -->
+    <TopBanner />
     <slot />
 
     <!-- Authentication Guard -->
