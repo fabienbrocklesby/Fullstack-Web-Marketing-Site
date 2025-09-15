@@ -4,6 +4,7 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import BuyButton from "../components/BuyButton.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
+import Countdown from "../components/Countdown.astro";
 ---
 
 <Layout
@@ -24,9 +25,9 @@ import DownloadButtons from "../components/DownloadButtons.astro";
             Launch Pricing (Limited Time)
           </h1>
           <p class="text-lg md:text-xl text-base-content/70">
-            Locked‑in lifetime licenses. This introductory pricing is available
-            for a limited time. Grandfathered priority support and discounted
-            future seats included.
+            Prices increase on <span class="font-semibold">October 15</span>.
+            Lock in a <span class="font-semibold">one‑time lifetime</span> license
+            today and keep this rate forever.
           </p>
           <div
             class="flex flex-col md:flex-row gap-4 justify-center items-center"
@@ -42,10 +43,16 @@ import DownloadButtons from "../components/DownloadButtons.astro";
               GRANDFATHERED LIFETIME UPDATES
             </div>
           </div>
-          <div role="alert" class="alert alert-info justify-center">
+          <div class="mt-2">
+            <Countdown
+              target="2025-10-15T00:00:00Z"
+              label="Intro pricing ends in"
+            />
+          </div>
+          <div role="alert" class="alert alert-warning justify-center">
             <span>
-              Download now - free trial is built in. Buy a license any time to
-              unlock full access.
+              Founders deal: one-time lifetime pricing ends Oct 15. Future
+              prices will be higher.
             </span>
           </div>
           <DownloadButtons align="center" />
