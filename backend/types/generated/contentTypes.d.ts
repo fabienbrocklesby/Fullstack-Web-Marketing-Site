@@ -1395,6 +1395,41 @@ export interface ApiPurchasePurchase extends Schema.CollectionType {
   };
 }
 
+export interface ApiReleaseRelease extends Schema.CollectionType {
+  collectionName: "releases";
+  info: {
+    singularName: "release";
+    pluralName: "releases";
+    displayName: "Release";
+    description: "Application releases and download URLs";
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    version: Attribute.String & Attribute.Required;
+    macUrl: Attribute.String & Attribute.Required;
+    windowsUrl: Attribute.String & Attribute.Required;
+    checksumsUrl: Attribute.String & Attribute.Required;
+    isCurrent: Attribute.Boolean & Attribute.DefaultTo<false>;
+    notes: Attribute.Text;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      "api::release.release",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      "api::release.release",
+      "oneToOne",
+      "admin::user"
+    > &
+      Attribute.Private;
+  };
+}
+
 declare module "@strapi/types" {
   export module Shared {
     export interface ContentTypes {
@@ -1426,6 +1461,7 @@ declare module "@strapi/types" {
       "api::license-key.license-key": ApiLicenseKeyLicenseKey;
       "api::page.page": ApiPagePage;
       "api::purchase.purchase": ApiPurchasePurchase;
+      "api::release.release": ApiReleaseRelease;
     }
   }
 }

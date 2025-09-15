@@ -60,6 +60,11 @@ const STRAPI_URL: string = (
             >
             <span class="badge badge-soft badge-accent">Global team</span>
           </div>
+          <div class="pt-2 text-sm">
+            New here? <a href="/customer/register" class="link link-primary"
+              >Create Account</a
+            >
+          </div>
         </div>
       </div>
     </section>
@@ -284,6 +289,27 @@ const STRAPI_URL: string = (
       const loader = form.querySelector("[data-btn-loading]");
       const successEl = form.querySelector("[data-success]");
       const errorEl = form.querySelector("[data-error]");
+
+      // Prefill subject/message if provided via query string (e.g. trial request)
+      try {
+        const url = new URL(window.location.href);
+        const subjectPrefill = url.searchParams.get("subject");
+        if (subjectPrefill) {
+          const subjectInput = form.querySelector("#subject");
+          if (subjectInput && "value" in subjectInput) {
+            subjectInput.value = subjectPrefill;
+            subjectInput.dispatchEvent(new Event("input"));
+          }
+        }
+        const messagePrefill = url.searchParams.get("message");
+        if (messagePrefill) {
+          const messageInput = form.querySelector("#message");
+          if (messageInput && "value" in messageInput) {
+            messageInput.value = messagePrefill;
+            messageInput.dispatchEvent(new Event("input"));
+          }
+        }
+      } catch {}
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         e.stopPropagation();

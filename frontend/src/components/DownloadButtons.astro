@@ -1,0 +1,61 @@
+---
+interface Props {
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  soft?: boolean; // use btn-soft instead of solid
+  showChecksums?: boolean;
+  align?: "left" | "center" | "right";
+  class?: string;
+}
+const {
+  size = "sm",
+  soft = true,
+  showChecksums = true,
+  align = "left",
+  class: klass = "",
+} = Astro.props as Props;
+---
+
+<div
+  class={`flex flex-wrap gap-2 ${align === "center" ? "justify-center" : align === "right" ? "justify-end" : ""} ${klass}`}
+>
+  <a
+    id="dl-mac"
+    class={`btn ${soft ? "btn-soft" : "btn-primary"} btn-${size}`}
+    href="#">Download macOS</a
+  >
+  <a
+    id="dl-win"
+    class={`btn ${soft ? "btn-soft" : "btn-primary"} btn-${size}`}
+    href="#">Download Windows</a
+  >
+  {
+    showChecksums && (
+      <a id="dl-sums" class={`btn btn-ghost btn-${size}`} href="#">
+        Checksums
+      </a>
+    )
+  }
+</div>
+
+<script>
+  (async function () {
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      const res = await fetch(
+        `${cmsUrl.replace(/\/$/, "")}/api/release/latest`,
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const r = data && data.release ? data.release : null;
+      if (!r) return;
+      const mac = document.getElementById("dl-mac");
+      const win = document.getElementById("dl-win");
+      const sums = document.getElementById("dl-sums");
+      if (mac && r.macUrl) mac.setAttribute("href", r.macUrl);
+      if (win && r.windowsUrl) win.setAttribute("href", r.windowsUrl);
+      if (sums && r.checksumsUrl) sums.setAttribute("href", r.checksumsUrl);
+    } catch (e) {}
+  })();
+</script>

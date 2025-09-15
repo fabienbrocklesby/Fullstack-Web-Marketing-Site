@@ -1,0 +1,37 @@
+{
+  "collectionName": "releases",
+  "info": {
+    "singularName": "release",
+    "pluralName": "releases",
+    "displayName": "Release",
+    "description": "Application releases and download URLs"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "version": {
+      "type": "string",
+      "required": true
+    },
+    "macUrl": {
+      "type": "string",
+      "required": true
+    },
+    "windowsUrl": {
+      "type": "string",
+      "required": true
+    },
+    "checksumsUrl": {
+      "type": "string",
+      "required": true
+    },
+    "isCurrent": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "text"
+    }
+  }
+}

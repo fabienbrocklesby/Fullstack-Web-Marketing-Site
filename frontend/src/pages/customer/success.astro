@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
 <Layout
@@ -13,8 +14,9 @@ import Layout from "../../layouts/Layout.astro";
           <div class="text-6xl mb-8">🎉</div>
           <h1 class="text-4xl font-bold mb-4">Purchase Successful!</h1>
           <p class="text-xl text-base-content/70 mb-8">
-            Thank you for your purchase! Your license key has been generated and
-            is now available in your account.
+            Thank you for your purchase! Your license key is ready in your
+            account. Download the app below and activate your free trial or
+            license inside the app.
           </p>
 
           <div id="purchase-details" class="card bg-base-100 shadow-xl mb-8">
@@ -27,7 +29,8 @@ import Layout from "../../layouts/Layout.astro";
             </div>
           </div>
 
-          <div class="space-y-4">
+          <div class="space-y-6">
+            <DownloadButtons align="center" />
             <div class="flex justify-center space-x-4">
               <a href="/customer/dashboard" class="btn btn-primary"
                 >View Dashboard</a

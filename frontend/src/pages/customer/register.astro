@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
 <Layout title="Customer Registration">
@@ -21,6 +22,16 @@ import Layout from "../../layouts/Layout.astro";
     <div
       class="container mx-auto px-5 py-10 flex flex-col lg:flex-row gap-14 lg:gap-20 items-center"
     >
+      <div
+        id="pricing-context-banner"
+        class="hidden w-full lg:absolute lg:top-4 lg:left-0 lg:right-0"
+      >
+        <div class="container mx-auto px-5">
+          <div role="alert" class="alert alert-info">
+            <span> Please create an account first to buy your license.</span>
+          </div>
+        </div>
+      </div>
       <div class="w-full max-w-xl space-y-10 text-center lg:text-left">
         <a
           href="/"
@@ -41,10 +52,15 @@ import Layout from "../../layouts/Layout.astro";
           <p
             class="text-base md:text-lg text-base-content/70 max-w-lg mx-auto lg:mx-0"
           >
-            Create your account to start using Lightlane. During early beta,
-            we’ll email your downloads after purchase and provide hands‑on setup
-            support.
+            Create your account to start using Lightlane.
           </p>
+          <div role="alert" class="alert alert-info mt-3">
+            <span>
+              Download now — free trial is built in. Create an account to manage
+              your license and checkout faster when ready.
+            </span>
+          </div>
+          <DownloadButtons />
           <ul class="grid sm:grid-cols-2 gap-4 text-sm">
             <li
               class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
@@ -196,6 +212,16 @@ import Layout from "../../layouts/Layout.astro";
 </Layout>
 
 <script>
+  // Show contextual banner if coming from pricing page
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get("from");
+    const banner = document.getElementById("pricing-context-banner");
+    if (from === "pricing" && banner) {
+      banner.classList.remove("hidden");
+    }
+  })();
+
   document
     .getElementById("register-form")
     ?.addEventListener("submit", async (e) => {
