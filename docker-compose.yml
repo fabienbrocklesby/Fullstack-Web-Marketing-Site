@@ -1,0 +1,68 @@
+# Local Development Setup
+# For production deployment, use Dokploy (see DOKPLOY-SETUP.md)
+
+services:
+  # PostgreSQL Database (Local Dev Only)
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-strapi}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-strapi}
+      POSTGRES_DB: ${DB_NAME:-strapi}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-strapi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Strapi Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DB_NAME:-strapi}
+      DATABASE_USER: ${DB_USER:-strapi}
+      DATABASE_PASSWORD: ${DB_PASSWORD:-strapi}
+      APP_KEYS: ${APP_KEYS}
+      API_TOKEN_SALT: ${API_TOKEN_SALT}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+      JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - uploads:/workspace/backend/public/uploads
+    ports:
+      - "1337:1337"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Astro Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    environment:
+      PUBLIC_STRAPI_URL: ${PUBLIC_STRAPI_URL:-http://localhost:1337}
+      NODE_ENV: production
+    ports:
+      - "4321:4321"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads:
+    driver: local

@@ -1,0 +1,40 @@
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Build stage - build in workspace root
+FROM base AS builder
+WORKDIR /workspace
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY backend ./backend
+COPY frontend/package.json ./frontend/package.json
+RUN pnpm install --filter=backend...
+RUN cd backend && pnpm build
+
+# Production stage - only backend files
+FROM base AS runner
+WORKDIR /workspace
+ENV NODE_ENV=production
+
+# Copy package files first
+COPY --from=builder /workspace/pnpm-workspace.yaml /workspace/package.json /workspace/pnpm-lock.yaml* ./
+COPY --from=builder /workspace/backend/package.json ./backend/
+COPY --from=builder /workspace/frontend/package.json ./frontend/
+
+# Install production dependencies only
+RUN pnpm install --filter=backend... --prod
+
+# Copy backend files
+COPY --from=builder /workspace/backend/build ./backend/build
+COPY --from=builder /workspace/backend/public ./backend/public
+COPY --from=builder /workspace/backend/config ./backend/config
+COPY --from=builder /workspace/backend/database ./backend/database
+COPY --from=builder /workspace/backend/src ./backend/src
+
+# Set working directory to backend
+WORKDIR /workspace/backend
+
+# Create uploads directory and set permissions
+RUN mkdir -p public/uploads && chmod -R 777 public
+
+EXPOSE 1337
+CMD ["../node_modules/.pnpm/node_modules/.bin/strapi", "start"]

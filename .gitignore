@@ -17,3 +17,28 @@ public/build/
 .tmp/
 uploads/
 .husky/_/
+
+# Docker
+docker-compose.override.yml
+
+# Database & Backups
+*.db
+*.db-*
+*.sqlite*
+backend/data/
+backups/
+*.sql
+*.sql.gz
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+.pm2/
+
+# Uploads
+backend/public/uploads/
