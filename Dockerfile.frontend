@@ -6,7 +6,7 @@ FROM base AS builder
 WORKDIR /workspace
 
 # Accept build arguments for environment variables needed at build time
-ARG PUBLIC_STRAPI_URL
+ARG PUBLIC_STRAPI_URL=https://api.lightlane.app
 ENV PUBLIC_STRAPI_URL=$PUBLIC_STRAPI_URL
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
