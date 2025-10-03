@@ -688,34 +688,12 @@ import { enquirySchema } from "../lib/validation/enquiry";
       let cms;
       // 1. Try data attribute injected by server/layout
       cms = document.documentElement.getAttribute("data-cms-url");
-      // 2. Try build-time replacement (wrapped in try to avoid ReferenceError/undefined chain)
-      if (!cms) {
-        try {
-          cms =
-            (import.meta &&
-              import.meta.env &&
-              import.meta.env.PUBLIC_CMS_URL) ||
-            undefined;
-        } catch (_e) {
-          /* ignore */
-        }
-      }
-      // 3. Final fallback
+      // Final fallback (should rarely be needed since data-cms-url is set in Layout)
       if (!cms) cms = "http://localhost:1337";
       console.log("[enquiry] Submitting", {
         cmsSource: document.documentElement.getAttribute("data-cms-url")
           ? "data-attr"
-          : (() => {
-              try {
-                return import.meta &&
-                  import.meta.env &&
-                  import.meta.env.PUBLIC_CMS_URL
-                  ? "env"
-                  : "fallback";
-              } catch (e) {
-                return "fallback";
-              }
-            })(),
+          : "fallback",
         cms,
         payload: fd,
       });

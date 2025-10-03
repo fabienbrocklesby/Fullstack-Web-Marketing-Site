@@ -238,7 +238,8 @@ import Layout from "../layouts/Layout.astro";
     }
 
     // API Base URL
-    const API_BASE = "http://localhost:1337/api";
+    import { STRAPI_API_URL } from "../config/strapi";
+    const API_BASE = STRAPI_API_URL;
 
     // Show result in DaisyUI alert format
     function showResult(elementId, success, title, content) {

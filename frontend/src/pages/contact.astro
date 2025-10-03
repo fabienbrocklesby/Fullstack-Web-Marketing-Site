@@ -2,16 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-
-// Embed Strapi URL at build time (Astro injects import.meta.env)
-// Supports either PUBLIC_STRAPI_URL or PUBLIC_CMS_URL (alias) with localhost fallback
-// @ts-ignore cast for env access
-const STRAPI_URL: string = (
-  ((import.meta as any).env &&
-    ((import.meta as any).env.PUBLIC_STRAPI_URL ||
-      (import.meta as any).env.PUBLIC_CMS_URL)) ||
-  "http://localhost:1337"
-).replace(/\/$/, "");
+import { STRAPI_URL } from "../config/strapi";
 ---
 
 <Layout

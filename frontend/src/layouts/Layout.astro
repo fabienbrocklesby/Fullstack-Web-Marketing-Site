@@ -23,14 +23,14 @@ const {
 
 // @ts-ignore - Astro injects import.meta.env at build time
 import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
+import { STRAPI_URL } from "../config/strapi";
+
 const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
 const imageUrl = new URL(image, siteUrl).href;
-// Prefer PUBLIC_CMS_URL from env (Astro public env var) or fallback to localhost
-const cmsUrl = import.meta.env.PUBLIC_CMS_URL || "http://localhost:1337";
 ---
 
 <!doctype html>
-<html lang="en" data-cms-url={cmsUrl} data-theme="lightlane">
+<html lang="en" data-cms-url={STRAPI_URL} data-theme="lightlane">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

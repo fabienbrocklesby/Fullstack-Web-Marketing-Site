@@ -4,6 +4,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Build stage - build in workspace root
 FROM base AS builder
 WORKDIR /workspace
+
+# Accept build arguments for environment variables needed at build time
+ARG PUBLIC_STRAPI_URL
+ENV PUBLIC_STRAPI_URL=$PUBLIC_STRAPI_URL
+
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY frontend ./frontend
 COPY backend/package.json ./backend/package.json
