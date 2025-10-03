@@ -7,7 +7,7 @@
  */
 
 // @ts-ignore - Astro injects env at build time
-const rawUrl = import.meta.env?.PUBLIC_STRAPI_URL || "http://localhost:1337";
+const rawUrl = import.meta.env?.PUBLIC_STRAPI_URL;
 
 export const STRAPI_URL = rawUrl.replace(/\/$/, "");
 export const STRAPI_API_URL = `${STRAPI_URL}/api`;
