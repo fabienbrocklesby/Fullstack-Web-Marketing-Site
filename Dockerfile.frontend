@@ -25,7 +25,7 @@ WORKDIR /workspace
 RUN pnpm install --filter=frontend... --prod
 
 # Copy built dist
-COPY --from=builder /workspace/frontend/dist . /frontend/dist
+COPY --from=builder /workspace/frontend/dist ./frontend/dist
 
 # Set working directory to frontend
 WORKDIR /workspace/frontend
