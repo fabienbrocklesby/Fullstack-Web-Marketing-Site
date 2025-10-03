@@ -27,14 +27,13 @@ RUN pnpm install --filter=backend... --prod
 COPY --from=builder /workspace/backend/build ./backend/build
 COPY --from=builder /workspace/backend/public ./backend/public
 COPY --from=builder /workspace/backend/config ./backend/config
-COPY --from=builder /workspace/backend/database ./backend/database
 COPY --from=builder /workspace/backend/src ./backend/src
 
 # Set working directory to backend
 WORKDIR /workspace/backend
 
-# Create uploads directory and set permissions
-RUN mkdir -p public/uploads && chmod -R 777 public
+# Create necessary directories and set permissions
+RUN mkdir -p public/uploads database && chmod -R 777 public
 
 EXPOSE 1337
 CMD ["../node_modules/.pnpm/node_modules/.bin/strapi", "start"]
