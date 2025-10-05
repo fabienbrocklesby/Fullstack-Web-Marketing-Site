@@ -1,0 +1,171 @@
+---
+interface Props {
+  target: string; // ISO date e.g. 2025-10-15T00:00:00Z
+  label?: string;
+  align?: "left" | "center" | "right";
+  size?: "sm" | "md" | "lg";
+  class?: string;
+}
+const {
+  target,
+  label = "Offer ends in",
+  align = "center",
+  size = "md",
+  class: klass = "",
+} = Astro.props as Props;
+const justifyClass =
+  align === "center"
+    ? "justify-center"
+    : align === "right"
+      ? "justify-end"
+      : "justify-start";
+const sizeClass =
+  size === "lg" ? "text-3xl" : size === "sm" ? "text-lg" : "text-2xl";
+const numWidthClass = size === "lg" ? "w-14" : size === "sm" ? "w-10" : "w-12";
+---
+
+<div
+  class={`ll-countdown space-y-3 ${align === "center" ? "text-center" : align === "right" ? "text-right" : ""} ${klass}`}
+  data-target={target}
+>
+  {label && <div class="text-sm opacity-70">{label}</div>}
+  <div class={`flex gap-4 items-end ${justifyClass}`}>
+    <span class="flex flex-col items-center">
+      <span
+        class={`value value-days ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm`}
+      >
+        <span class="cd-days">0</span>
+      </span>
+      <span class="opacity-60 text-[10px] mt-1">days</span>
+    </span>
+
+    <span class="flex flex-col items-center">
+      <span
+        class={`value value-hours ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm`}
+      >
+        <span class="cd-hours">0</span>
+      </span>
+      <span class="opacity-60 text-[10px] mt-1">h</span>
+    </span>
+
+    <span class="flex flex-col items-center">
+      <span
+        class={`value value-mins ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm`}
+      >
+        <span class="cd-mins">0</span>
+      </span>
+      <span class="opacity-60 text-[10px] mt-1">m</span>
+    </span>
+
+    <span class="flex flex-col items-center">
+      <span
+        class={`value value-secs ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm relative overflow-hidden`}
+      >
+        <span class="current cd-secs">0</span>
+      </span>
+      <span class="opacity-60 text-[10px] mt-1">s</span>
+    </span>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const roots = document.querySelectorAll(
+      ".ll-countdown:not([data-initialized])",
+    );
+    roots.forEach((root) => {
+      if (!(root instanceof HTMLElement)) return;
+      root.setAttribute("data-initialized", "1");
+      const targetStr = root.getAttribute("data-target") || "";
+      const end = new Date(targetStr).getTime();
+      if (!end || isNaN(end)) return;
+      const daysEl = root.querySelector(".cd-days") as HTMLElement | null;
+      const hoursEl = root.querySelector(".cd-hours") as HTMLElement | null;
+      const minsEl = root.querySelector(".cd-mins") as HTMLElement | null;
+      const secsContainer = root.querySelector(
+        ".value-secs",
+      ) as HTMLElement | null;
+      const animateSeconds = (container: HTMLElement | null, value: number) => {
+        if (!container) return;
+        if (container.getAttribute("data-animating") === "1") return;
+        const current = container.querySelector(
+          ".current",
+        ) as HTMLElement | null;
+        const prevVal = current?.textContent ?? "";
+        const nextVal = String(value);
+        if (prevVal === nextVal) return;
+        // Build next element below the current
+        const next = document.createElement("span");
+        next.className = "next";
+        next.textContent = nextVal;
+        next.style.position = "absolute";
+        next.style.left = "0";
+        next.style.right = "0";
+        next.style.top = "100%";
+        next.style.opacity = "0";
+        next.style.display = "flex";
+        next.style.alignItems = "center";
+        next.style.justifyContent = "center";
+        container.appendChild(next);
+        if (current) {
+          current.style.position = "absolute";
+          current.style.left = "0";
+          current.style.right = "0";
+          current.style.top = "0";
+        }
+        // Force reflow
+        void container.getBoundingClientRect().height;
+        // Animate both
+        container.setAttribute("data-animating", "1");
+        const D = 300;
+        if (current) {
+          current.style.transition = `transform ${D}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${D}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+          current.style.transform = "translateY(-100%)";
+          current.style.opacity = "0";
+        }
+        next.style.transition = `transform ${D}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${D}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+        next.style.transform = "translateY(-100%)";
+        next.style.opacity = "1";
+        const onDone = () => {
+          container.removeEventListener("transitionend", onDone);
+          if (current && current.parentElement === container) current.remove();
+          next.className = "current cd-secs";
+          next.removeAttribute("style");
+          container.removeAttribute("data-animating");
+        };
+        container.addEventListener("transitionend", onDone);
+      };
+      const update = () => {
+        const now = Date.now();
+        let diff = Math.max(0, Math.floor((end - now) / 1000));
+        const days = Math.floor(diff / 86400);
+        diff -= days * 86400;
+        const hours = Math.floor(diff / 3600);
+        diff -= hours * 3600;
+        const mins = Math.floor(diff / 60);
+        diff -= mins * 60;
+        const secs = diff;
+        if (daysEl && daysEl.textContent !== String(days))
+          daysEl.textContent = String(days);
+        if (hoursEl && hoursEl.textContent !== String(hours))
+          hoursEl.textContent = String(hours);
+        if (minsEl && minsEl.textContent !== String(mins))
+          minsEl.textContent = String(mins);
+        animateSeconds(secsContainer, secs);
+      };
+      update();
+      const t = setInterval(update, 1000);
+      window.addEventListener("beforeunload", () => clearInterval(t));
+    });
+  })();
+</script>
+
+<style is:global>
+  .ll-countdown .value {
+    min-width: 2ch;
+  }
+  .ll-countdown .value-secs {
+    position: relative;
+    overflow: hidden;
+  }
+</style>

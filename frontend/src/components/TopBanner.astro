@@ -1,0 +1,66 @@
+---
+interface Banner {
+  id: number;
+  message: string;
+  severity?: "info" | "success" | "warning" | "error";
+  linkUrl?: string | null;
+  dismissible?: boolean;
+}
+
+const cmsUrl = Astro.props.cmsUrl as string | undefined;
+const storageKey = "ll_top_banner_dismissed";
+---
+
+<div id="top-banner" class="hidden"></div>
+
+<script is:inline>
+  const container = document.getElementById("top-banner");
+  const cmsUrl = document.documentElement.getAttribute("data-cms-url") || "";
+  const storageKey = "ll_top_banner_dismissed";
+
+  async function fetchBanner() {
+    try {
+      const res = await fetch(`${cmsUrl.replace(/\/$/, "")}/api/banner/active`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.banner || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderBanner(banner) {
+    if (!container || !banner) return;
+    if (
+      banner.dismissible &&
+      localStorage.getItem(storageKey) === String(banner.id)
+    ) {
+      return;
+    }
+    const severity = banner.severity || "info";
+    const colorClass = `alert-${severity}`;
+    const link = banner.linkUrl
+      ? `<a href="${banner.linkUrl}" class="link link-primary ml-2">Learn more</a>`
+      : "";
+    const closeBtn = banner.dismissible
+      ? `<button class="btn btn-sm btn-ghost ml-auto" aria-label="Dismiss" data-dismiss>✕</button>`
+      : "";
+    container.innerHTML = `
+      <div class="alert ${colorClass} rounded-none">
+        <span>${banner.message}${link}</span>
+        ${closeBtn}
+      </div>
+    `;
+    container.classList.remove("hidden");
+
+    const dismiss = container.querySelector("[data-dismiss]");
+    dismiss?.addEventListener("click", () => {
+      if (banner.dismissible) {
+        localStorage.setItem(storageKey, String(banner.id));
+      }
+      container.classList.add("hidden");
+    });
+  }
+
+  fetchBanner().then(renderBanner);
+</script>

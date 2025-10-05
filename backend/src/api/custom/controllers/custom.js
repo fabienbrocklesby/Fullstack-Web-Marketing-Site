@@ -73,7 +73,26 @@ module.exports = {
         return;
       }
 
-      console.log("Creating checkout session for:", priceInfo);
+      // Ensure Stripe key is configured on the server
+      if (!process.env.STRIPE_SECRET_KEY) {
+        console.error(
+          "Stripe configuration error: STRIPE_SECRET_KEY is missing in backend environment",
+        );
+        ctx.status = 500;
+        ctx.body = {
+          error: "Stripe not configured on server",
+          message:
+            "STRIPE_SECRET_KEY is not set in the backend environment. Add it to backend/.env and restart the backend.",
+        };
+        return;
+      }
+
+      console.log(
+        "Creating checkout session for:",
+        priceInfo,
+        "(Stripe key loaded, ends with)",
+        String(process.env.STRIPE_SECRET_KEY).slice(-4),
+      );
 
       // For development, create a checkout session with fixed price
       // In production, you'd use real Stripe price IDs
@@ -164,7 +183,26 @@ module.exports = {
         return;
       }
 
-      console.log("Creating customer checkout session for:", priceInfo);
+      // Ensure Stripe key is configured on the server
+      if (!process.env.STRIPE_SECRET_KEY) {
+        console.error(
+          "Stripe configuration error: STRIPE_SECRET_KEY is missing in backend environment",
+        );
+        ctx.status = 500;
+        ctx.body = {
+          error: "Stripe not configured on server",
+          message:
+            "STRIPE_SECRET_KEY is not set in the backend environment. Add it to backend/.env and restart the backend.",
+        };
+        return;
+      }
+
+      console.log(
+        "Creating customer checkout session for:",
+        priceInfo,
+        "(Stripe key loaded, ends with)",
+        String(process.env.STRIPE_SECRET_KEY).slice(-4),
+      );
 
       // Create Stripe checkout session with customer info
       const session = await stripe.checkout.sessions.create({

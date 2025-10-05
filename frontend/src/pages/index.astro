@@ -3,6 +3,8 @@ import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import BuyButton from "../components/BuyButton.astro";
+import DownloadButtons from "../components/DownloadButtons.astro";
+import Countdown from "../components/Countdown.astro";
 ---
 
 <Layout
@@ -30,16 +32,18 @@ import BuyButton from "../components/BuyButton.astro";
             hardware.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/pricing#enquire" class="btn btn-gradient btn-lg"
-              >Request Early Access</a
-            >
-            <a href="/pricing" class="btn btn-outline btn-lg"
-              >View Early Access Tiers</a
+            <a href="/pricing" class="btn btn-gradient btn-lg">Buy Now</a>
+            <a href="/customer/register" class="btn btn-outline btn-lg"
+              >Create Account</a
             >
           </div>
-          <p class="text-sm uppercase tracking-wide text-base-content/60">
-            Invite-only private beta • Limited seats
-          </p>
+          <DownloadButtons align="center" />
+          <div class="mt-4">
+            <Countdown
+              target="2025-10-15T00:00:00Z"
+              label="Founders pricing ends in"
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -81,9 +85,7 @@ import BuyButton from "../components/BuyButton.astro";
             engineered for speed, clarity, and trust.
           </p>
           <div class="flex flex-wrap gap-4">
-            <a href="/pricing#enquire" class="btn btn-gradient"
-              >Get Early Access</a
-            >
+            <a href="/pricing" class="btn btn-gradient">Buy Now</a>
             <a href="#workflow" class="btn btn-outline">See Workflow</a>
           </div>
         </div>
@@ -132,7 +134,8 @@ import BuyButton from "../components/BuyButton.astro";
                     class="aspect-video rounded-xl bg-base-300 overflow-hidden ring-1 ring-base-300/60 shadow-sm relative shadow-lg/30"
                   >
                     <video
-                      src="/landing/drag&drop.mp4"
+                      data-autoplay
+                      data-src="/landing/drag&drop.mp4"
                       class="w-full h-full object-cover"
                       muted
                       loop
@@ -165,7 +168,8 @@ import BuyButton from "../components/BuyButton.astro";
                     class="order-2 md:order-1 aspect-video rounded-xl bg-base-300 overflow-hidden ring-1 ring-base-300/60 shadow-sm relative shadow-lg/30"
                   >
                     <video
-                      src="/landing/preview.mp4"
+                      data-autoplay
+                      data-src="/landing/preview.mp4"
                       class="w-full h-full object-cover"
                       muted
                       loop
@@ -198,7 +202,8 @@ import BuyButton from "../components/BuyButton.astro";
                     class="aspect-video rounded-xl bg-base-300 overflow-hidden ring-1 ring-base-300/60 shadow-sm relative shadow-lg/30"
                   >
                     <video
-                      src="/landing/materials.mp4"
+                      data-autoplay
+                      data-src="/landing/materials.mp4"
                       class="w-full h-full object-cover"
                       muted
                       loop
@@ -231,7 +236,8 @@ import BuyButton from "../components/BuyButton.astro";
                     class="order-2 md:order-1 aspect-video rounded-xl bg-base-300 overflow-hidden ring-1 ring-base-300/60 shadow-sm relative shadow-lg/30"
                   >
                     <video
-                      src="/landing/stream.mp4"
+                      data-autoplay
+                      data-src="/landing/stream.mp4"
                       class="w-full h-full object-cover"
                       muted
                       loop
@@ -264,7 +270,8 @@ import BuyButton from "../components/BuyButton.astro";
                     class="aspect-video rounded-xl bg-base-300 overflow-hidden ring-1 ring-base-300/60 shadow-sm relative shadow-lg/30"
                   >
                     <video
-                      src="/landing/templates.mp4"
+                      data-autoplay
+                      data-src="/landing/templates.mp4"
                       class="w-full h-full object-cover"
                       muted
                       loop
@@ -485,7 +492,7 @@ import BuyButton from "../components/BuyButton.astro";
             </div>
           </div>
           <div class="flex gap-4">
-            <a href="/pricing#enquire" class="btn btn-gradient">Join Beta</a>
+            <a href="/pricing" class="btn btn-gradient">Buy Now</a>
             <a href="/pricing" class="btn btn-outline">Pricing</a>
           </div>
         </div>
@@ -642,22 +649,19 @@ import BuyButton from "../components/BuyButton.astro";
             >
               <input type="radio" name="faq-new" />
               <div class="collapse-title text-sm font-semibold">
-                What’s special about joining Early Access now?
+                What’s included at launch pricing?
               </div>
               <div
                 class="collapse-content text-sm text-base-content/70 leading-relaxed"
               >
-                Early Access grants a one-time, deeply discounted lifetime price
-                (no renewal, no future subscription). All future updates are
-                included. This pricing tier disappears permanently after public
-                launch.
+                Launch pricing is a limited-time lifetime license (no renewal).
+                After purchase, we’ll email your downloads and assist with setup
+                during early beta. Future pricing may increase.
               </div>
             </div>
           </div>
           <div class="pt-4 text-center">
-            <a href="/pricing#enquire" class="btn btn-gradient btn-sm"
-              >Request Early Access</a
-            >
+            <a href="/pricing" class="btn btn-gradient btn-sm">Buy Now</a>
           </div>
         </div>
       </div>
@@ -919,9 +923,7 @@ import BuyButton from "../components/BuyButton.astro";
           </div>
         </div>
         <div class="mt-10 flex flex-wrap gap-4 justify-center">
-          <a href="/pricing#enquire" class="btn btn-gradient"
-            >Request Early Access</a
-          >
+          <a href="/pricing" class="btn btn-gradient">Buy Now</a>
           <a href="/pricing" class="btn btn-outline">View Tiers</a>
         </div>
       </div>
@@ -937,12 +939,11 @@ import BuyButton from "../components/BuyButton.astro";
           Engrave smarter. Ship faster.
         </h2>
         <p class="text-lg text-base-content/70 mb-8">
-          Join the private beta and help shape the fastest iteration loop in
-          laser engraving.
+          We’ve launched — get yours now. Grandfathered price available for a
+          limited time. After purchase, we’ll email your downloads and provide
+          hands‑on setup support during early beta.
         </p>
-        <a href="/pricing#enquire" class="btn btn-gradient btn-lg"
-          >Request Early Access</a
-        >
+        <a href="/pricing" class="btn btn-gradient btn-lg">Buy Now</a>
       </div>
     </section>
   </main>
@@ -990,6 +991,11 @@ import BuyButton from "../components/BuyButton.astro";
           entries.forEach((entry) => {
             const v = entry.target as HTMLVideoElement;
             if (entry.isIntersecting) {
+              // Lazy-assign src on first intersection
+              const ds = v.getAttribute("data-src");
+              if (ds && !v.getAttribute("src")) {
+                v.setAttribute("src", ds);
+              }
               // Attempt play; catch to avoid unhandled promise rejection on some browsers
               const p = v.play();
               if (p && typeof p.catch === "function") p.catch(() => {});
@@ -998,11 +1004,12 @@ import BuyButton from "../components/BuyButton.astro";
             }
           });
         },
-        { threshold: 0.35 },
+        { threshold: 0.2 },
       );
-      document
-        .querySelectorAll("video[data-autoplay]")
-        .forEach((el) => vidObserver.observe(el));
+      const autoVideos = Array.from(
+        document.querySelectorAll("video[data-autoplay]"),
+      ) as HTMLVideoElement[];
+      autoVideos.forEach((el) => vidObserver.observe(el));
 
       // Scrollytelling workflow (one step visible at a time)
       const stepsContainer = document.getElementById("workflow-scrollytell");
@@ -1016,11 +1023,8 @@ import BuyButton from "../components/BuyButton.astro";
         if (spacer) {
           spacer.style.height = `${perStep * (steps.length - 1) + window.innerHeight * 0.2}px`;
         }
-        // Prime first
-        steps[0].style.opacity = "1";
-        steps[0].style.pointerEvents = "auto";
-        const activeClass = "[data-active]";
-        steps[0].dataset.active = "true";
+        // Prime first: explicitly activate to trigger video play
+        setActive(0);
 
         function setActive(idx: number) {
           steps.forEach((s, i) => {

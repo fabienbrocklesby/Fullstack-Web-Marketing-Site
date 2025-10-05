@@ -29,16 +29,9 @@ const buttonId = `buy-button-${priceId}`;
 <script>
   import Cookies from "js-cookie";
 
+  // Initialize buy buttons on DOM ready without waiting for tracker
   document.addEventListener("DOMContentLoaded", () => {
-    // Wait for journey tracker to be initialized
-    const waitForTracker = () => {
-      if ((window as any).journeyTracker) {
-        initializeBuyButton();
-      } else {
-        setTimeout(waitForTracker, 100);
-      }
-    };
-    waitForTracker();
+    initializeBuyButton();
   });
 
   function initializeBuyButton() {
@@ -105,8 +98,8 @@ const buttonId = `buy-button-${priceId}`;
               );
             }
 
-            // Redirect to customer registration with product info
-            window.location.href = `/customer/register?product=${encodeURIComponent(priceId ?? "")}&redirect=checkout`;
+            // Redirect to customer registration with product info and context
+            window.location.href = `/customer/register?from=pricing&product=${encodeURIComponent(priceId ?? "")}&redirect=checkout`;
           }
         });
       }

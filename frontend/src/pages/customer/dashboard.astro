@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
 <Layout title="Customer Dashboard">
@@ -82,6 +83,36 @@ import Layout from "../../layouts/Layout.astro";
     </div>
 
     <div class="container mx-auto px-4 py-8">
+      <div role="alert" class="alert alert-info mb-6">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6 shrink-0"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          ><path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          ></path></svg
+        >
+        <div class="flex-1">
+          <p class="font-semibold">Download the app</p>
+          <p class="text-sm opacity-80">
+            Free trial is built in — download and activate your trial inside the
+            app.
+          </p>
+          <div class="mt-2">
+            <DownloadButtons />
+          </div>
+        </div>
+        <button
+          class="btn btn-primary btn-sm"
+          onclick="document.getElementById('open-purchase')?.click()"
+          >Buy a License</button
+        >
+      </div>
       <!-- Hero Empty State (hidden until determined no licenses) -->
       <section id="purchase-hero" class="hidden mb-10">
         <div class="hero bg-base-100 rounded-2xl shadow-lg">
@@ -100,11 +131,19 @@ import Layout from "../../layouts/Layout.astro";
                 >
                   <option value="price_starter">Starter – $99</option>
                   <option value="price_pro" selected>Pro – $199</option>
-                  <option value="price_enterprise">Enterprise – $499</option>
                 </select>
                 <button id="hero-buy" class="btn btn-primary"
                   >Buy with Stripe</button
                 >
+              </div>
+              <div class="mt-4 text-sm text-base-content/70">
+                Enterprise or Education plans require a conversation first. <a
+                  href="/contact?subject=Enterprise%20Enquiry#contact-form"
+                  class="link link-primary">Contact us</a
+                > for Enterprise, or <a
+                  href="/contact?subject=Education%20Access%20Enquiry#contact-form"
+                  class="link">Education</a
+                >.
               </div>
               <p class="mt-3 text-xs opacity-60">
                 One device per license • Instant key issuance • Offline
@@ -244,11 +283,16 @@ import Layout from "../../layouts/Layout.astro";
         <select id="plan-select" class="select select-bordered w-full">
           <option value="price_starter">Starter ($99)</option>
           <option value="price_pro" selected>Pro ($199)</option>
-          <option value="price_enterprise">Enterprise ($499)</option>
         </select>
         <button class="btn btn-primary w-full">Checkout</button>
         <p id="purchase-error" class="text-error text-sm hidden"></p>
       </form>
+      <div class="text-xs text-base-content/70 mt-3">
+        For Enterprise or Education plans, please <a
+          href="/contact?subject=Enterprise%20Enquiry#contact-form"
+          class="link link-primary">contact us</a
+        > to discuss.
+      </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
   </dialog>
@@ -279,70 +323,100 @@ import Layout from "../../layouts/Layout.astro";
           >
         </div>
 
-        <div class="tabs tabs-boxed mb-4">
-          <a class="tab tab-active" onclick="showMacInstructions('windows')"
-            >Windows</a
+        <div class="tabs tabs-boxed mb-4" id="mac-top-tabs">
+          <a class="tab tab-active" onclick="showMacTopTab('via-app')"
+            >Via App</a
           >
-          <a class="tab" onclick="showMacInstructions('macos')">macOS</a>
-          <a class="tab" onclick="showMacInstructions('linux')">Linux</a>
+          <a class="tab" onclick="showMacTopTab('commands')">Commands</a>
         </div>
 
-        <div id="mac-instructions">
-          <!-- Windows Instructions -->
-          <div id="windows-instructions" class="mac-instruction">
-            <h4 class="font-semibold mb-2">Windows Command:</h4>
-            <div class="mockup-code mb-2">
-              <pre
-                data-prefix="$"><code>getmac /fo csv | findstr /V "Transport Name" | head -n 1</code></pre>
+        <!-- Via App Pane (default) -->
+        <div id="mac-via-app-pane" class="">
+          <div class="card bg-base-200">
+            <div class="card-body p-4">
+              <h4 class="card-title mb-2">Find MAC address via the app</h4>
+              <ul class="list list-disc ml-4 text-sm space-y-1">
+                <li>
+                  Open the application on the machine you want to activate.
+                </li>
+                <li>Open the activation options.</li>
+                <li>The screen will show your device MAC address. Copy it.</li>
+              </ul>
+              <p class="text-xs opacity-70 mt-2">
+                Tip: You can also use the system commands under the Commands
+                tab.
+              </p>
             </div>
-            <p class="text-sm mb-2">Or use this simpler command:</p>
-            <div class="mockup-code mb-2">
-              <pre data-prefix="$"><code>getmac</code></pre>
-            </div>
-            <button
-              class="btn btn-outline btn-sm"
-              onclick="copyCommand('getmac')">Copy Command</button
+          </div>
+        </div>
+
+        <!-- Commands Pane (with nested OS tabs) -->
+        <div id="mac-commands-pane" class="hidden">
+          <div class="tabs tabs-sm tabs-boxed mb-3" id="mac-commands-tabs">
+            <a class="tab tab-active" onclick="showMacInstructions('windows')"
+              >Windows</a
             >
+            <a class="tab" onclick="showMacInstructions('macos')">macOS</a>
+            <a class="tab" onclick="showMacInstructions('linux')">Linux</a>
           </div>
 
-          <!-- macOS Instructions -->
-          <div id="macos-instructions" class="mac-instruction hidden">
-            <h4 class="font-semibold mb-2">macOS Command:</h4>
-            <div class="mockup-code mb-2">
-              <pre
-                data-prefix="$"><code>ifconfig en0 | grep ether | awk '&#123;print $2&#125;'</code></pre>
+          <div id="mac-instructions">
+            <!-- Windows Instructions -->
+            <div id="windows-instructions" class="mac-instruction">
+              <h4 class="font-semibold mb-2">Windows Command:</h4>
+              <div class="mockup-code mb-2">
+                <pre
+                  data-prefix="$"><code>getmac /fo csv | findstr /V "Transport Name" | head -n 1</code></pre>
+              </div>
+              <p class="text-sm mb-2">Or use this simpler command:</p>
+              <div class="mockup-code mb-2">
+                <pre data-prefix="$"><code>getmac</code></pre>
+              </div>
+              <button
+                class="btn btn-outline btn-sm"
+                onclick="copyCommand('getmac')">Copy Command</button
+              >
             </div>
-            <p class="text-sm mb-2">
-              Alternative command (if en0 doesn't work):
-            </p>
-            <div class="mockup-code mb-2">
-              <pre
-                data-prefix="$"><code>networksetup -getmacaddress Wi-Fi | awk '&#123;print $3&#125;'</code></pre>
-            </div>
-            <button
-              class="btn btn-outline btn-sm"
-              onclick="copyCommand('ifconfig en0 | grep ether | awk \'{print $2}\'')"
-              >Copy Command</button
-            >
-          </div>
 
-          <!-- Linux Instructions -->
-          <div id="linux-instructions" class="mac-instruction hidden">
-            <h4 class="font-semibold mb-2">Linux Command:</h4>
-            <div class="mockup-code mb-2">
-              <pre
-                data-prefix="$"><code>ip link show | grep -A1 -E "^[0-9]+: (eth|wlan|enp)" | grep link/ether | head -n 1 | awk '&#123;print $2&#125;'</code></pre>
+            <!-- macOS Instructions -->
+            <div id="macos-instructions" class="mac-instruction hidden">
+              <h4 class="font-semibold mb-2">macOS Command:</h4>
+              <div class="mockup-code mb-2">
+                <pre
+                  data-prefix="$"><code>ifconfig en0 | grep ether | awk '&#123;print $2&#125;'</code></pre>
+              </div>
+              <p class="text-sm mb-2">
+                Alternative command (if en0 doesn't work):
+              </p>
+              <div class="mockup-code mb-2">
+                <pre
+                  data-prefix="$"><code>networksetup -getmacaddress Wi-Fi | awk '&#123;print $3&#125;'</code></pre>
+              </div>
+              <button
+                class="btn btn-outline btn-sm"
+                onclick="copyCommand('ifconfig en0 | grep ether | awk \'{print $2}\'')"
+                >Copy Command</button
+              >
             </div>
-            <p class="text-sm mb-2">Alternative command:</p>
-            <div class="mockup-code mb-2">
-              <pre
-                data-prefix="$"><code>cat /sys/class/net/*/address | head -n 1</code></pre>
+
+            <!-- Linux Instructions -->
+            <div id="linux-instructions" class="mac-instruction hidden">
+              <h4 class="font-semibold mb-2">Linux Command:</h4>
+              <div class="mockup-code mb-2">
+                <pre
+                  data-prefix="$"><code>ip link show | grep -A1 -E "^[0-9]+: (eth|wlan|enp)" | grep link/ether | head -n 1 | awk '&#123;print $2&#125;'</code></pre>
+              </div>
+              <p class="text-sm mb-2">Alternative command:</p>
+              <div class="mockup-code mb-2">
+                <pre
+                  data-prefix="$"><code>cat /sys/class/net/*/address | head -n 1</code></pre>
+              </div>
+              <button
+                class="btn btn-outline btn-sm"
+                onclick="copyCommand('ip link show | grep -A1 -E &quot;^[0-9]+: (eth|wlan|enp)&quot; | grep link/ether | head -n 1 | awk \'{print $2}\'')"
+                >Copy Command</button
+              >
             </div>
-            <button
-              class="btn btn-outline btn-sm"
-              onclick="copyCommand('ip link show | grep -A1 -E &quot;^[0-9]+: (eth|wlan|enp)&quot; | grep link/ether | head -n 1 | awk \'{print $2}\'')"
-              >Copy Command</button
-            >
           </div>
         </div>
 
@@ -390,6 +464,24 @@ import Layout from "../../layouts/Layout.astro";
             >Activation code generated! This code will only work on the machine
             with the MAC address you provided.</span
           >
+        </div>
+
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Your License Key:</span>
+          </label>
+          <div class="join w-full">
+            <input
+              type="text"
+              id="licenseKeyDisplay"
+              class="input input-bordered join-item flex-1"
+              readonly
+            />
+            <button
+              class="btn btn-ghost join-item"
+              onclick="copyFromDisplay('licenseKeyDisplay')">Copy</button
+            >
+          </div>
         </div>
 
         <div class="form-control">
@@ -449,9 +541,6 @@ import Layout from "../../layouts/Layout.astro";
         </div>
 
         <div class="modal-action">
-          <button class="btn btn-outline" onclick="resetActivationModal()"
-            >Generate Another</button
-          >
           <form method="dialog"><button class="btn">Done</button></form>
         </div>
       </div>
@@ -670,6 +759,11 @@ import Layout from "../../layouts/Layout.astro";
         }
         return;
       }
+      if (priceId === "price_enterprise") {
+        window.location.href =
+          "/contact?subject=Enterprise%20Enquiry#contact-form";
+        return;
+      }
       try {
         const res = await fetch(`${cmsUrl}/api/customer-checkout`, {
           method: "POST",
@@ -851,6 +945,7 @@ import Layout from "../../layouts/Layout.astro";
     }
 
     let currentLicenseId = null;
+    let currentLicenseKey = "";
     let currentLicenseKeys = []; // Store current license keys
 
     // Helper function to get current license keys
@@ -873,6 +968,7 @@ import Layout from "../../layouts/Layout.astro";
       }
 
       currentLicenseId = licenseId;
+      currentLicenseKey = license?.key || "";
       const modal = document.getElementById(
         "generate_activation_modal",
       ) as HTMLDialogElement;
@@ -890,6 +986,9 @@ import Layout from "../../layouts/Layout.astro";
       const activationCodeDisplay = document.getElementById(
         "activationCodeDisplay",
       ) as HTMLInputElement;
+      const licenseKeyDisplay = document.getElementById(
+        "licenseKeyDisplay",
+      ) as HTMLInputElement;
       const boundMacDisplay = document.getElementById(
         "boundMacDisplay",
       ) as HTMLInputElement;
@@ -897,33 +996,61 @@ import Layout from "../../layouts/Layout.astro";
 
       if (macInput) macInput.value = "";
       if (activationCodeDisplay) activationCodeDisplay.value = "";
+      if (licenseKeyDisplay) licenseKeyDisplay.value = currentLicenseKey || "";
       if (boundMacDisplay) boundMacDisplay.value = "";
       if (securityMacDisplay) securityMacDisplay.textContent = "";
+
+      // Reset tabs: default to Via App and Windows under Commands
+      const viaPane = document.getElementById("mac-via-app-pane");
+      const cmdPane = document.getElementById("mac-commands-pane");
+      const topTabs = document.getElementById("mac-top-tabs");
+      if (viaPane && cmdPane && topTabs) {
+        viaPane.classList.remove("hidden");
+        cmdPane.classList.add("hidden");
+        const tabs = topTabs.querySelectorAll(".tab");
+        tabs.forEach((el) => el.classList.remove("tab-active"));
+        (tabs[0] as HTMLElement)?.classList.add("tab-active");
+        (window as any).showMacInstructions("windows");
+      }
 
       modal?.showModal();
     };
 
     // MAC Address Modal functions
     (window as any).showMacInstructions = function (os: string) {
-      // Hide all instructions
-      document
+      const pane = document.getElementById("mac-commands-pane");
+      if (!pane) return;
+      pane
         .querySelectorAll(".mac-instruction")
         .forEach((el) => el.classList.add("hidden"));
-      // Remove active class from all tabs
-      document
-        .querySelectorAll(".tab")
-        .forEach((el) => el.classList.remove("tab-active"));
-
-      // Show selected instructions
+      const tabs = pane.querySelectorAll("#mac-commands-tabs .tab");
+      tabs.forEach((el) => el.classList.remove("tab-active"));
       const selectedInstructions = document.getElementById(
         `${os}-instructions`,
       );
       if (selectedInstructions) selectedInstructions.classList.remove("hidden");
-
-      // Add active class to clicked tab
-      const tabs = document.querySelectorAll(".tab");
       const osIndex = os === "windows" ? 0 : os === "macos" ? 1 : 2;
-      if (tabs[osIndex]) tabs[osIndex].classList.add("tab-active");
+      const tabEl = tabs[osIndex] as HTMLElement | undefined;
+      if (tabEl) tabEl.classList.add("tab-active");
+    };
+
+    (window as any).showMacTopTab = function (which: string) {
+      const viaPane = document.getElementById("mac-via-app-pane");
+      const cmdPane = document.getElementById("mac-commands-pane");
+      const topTabs = document.getElementById("mac-top-tabs");
+      if (!viaPane || !cmdPane || !topTabs) return;
+      const tabs = topTabs.querySelectorAll(".tab");
+      tabs.forEach((el) => el.classList.remove("tab-active"));
+      if (which === "via-app") {
+        viaPane.classList.remove("hidden");
+        cmdPane.classList.add("hidden");
+        (tabs[0] as HTMLElement)?.classList.add("tab-active");
+      } else {
+        viaPane.classList.add("hidden");
+        cmdPane.classList.remove("hidden");
+        (tabs[1] as HTMLElement)?.classList.add("tab-active");
+        (window as any).showMacInstructions("windows");
+      }
     };
 
     (window as any).copyCommand = function (command: string) {
@@ -988,6 +1115,9 @@ import Layout from "../../layouts/Layout.astro";
       const activationCodeDisplay = document.getElementById(
         "activationCodeDisplay",
       ) as HTMLInputElement;
+      const licenseKeyDisplay = document.getElementById(
+        "licenseKeyDisplay",
+      ) as HTMLInputElement;
       const boundMacDisplay = document.getElementById(
         "boundMacDisplay",
       ) as HTMLInputElement;
@@ -995,8 +1125,22 @@ import Layout from "../../layouts/Layout.astro";
 
       if (macInput) macInput.value = "";
       if (activationCodeDisplay) activationCodeDisplay.value = "";
+      if (licenseKeyDisplay) licenseKeyDisplay.value = "";
       if (boundMacDisplay) boundMacDisplay.value = "";
       if (securityMacDisplay) securityMacDisplay.textContent = "";
+
+      // Reset tabs to default state
+      const viaPane2 = document.getElementById("mac-via-app-pane");
+      const cmdPane2 = document.getElementById("mac-commands-pane");
+      const topTabs2 = document.getElementById("mac-top-tabs");
+      if (viaPane2 && cmdPane2 && topTabs2) {
+        viaPane2.classList.remove("hidden");
+        cmdPane2.classList.add("hidden");
+        const tabs = topTabs2.querySelectorAll(".tab");
+        tabs.forEach((el) => el.classList.remove("tab-active"));
+        (tabs[0] as HTMLElement)?.classList.add("tab-active");
+        (window as any).showMacInstructions("windows");
+      }
     };
 
     async function generateActivationCodeWithMac(macAddress: string) {
@@ -1029,6 +1173,9 @@ import Layout from "../../layouts/Layout.astro";
         const activationCodeDisplay = document.getElementById(
           "activationCodeDisplay",
         ) as HTMLInputElement;
+        const licenseKeyDisplay = document.getElementById(
+          "licenseKeyDisplay",
+        ) as HTMLInputElement;
         const boundMacDisplay = document.getElementById(
           "boundMacDisplay",
         ) as HTMLInputElement;
@@ -1036,6 +1183,8 @@ import Layout from "../../layouts/Layout.astro";
           document.getElementById("securityMacDisplay");
 
         if (activationCodeDisplay) activationCodeDisplay.value = activationCode;
+        if (licenseKeyDisplay)
+          licenseKeyDisplay.value = currentLicenseKey || "";
         if (boundMacDisplay) boundMacDisplay.value = macAddress;
         if (securityMacDisplay) securityMacDisplay.textContent = macAddress;
 

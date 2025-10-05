@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
 <Layout title="Customer Registration">
@@ -21,6 +22,16 @@ import Layout from "../../layouts/Layout.astro";
     <div
       class="container mx-auto px-5 py-10 flex flex-col lg:flex-row gap-14 lg:gap-20 items-center"
     >
+      <div
+        id="pricing-context-banner"
+        class="hidden w-full lg:absolute lg:top-4 lg:left-0 lg:right-0"
+      >
+        <div class="container mx-auto px-5">
+          <div role="alert" class="alert alert-info">
+            <span> Please create an account first to buy your license.</span>
+          </div>
+        </div>
+      </div>
       <div class="w-full max-w-xl space-y-10 text-center lg:text-left">
         <a
           href="/"
@@ -41,16 +52,23 @@ import Layout from "../../layouts/Layout.astro";
           <p
             class="text-base md:text-lg text-base-content/70 max-w-lg mx-auto lg:mx-0"
           >
-            Private beta access. Enter your activation code to create an account
-            and accelerate every single job with Lightlane’s optimised pipeline.
+            Create your account to start using Lightlane.
           </p>
+          <div role="alert" class="alert alert-info mt-3">
+            <span>
+              Download now — free trial is built in. Create an account to manage
+              your license and checkout faster when ready.
+            </span>
+          </div>
+          <DownloadButtons />
           <ul class="grid sm:grid-cols-2 gap-4 text-sm">
             <li
               class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
               <span class="badge badge-primary badge-soft mt-0.5">Preview</span
               ><span class="text-base-content/70"
-                >Real-time path & power feedback for confident first runs.</span>
+                >Real-time path & power feedback for confident first runs.</span
+              >
             </li>
             <li
               class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
@@ -58,30 +76,26 @@ import Layout from "../../layouts/Layout.astro";
               <span class="badge badge-success badge-soft mt-0.5"
                 >Throughput</span
               ><span class="text-base-content/70"
-                >Fewer modal hops. Rapid template reuse. High repeatability.</span>
+                >Fewer modal hops. Rapid template reuse. High repeatability.</span
+              >
             </li>
             <li
               class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
               <span class="badge badge-accent badge-soft mt-0.5">Offline</span
               ><span class="text-base-content/70"
-                >Activation & licensing resilient to patchy networks.</span>
+                >Activation & licensing resilient to patchy networks.</span
+              >
             </li>
             <li
               class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
               <span class="badge badge-secondary badge-soft mt-0.5">Scale</span
               ><span class="text-base-content/70"
-                >Materials DB & smart parameter memory reduce setup drift.</span>
+                >Materials DB & smart parameter memory reduce setup drift.</span
+              >
             </li>
           </ul>
-          <div
-            class="flex flex-wrap gap-3 justify-center lg:justify-start text-xs text-base-content/60"
-          >
-            <span class="badge badge-soft badge-info">Private Beta</span><span
-              class="badge badge-soft badge-warning">One-Time Codes</span
-            ><span class="badge badge-soft badge-error">Limited Seats</span>
-          </div>
         </div>
       </div>
       <div class="w-full max-w-sm">
@@ -94,21 +108,11 @@ import Layout from "../../layouts/Layout.astro";
                 Create your account
               </h2>
               <p class="text-sm text-base-content/60">
-                Activation code required – single use.
+                Public sign‑up is open. After purchase, we’ll email your
+                download with support.
               </p>
             </div>
             <form id="register-form" class="space-y-5" novalidate>
-              <div class="form-control gap-2">
-                <label class="text-sm font-medium" for="activationCode"
-                  >Activation Code</label
-                ><input
-                  type="text"
-                  id="activationCode"
-                  placeholder="e.g. BETA-9F3K-ALPHA"
-                  class="input input-bordered w-full tracking-wide"
-                  required
-                />
-              </div>
               <div class="grid grid-cols-2 gap-4">
                 <div class="form-control gap-2">
                   <label class="text-sm font-medium" for="firstName"
@@ -208,14 +212,21 @@ import Layout from "../../layouts/Layout.astro";
 </Layout>
 
 <script>
+  // Show contextual banner if coming from pricing page
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get("from");
+    const banner = document.getElementById("pricing-context-banner");
+    if (from === "pricing" && banner) {
+      banner.classList.remove("hidden");
+    }
+  })();
+
   document
     .getElementById("register-form")
     ?.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const activationCodeInput = document.getElementById(
-        "activationCode",
-      ) as HTMLInputElement;
       const firstNameInput = document.getElementById(
         "firstName",
       ) as HTMLInputElement;
@@ -235,7 +246,6 @@ import Layout from "../../layouts/Layout.astro";
       const successText = document.getElementById("success-text");
 
       if (
-        !activationCodeInput ||
         !firstNameInput ||
         !lastNameInput ||
         !emailInput ||
@@ -251,12 +261,6 @@ import Layout from "../../layouts/Layout.astro";
       // Hide previous messages
       errorDiv.classList.add("hidden");
       successDiv.classList.add("hidden");
-
-      if (!activationCodeInput.value.trim()) {
-        errorDiv.classList.remove("hidden");
-        errorText.textContent = "Activation code is required";
-        return;
-      }
 
       // Validate passwords match
       if (passwordInput.value !== confirmPasswordInput.value) {
@@ -300,7 +304,6 @@ import Layout from "../../layouts/Layout.astro";
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              activationCode: activationCodeInput.value.trim(),
               firstName: firstNameInput.value,
               lastName: lastNameInput.value,
               email: emailInput.value,

@@ -37,8 +37,8 @@ import { STRAPI_URL } from "../config/strapi";
           <p
             class="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto"
           >
-            Questions about early access, licensing, partnerships or the product
-            roadmap? Send a note and the right team will reply shortly.
+            Questions about licensing, partnerships or the product roadmap? Send
+            a note and the right team will reply shortly.
           </p>
           <div
             class="flex flex-wrap gap-3 justify-center text-xs md:text-sm text-base-content/60"
@@ -50,6 +50,11 @@ import { STRAPI_URL } from "../config/strapi";
               >Avg response &lt; 24h</span
             >
             <span class="badge badge-soft badge-accent">Global team</span>
+          </div>
+          <div class="pt-2 text-sm">
+            New here? <a href="/customer/register" class="link link-primary"
+              >Create Account</a
+            >
           </div>
         </div>
       </div>
@@ -181,9 +186,7 @@ import { STRAPI_URL } from "../config/strapi";
                   activation ID so we can prioritise triage.
                 </p>
                 <div class="flex flex-wrap gap-3">
-                  <a href="/pricing#enquire" class="btn btn-soft btn-sm"
-                    >Early access enquiry</a
-                  >
+                  <a href="/pricing" class="btn btn-soft btn-sm">Pricing</a>
                   <a href="/#faq" class="btn btn-outline btn-sm">View FAQ</a>
                 </div>
               </div>
@@ -277,6 +280,27 @@ import { STRAPI_URL } from "../config/strapi";
       const loader = form.querySelector("[data-btn-loading]");
       const successEl = form.querySelector("[data-success]");
       const errorEl = form.querySelector("[data-error]");
+
+      // Prefill subject/message if provided via query string (e.g. trial request)
+      try {
+        const url = new URL(window.location.href);
+        const subjectPrefill = url.searchParams.get("subject");
+        if (subjectPrefill) {
+          const subjectInput = form.querySelector("#subject");
+          if (subjectInput && "value" in subjectInput) {
+            subjectInput.value = subjectPrefill;
+            subjectInput.dispatchEvent(new Event("input"));
+          }
+        }
+        const messagePrefill = url.searchParams.get("message");
+        if (messagePrefill) {
+          const messageInput = form.querySelector("#message");
+          if (messageInput && "value" in messageInput) {
+            messageInput.value = messagePrefill;
+            messageInput.dispatchEvent(new Event("input"));
+          }
+        }
+      } catch {}
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         e.stopPropagation();
