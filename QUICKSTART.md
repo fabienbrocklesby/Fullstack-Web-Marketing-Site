@@ -28,26 +28,32 @@ For local testing without Dokploy:
 - Docker & Docker Compose installed
 - 2GB+ RAM available
 
-### Step 1: Start Local Services
+### Step 1: Choose your Docker workflow
+
+#### 🔄 Hot Reload (Recommended for daily development)
 
 ```bash
 cd /Volumes/Samsung\ T7/LightLane/Development/Main-Website
 
-# Start PostgreSQL, Strapi backend, and Astro frontend
+# Create .env files if you haven't already
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+
+# Start PostgreSQL, Strapi (watch mode), and Astro dev server with live reload
+docker compose -f docker-compose.dev.yml up --build
+```
+
+This stack mounts your local code into the containers so changes you make in VS Code are reflected immediately.
+
+#### 🧪 Production-like stack (no hot reload)
+
+```bash
 docker compose up -d
 ```
 
-Wait ~30 seconds for services to initialize:
+Use this when you want to mimic the production build artefacts that Dokploy deploys.
 
-```bash
-docker compose ps
-```
-
-You should see:
-- ✅ `backend` (Strapi API) - **Up**
-- ✅ `frontend` (Astro SSR) - **Up**
-
-**Note:** For local dev, you'll need to set up PostgreSQL separately or use Dokploy's managed database.
+> ⏱️ Both stacks can live side-by-side. Use `docker compose -f docker-compose.dev.yml down` to stop the hot reload stack.
 
 ### Step 2: Access Services
 
@@ -56,6 +62,12 @@ You should see:
 | Frontend | http://localhost:4321 | Main website |
 | Backend Admin | http://localhost:1337/admin | CMS dashboard |
 | Backend API | http://localhost:1337/api | REST API |
+
+#### Database connection hints
+
+- When services run inside Docker (`docker-compose.dev.yml`), use `DATABASE_HOST=postgres` in `backend/.env`.
+- When running Strapi directly on your host (without Docker), connect to the same database with `DATABASE_HOST=localhost` and port `5432`.
+- Any external tool (pgAdmin, psql) from your machine can reach the database at `localhost:5432`, credentials from `.env` (defaults: `strapi/strapi`).
 
 ### Step 3: Create Strapi Admin Account
 
@@ -108,6 +120,8 @@ Common issues:
 - Port conflict: Ensure port 1337 is free
 - Missing env vars: Check `.env` file
 
+> For the hot reload stack, prepend `-f docker-compose.dev.yml` to the commands above.
+
 ### Frontend won't start  
 ```bash
 docker compose logs frontend --tail 100
@@ -120,25 +134,29 @@ Common issues:
 ## 🛑 Stop Local Development
 
 ```bash
-# Stop services
+# Stop hot reload stack
+docker compose -f docker-compose.dev.yml down
+
+# Stop production-like stack
 docker compose down
 
-# Stop and delete all data
+# Remove all volumes/data for both stacks
+docker compose -f docker-compose.dev.yml down -v
 docker compose down -v
 ```
 
 ## � View Logs
 
 ```bash
-# View all logs
-docker compose logs -f
+# View all logs (hot reload stack)
+docker compose -f docker-compose.dev.yml logs -f
 
 # View specific service
-docker compose logs backend -f
-docker compose logs frontend -f
+docker compose -f docker-compose.dev.yml logs backend -f
+docker compose -f docker-compose.dev.yml logs frontend -f
 
 # Last 50 lines
-docker compose logs backend --tail 50
+docker compose -f docker-compose.dev.yml logs backend --tail 50
 ```
 
 ---

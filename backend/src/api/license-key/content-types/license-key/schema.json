@@ -31,6 +31,10 @@
       "target": "api::customer.customer",
       "inversedBy": "licenseKeys"
     },
+    "customerEmail": {
+      "type": "email",
+      "configurable": false
+    },
     "purchase": {
       "type": "relation",
       "relation": "oneToOne",
@@ -42,7 +46,10 @@
     },
     "status": {
       "type": "enumeration",
-      "enum": ["unused", "active"],
+      "enum": [
+        "unused",
+        "active"
+      ],
       "default": "unused"
     },
     "jti": {
@@ -55,7 +62,13 @@
     },
     "typ": {
       "type": "enumeration",
-      "enum": ["trial", "paid", "starter", "pro", "enterprise"],
+      "enum": [
+        "trial",
+        "paid",
+        "starter",
+        "pro",
+        "enterprise"
+      ],
       "default": "paid"
     },
     "trialStart": {

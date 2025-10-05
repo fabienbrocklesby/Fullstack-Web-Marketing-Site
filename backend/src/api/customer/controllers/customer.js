@@ -1,6 +1,45 @@
 const { createCoreController } = require("@strapi/strapi").factories;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const {
+  normalizeEmail,
+  linkPendingLicensesToCustomer,
+} = require("../../../utils/license-linker");
+
+const getSanitizedCustomer = async (strapi, customerId) => {
+  if (!customerId) {
+    return null;
+  }
+
+  const customer = await strapi.entityService.findOne(
+    "api::customer.customer",
+    customerId,
+    {
+      populate: ["purchases", "licenseKeys"],
+    },
+  );
+
+  if (!customer) {
+    return null;
+  }
+
+  const { password, ...customerData } = customer;
+  return customerData;
+};
+
+const getCustomerEmail = async (strapi, customerId) => {
+  if (!customerId) {
+    return null;
+  }
+
+  const customer = await strapi.entityService.findOne(
+    "api::customer.customer",
+    customerId,
+    { fields: ["email"] },
+  );
+
+  return customer?.email ? normalizeEmail(customer.email) : null;
+};
 
 module.exports = createCoreController(
   "api::customer.customer",
@@ -46,6 +85,8 @@ module.exports = createCoreController(
           },
         );
 
+        await linkPendingLicensesToCustomer(strapi, customer.id, customer.email);
+
         // Generate JWT token
         const token = jwt.sign(
           {
@@ -60,8 +101,11 @@ module.exports = createCoreController(
         // Remove password from response
         const { password: _, ...customerData } = customer;
 
+        const hydratedCustomer =
+          (await getSanitizedCustomer(strapi, customer.id)) || customerData;
+
         ctx.body = {
-          customer: customerData,
+          customer: hydratedCustomer,
           token,
         };
       } catch (error) {
@@ -109,6 +153,13 @@ module.exports = createCoreController(
           return ctx.badRequest("Invalid credentials");
         }
 
+        await linkPendingLicensesToCustomer(strapi, customer.id, customer.email);
+
+        const { password: __, ...customerData } = customer;
+
+        const hydratedCustomer =
+          (await getSanitizedCustomer(strapi, customer.id)) || customerData;
+
         // Generate JWT token
         const token = jwt.sign(
           {
@@ -120,11 +171,8 @@ module.exports = createCoreController(
           { expiresIn: "7d" },
         );
 
-        // Remove password from response
-        const { password: _, ...customerData } = customer;
-
         ctx.body = {
-          customer: customerData,
+          customer: hydratedCustomer,
           token,
         };
       } catch (error) {
@@ -142,6 +190,11 @@ module.exports = createCoreController(
         if (!customerId) {
           return ctx.unauthorized("Not authenticated");
         }
+
+        const email =
+          ctx.state.customer?.email || (await getCustomerEmail(strapi, customerId));
+
+        await linkPendingLicensesToCustomer(strapi, customerId, email);
 
         const customer = await strapi.entityService.findOne(
           "api::customer.customer",
@@ -203,10 +256,18 @@ module.exports = createCoreController(
           },
         );
 
-        // Remove password from response
-        const { password: _, ...customerData } = updatedCustomer;
+        await linkPendingLicensesToCustomer(
+          strapi,
+          customerId,
+          updatedCustomer.email,
+        );
 
-        ctx.body = { customer: customerData };
+        const { password: __, ...customerData } = updatedCustomer;
+
+        const hydratedCustomer =
+          (await getSanitizedCustomer(strapi, customerId)) || customerData;
+
+        ctx.body = { customer: hydratedCustomer };
       } catch (error) {
         console.error("Update customer profile error:", error);
         ctx.status = 500;

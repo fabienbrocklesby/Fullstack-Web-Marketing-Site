@@ -42,3 +42,6 @@ logs/
 
 # Uploads
 backend/public/uploads/
+
+#pnpm
+.pnpm-store/** 

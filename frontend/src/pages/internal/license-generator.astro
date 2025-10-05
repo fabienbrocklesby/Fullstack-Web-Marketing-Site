@@ -1,0 +1,367 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const LICENSE_TYPES = [
+  { value: "paid", label: "Paid" },
+  { value: "starter", label: "Starter" },
+  { value: "pro", label: "Pro" },
+  { value: "enterprise", label: "Enterprise" },
+  { value: "trial", label: "Trial" },
+];
+---
+
+<Layout title="Internal License Generator">
+  <main class="min-h-screen bg-base-200 py-16">
+    <div class="container mx-auto px-4">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold">Internal License Generator</h1>
+        <p class="mt-2 max-w-2xl text-base-content/80">
+          Generate license keys that match the same format produced after a
+          Stripe checkout. Use this for manual issuance before a customer exists
+          in Strapi—just paste the generated payload into a new
+          <code class="badge badge-neutral mx-1">License Key</code> entry and set
+          the
+          <span class="badge badge-neutral mx-1">customer</span> or
+          <span class="badge badge-neutral mx-1">customerEmail</span> field as needed.
+        </p>
+      </div>
+
+      <div class="grid gap-8 lg:grid-cols-[1.2fr,1fr]">
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Input details</h2>
+            <form id="license-generator" class="space-y-4">
+              <div class="form-control">
+                <label class="label" for="licenseType">
+                  <span class="label-text">License type</span>
+                </label>
+                <select
+                  id="licenseType"
+                  class="select select-bordered"
+                  required
+                >
+                  <option value="" disabled selected>Choose type</option>
+                  {
+                    LICENSE_TYPES.map((type) => (
+                      <option value={type.value}>{type.label}</option>
+                    ))
+                  }
+                </select>
+                <label class="label">
+                  <span class="label-text-alt">
+                    Maps to the <code>typ</code> field in Strapi.
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-control">
+                <label class="label" for="productName">
+                  <span class="label-text">Product name</span>
+                </label>
+                <input
+                  id="productName"
+                  type="text"
+                  placeholder="Starter Plan"
+                  class="input input-bordered"
+                  required
+                />
+                <label class="label">
+                  <span class="label-text-alt">
+                    Used for the <code>productName</code> field and the license key
+                    prefix.
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-control">
+                <label class="label" for="priceId">
+                  <span class="label-text">Price ID</span>
+                </label>
+                <input
+                  id="priceId"
+                  type="text"
+                  placeholder="price_pro_123"
+                  class="input input-bordered"
+                  required
+                />
+                <label class="label">
+                  <span class="label-text-alt">
+                    Use the Stripe price ID that should be attached to the
+                    record.
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-control">
+                <label class="label" for="customerId">
+                  <span class="label-text">Customer ID (optional)</span>
+                </label>
+                <input
+                  id="customerId"
+                  type="text"
+                  placeholder="1234"
+                  class="input input-bordered"
+                />
+                <label class="label">
+                  <span class="label-text-alt">
+                    Only needed if the customer already exists. Otherwise, set a <code
+                      >customerEmail</code
+                    > manually when creating the record.
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-control">
+                <label class="label" for="customerEmail">
+                  <span class="label-text">Customer email (optional)</span>
+                </label>
+                <input
+                  id="customerEmail"
+                  type="email"
+                  placeholder="customer@example.com"
+                  class="input input-bordered"
+                />
+                <label class="label">
+                  <span class="label-text-alt">
+                    Helpful when issuing a key before the customer account
+                    exists—add this value to the Strapi record.
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-control">
+                <label class="label" for="activationLimit">
+                  <span class="label-text">Max activations</span>
+                </label>
+                <input
+                  id="activationLimit"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="input input-bordered"
+                  value="1"
+                  required
+                />
+              </div>
+
+              <button type="submit" class="btn btn-primary w-full">
+                Generate license payload
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body space-y-4">
+            <h2 class="card-title">Generated output</h2>
+            <div id="no-result" class="rounded-lg border border-dashed p-6">
+              <p class="text-base-content/70">
+                Fill the form and click
+                <strong>Generate license payload</strong> to preview the license
+                key and Strapi data snippet here.
+              </p>
+            </div>
+
+            <div id="result" class="hidden space-y-4">
+              <div>
+                <div class="flex items-center justify-between gap-4">
+                  <span
+                    class="text-sm font-semibold uppercase text-base-content/60"
+                  >
+                    License Key
+                  </span>
+                  <button
+                    id="copyKey"
+                    class="btn btn-ghost btn-xs"
+                    type="button"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <code
+                  id="licenseKeyOutput"
+                  class="mt-2 block rounded bg-base-200 p-3 font-mono text-sm"
+                ></code>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between gap-4">
+                  <span
+                    class="text-sm font-semibold uppercase text-base-content/60"
+                  >
+                    Strapi payload
+                  </span>
+                  <button
+                    id="copyPayload"
+                    class="btn btn-ghost btn-xs"
+                    type="button"
+                  >
+                    Copy JSON
+                  </button>
+                </div>
+                <pre
+                  id="payloadOutput"
+                  class="mt-2 max-h-80 overflow-auto rounded bg-base-200 p-4 text-left text-sm">
+                </pre>
+              </div>
+
+              <div class="alert alert-info">
+                <span>
+                  Paste this payload into a new
+                  <strong>License Key</strong> record. Set the customer relation
+                  or email and save—Strapi will take care of linking the license
+                  once the customer signs in.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const form = document.getElementById(
+    "license-generator",
+  ) as HTMLFormElement | null;
+  const resultWrapper = document.getElementById("result");
+  const emptyState = document.getElementById("no-result");
+  const keyOutput = document.getElementById("licenseKeyOutput");
+  const payloadOutput = document.getElementById("payloadOutput");
+  const copyKeyButton = document.getElementById("copyKey");
+  const copyPayloadButton = document.getElementById("copyPayload");
+
+  const buildLicenseKey = (productName: string, customerId?: string | null) => {
+    const productCode = (productName || "PRD").trim().slice(0, 3).toUpperCase();
+    const customerCode = (customerId || "0000").toString().slice(0, 4);
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const randomSegment = Array.from(randomBytes)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+
+    return `${productCode}-${customerCode}-${timestamp}-${randomSegment}`;
+  };
+
+  const prettyJSON = (data: Record<string, unknown>) =>
+    JSON.stringify(data, null, 2);
+
+  const copyToClipboard = async (value: string, button: HTMLElement | null) => {
+    if (!navigator.clipboard) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      if (button) {
+        const original = button.textContent;
+        button.textContent = "Copied!";
+        button.classList.add("btn-success");
+        setTimeout(() => {
+          button.textContent = original || "Copy";
+          button.classList.remove("btn-success");
+        }, 1600);
+      }
+    } catch (error) {
+      console.error("Unable to copy", error);
+    }
+  };
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const productNameInput = document.getElementById(
+      "productName",
+    ) as HTMLInputElement | null;
+    const priceIdInput = document.getElementById(
+      "priceId",
+    ) as HTMLInputElement | null;
+    const licenseTypeInput = document.getElementById(
+      "licenseType",
+    ) as HTMLSelectElement | null;
+    const customerIdInput = document.getElementById(
+      "customerId",
+    ) as HTMLInputElement | null;
+    const customerEmailInput = document.getElementById(
+      "customerEmail",
+    ) as HTMLInputElement | null;
+    const activationInput = document.getElementById(
+      "activationLimit",
+    ) as HTMLInputElement | null;
+
+    if (
+      !productNameInput ||
+      !priceIdInput ||
+      !licenseTypeInput ||
+      !activationInput
+    ) {
+      return;
+    }
+
+    const productName = productNameInput.value.trim();
+    const priceId = priceIdInput.value.trim();
+    const licenseType = licenseTypeInput.value;
+    const customerIdRaw = customerIdInput?.value.trim();
+    const customerEmail = customerEmailInput?.value.trim();
+    const maxActivations = Math.max(
+      1,
+      Number.parseInt(activationInput.value, 10) || 1,
+    );
+
+    if (!productName || !priceId || !licenseType) {
+      return;
+    }
+
+    const licenseKey = buildLicenseKey(productName, customerIdRaw);
+
+    const payload: Record<string, unknown> = {
+      key: licenseKey,
+      productName,
+      priceId,
+      typ: licenseType,
+      status: "unused",
+      isActive: true,
+      isUsed: false,
+      maxActivations,
+      currentActivations: 0,
+    };
+
+    if (customerIdRaw) {
+      payload.customer = Number.isNaN(Number(customerIdRaw))
+        ? customerIdRaw
+        : Number(customerIdRaw);
+    }
+
+    if (customerEmail) {
+      payload.customerEmail = customerEmail.toLowerCase();
+    }
+
+    const issuedAt = new Date().toISOString();
+    payload.metadata = {
+      issuedBy: "internal-tool",
+      issuedAt,
+    };
+
+    if (keyOutput && payloadOutput && resultWrapper && emptyState) {
+      keyOutput.textContent = licenseKey;
+      payloadOutput.textContent = prettyJSON(payload);
+      resultWrapper.classList.remove("hidden");
+      emptyState.classList.add("hidden");
+    }
+  });
+
+  copyKeyButton?.addEventListener("click", () => {
+    if (keyOutput?.textContent) {
+      copyToClipboard(keyOutput.textContent, copyKeyButton);
+    }
+  });
+
+  copyPayloadButton?.addEventListener("click", () => {
+    if (payloadOutput?.textContent) {
+      copyToClipboard(payloadOutput.textContent, copyPayloadButton);
+    }
+  });
+</script>

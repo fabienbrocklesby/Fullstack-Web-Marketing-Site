@@ -9,6 +9,7 @@
     "dev": "strapi develop",
     "start": "strapi start",
     "strapi": "strapi",
+    "test": "node --test tests/**/*.test.js",
     "lint": "eslint . --ext .js",
     "format": "prettier --write .",
     "seed": "node scripts/seed-data.js"

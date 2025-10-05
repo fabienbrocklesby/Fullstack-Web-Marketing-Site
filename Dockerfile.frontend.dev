@@ -1,0 +1,16 @@
+FROM node:22-alpine
+
+RUN apk add --no-cache bash
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+ENV PNPM_HOME=/root/.local/share/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+
+WORKDIR /workspace
+
+COPY docker/dev/entrypoint.frontend.sh /usr/local/bin/start-frontend.sh
+RUN chmod +x /usr/local/bin/start-frontend.sh
+
+EXPOSE 4321
+CMD ["/usr/local/bin/start-frontend.sh"]

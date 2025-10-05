@@ -52,10 +52,14 @@ A production-ready SaaS marketing site built with Astro frontend and Strapi back
 
 ### Option 2: Local Development
 
-**For local testing:**
+**New: Hot-reloading Docker environment**
 
-1. See [QUICKSTART.md](./QUICKSTART.md) for local Docker setup
-2. Configure PostgreSQL separately or use Dokploy
+- Run `docker compose -f docker-compose.dev.yml up --build` for a full stack with live reload
+- Backend changes under `backend/` and frontend changes under `frontend/` reflect instantly inside the containers
+- No impact on the existing production images or Dokploy workflow
+- Internal tools live under the same stack; visit `/internal/license-generator` to craft manual license payloads that mirror production keys.
+
+See [QUICKSTART.md](./QUICKSTART.md) for detailed instructions and troubleshooting tips.
 
 ## 📋 Prerequisites
 

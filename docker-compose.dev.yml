@@ -1,0 +1,83 @@
+# Local development compose override with live reload support
+# Usage: docker compose -f docker-compose.dev.yml up --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lightlane-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-strapi}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-strapi}
+      POSTGRES_DB: ${DB_NAME:-strapi}
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-strapi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend.dev
+    container_name: lightlane-backend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DB_NAME:-strapi}
+      DATABASE_USER: ${DB_USER:-strapi}
+      DATABASE_PASSWORD: ${DB_PASSWORD:-strapi}
+      APP_KEYS: ${APP_KEYS:-devAppKey1,devAppKey2}
+      API_TOKEN_SALT: ${API_TOKEN_SALT:-devApiTokenSalt}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-devAdminJwtSecret}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:-devTransferTokenSalt}
+      JWT_SECRET: ${JWT_SECRET:-devJwtSecret}
+      HOST: 0.0.0.0
+      PORT: 1337
+      CHOKIDAR_USEPOLLING: "true"
+    working_dir: /workspace/backend
+    volumes:
+      - .:/workspace:cached
+      - backend_node_modules:/workspace/backend/node_modules
+      - pnpm_store:/root/.local/share/pnpm/store
+      - uploads_dev:/workspace/backend/public/uploads
+    ports:
+      - "1337:1337"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    container_name: lightlane-frontend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PUBLIC_STRAPI_URL: ${PUBLIC_STRAPI_URL:-http://localhost:1337}
+      HOST: 0.0.0.0
+      PORT: 4321
+    working_dir: /workspace/frontend
+    volumes:
+      - .:/workspace:cached
+      - frontend_node_modules:/workspace/frontend/node_modules
+      - pnpm_store:/root/.local/share/pnpm/store
+    ports:
+      - "4321:4321"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data_dev:
+  backend_node_modules:
+  frontend_node_modules:
+  pnpm_store:
+  uploads_dev:
