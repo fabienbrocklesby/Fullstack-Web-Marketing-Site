@@ -1,422 +1,98 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import Header from "../components/Header.astro";
-import Footer from "../components/Footer.astro";
-import BuyButton from "../components/BuyButton.astro";
-import DownloadButtons from "../components/DownloadButtons.astro";
-import Countdown from "../components/Countdown.astro";
+export interface Props {
+  title?: string;
+  description?: string;
+  keywords?: string;
+  image?: string;
+  canonical?: string;
+  noindex?: boolean;
+  nofollow?: boolean;
+  ogType?: string; // default website, can be article for blog posts
+}
+
+const {
+  title = "Lightlane – Laser Engraving Software",
+  description = "Lightlane is the faster, smarter, gradient-driven laser engraving software: import → preview → engrave in fewer clicks.",
+  keywords = "",
+  image = "/og-lightlane.jpg",
+  canonical = Astro.url.href,
+  noindex = false,
+  nofollow = false,
+  ogType = "website",
+} = Astro.props;
+
+// @ts-ignore - Astro injects import.meta.env at build time
+import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
+import { STRAPI_URL } from "../config/strapi";
+
+const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
+const imageUrl = new URL(image, siteUrl).href;
 ---
 
-<Layout
-  title="Lightlane Pricing"
-  description="Public launch pricing — limited time. Faster import → preview → engrave workflows."
->
-  <Header />
+<!doctype html>
+<html lang="en" data-cms-url={STRAPI_URL} data-theme="lightlane">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Favicons -->
+    <link rel="icon" href="/AppIcon.ico" sizes="any" />
+    <link rel="shortcut icon" href="/AppIcon.ico" />
+    <!-- Apple Touch Icon (keep existing PNG if present; generate 180x180 PNG from AppIcon if not) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/site.webmanifest" />
+    <!-- Optional: Safari pinned tab (provide a monochrome SVG named safari-pinned-tab.svg if available) -->
+    <!-- <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#0F172A" /> -->
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="canonical" href={canonical} />
 
-  <main>
-    <section class="relative py-24 overflow-hidden">
-      <div
-        class="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(42,158,219,0.15),transparent_60%)]"
-      >
-      </div>
-      <div class="container mx-auto px-4 relative">
-        <div class="text-center mb-16 space-y-6 max-w-3xl mx-auto" data-animate>
-          <h1 class="text-4xl md:text-5xl font-bold text-ll-gradient pb-1">
-            Launch Pricing (Limited Time)
-          </h1>
-          <p class="text-lg md:text-xl text-base-content/70">
-            Prices increase on <span class="font-semibold">October 15</span>.
-            Lock in a <span class="font-semibold">one‑time lifetime</span> license
-            today and keep this rate forever.
-          </p>
-          <div
-            class="flex flex-col md:flex-row gap-4 justify-center items-center"
-          >
-            <div
-              class="badge badge-success badge-soft text-xs py-3 px-4 tracking-wide"
-            >
-              PUBLIC LAUNCH • LIMITED TIME
-            </div>
-            <div
-              class="badge badge-primary badge-soft text-xs py-3 px-4 tracking-wide"
-            >
-              GRANDFATHERED LIFETIME UPDATES
-            </div>
-          </div>
-          <div class="mt-2">
-            <Countdown
-              target="2025-10-15T00:00:00Z"
-              label="Intro pricing ends in"
-            />
-          </div>
-          <div role="alert" class="alert alert-warning justify-center">
-            <span>
-              Founders deal: one-time lifetime pricing ends Oct 15. Future
-              prices will be higher.
-            </span>
-          </div>
-          <DownloadButtons align="center" />
-          <div class="text-sm">
-            <a href="/customer/register" class="link link-primary"
-              >Create an account</a
-            > to manage your license and checkout faster.
-          </div>
-        </div>
+    <!-- SEO Meta Tags -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {keywords && <meta name="keywords" content={keywords} />}
+    <meta
+      name="robots"
+      content={`${noindex ? "noindex" : "index"}, ${nofollow ? "nofollow" : "follow"}`}
+    />
 
-        <div
-          class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto"
-        >
-          <!-- Hobbyist Plan -->
-          <div
-            class="plan-card group relative p-px rounded-2xl bg-gradient-to-br from-base-300/60 via-base-200 to-base-100 shadow-lg hover:shadow-primary/20 transition"
-            data-animate
-          >
-            <div
-              class="relative rounded-[inherit] bg-base-200/80 backdrop-blur-sm p-6 flex flex-col h-full border border-base-300"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-2xl font-semibold flex items-center gap-2">
-                  Hobbyist
-                </h3>
-              </div>
-              <p class="text-sm text-base-content/70 mb-4 leading-relaxed">
-                Solo makers. Fast local iteration with core engraving pipeline.
-              </p>
-              <div class="mb-6">
-                <span class="text-4xl font-bold tracking-tight">$100</span>
-                <span class="text-xs text-base-content/50 ml-1">one-time</span>
-                <div class="text-[11px] text-success mt-1">
-                  Lifetime updates • Grandfathered
-                </div>
-              </div>
-              <ul class="space-y-2 text-sm flex-1">
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>GRBL / G-code export &
-                  streaming
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Import → preview → engrave
-                  pipeline
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Offline activation
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Materials presets (local)
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Community support
-                </li>
-                <li class="flex gap-2 opacity-75">
-                  <span class="text-warning">•</span>Ruida / K40 <span
-                    class="badge badge-neutral badge-soft text-[10px] ml-1"
-                    >UPGRADE</span
-                  >
-                </li>
-                <li class="flex gap-2 opacity-75">
-                  <span class="text-warning">•</span>Remote engraving suite <span
-                    class="badge badge-secondary badge-soft text-[10px] ml-1"
-                    >PRO+</span
-                  >
-                </li>
-              </ul>
-              <BuyButton
-                className="mt-6 w-full animate-[fadeIn_.6s_.05s_backwards]"
-                variant="primary"
-                priceId="price_starter"
-                text="Buy Hobbyist"
-              />
-            </div>
-          </div>
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={imageUrl} />
 
-          <!-- Pro Plan -->
-          <div
-            class="plan-card group relative p-px rounded-2xl bg-gradient-to-br from-primary/40 via-primary/20 to-base-100 shadow-xl ring-1 ring-primary/40 scale-[1.015] hover:scale-[1.03] transition"
-            data-animate
-          >
-            <div
-              class="absolute -inset-px rounded-[inherit] bg-gradient-to-br from-primary/60 to-accent/40 opacity-0 group-hover:opacity-100 transition"
-            >
-            </div>
-            <div
-              class="relative rounded-[inherit] bg-base-200/90 backdrop-blur-md p-6 flex flex-col h-full border border-primary/40"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-2xl font-semibold flex items-center gap-2">
-                  Pro <span
-                    class="badge badge-secondary badge-soft whitespace-normal text-[10px]"
-                    >MOST POPULAR</span
-                  >
-                </h3>
-              </div>
-              <p class="text-sm text-base-content/70 mb-4 leading-relaxed">
-                Advanced controllers + upcoming team & remote fabrication
-                toolkit.
-              </p>
-              <div class="mb-6">
-                <span class="text-4xl font-bold tracking-tight">$200</span>
-                <span class="text-xs text-base-content/50 ml-1">one-time</span>
-                <div class="text-[11px] text-success mt-1">
-                  Lifetime updates • Grandfathered
-                </div>
-              </div>
-              <ul class="space-y-2 text-sm flex-1">
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Everything in Hobbyist
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Ruida controller support
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>K40 / M2-Nano <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >COMING SOON</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Priority support
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Template packs &
-                  marketplace access
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Device streaming
-                  enhancements
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-accent">•</span>Multi-seat team seats <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >COMING SOON</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-accent">•</span>Remote engraving suite <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >COMING SOON</span
-                  >
-                </li>
-              </ul>
-              <BuyButton
-                className="mt-6 w-full animate-[fadeIn_.6s_.1s_backwards]"
-                variant="primary"
-                priceId="price_pro"
-                text="Buy Pro"
-              />
-              <p class="mt-3 text-[11px] text-base-content/50">
-                Founders: future extra seats discounted permanently.
-              </p>
-            </div>
-          </div>
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={canonical} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Blog RSS"
+      href="/blog/rss.xml"
+    />
+    <slot name="headExtensions" />
 
-          <!-- Enterprise Plan -->
-          <div
-            class="plan-card group relative p-px rounded-2xl bg-gradient-to-br from-base-300/70 via-base-200 to-base-100 shadow-lg hover:shadow-accent/20 transition"
-            data-animate
-          >
-            <div
-              class="relative rounded-[inherit] bg-base-200/85 backdrop-blur-sm p-6 flex flex-col h-full border border-base-300"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-2xl font-semibold">Enterprise</h3>
-                <div class="flex gap-2">
-                  <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px]"
-                    >DISCUSS</span
-                  >
-                </div>
-              </div>
-              <p class="text-sm text-base-content/70 mb-4 leading-relaxed">
-                Scaling operations & production facilities needing governance &
-                customisation.
-              </p>
-              <div class="mb-6">
-                <span class="text-3xl font-semibold tracking-tight">Custom</span
-                >
-                <div class="text-[11px] text-base-content/50 mt-1">
-                  Tailored rollout & roadmap alignment
-                </div>
-              </div>
-              <ul class="space-y-2 text-sm flex-1">
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Everything in Pro
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>White-label build option
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Advanced automation APIs
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Early feature access
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Priority success & advisory
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-accent">•</span>Bulk / multi-site seat
-                  management <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >COMING SOON</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-accent">•</span>Remote engraving
-                  orchestration <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >COMING SOON</span
-                  >
-                </li>
-              </ul>
-              <a
-                href="/contact?subject=Enterprise%20Enquiry#contact-form"
-                class="mt-6 btn btn-outline w-full animate-[fadeIn_.6s_.15s_backwards]"
-                >Talk to Us</a
-              >
-              <p class="mt-3 text-[11px] text-base-content/50">
-                Founders lock discount on all future seat blocks.
-              </p>
-            </div>
-          </div>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
-          <!-- Education Plan -->
-          <div
-            class="plan-card group relative p-px rounded-2xl bg-gradient-to-br from-base-300/70 via-base-200 to-base-100 shadow-lg hover:shadow-info/20 transition"
-            data-animate
-          >
-            <div
-              class="relative rounded-[inherit] bg-base-200/85 backdrop-blur-sm p-6 flex flex-col h-full border border-base-300"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-2xl font-semibold">Education</h3>
-                <div class="flex gap-2">
-                  <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px]"
-                    >DISCUSS</span
-                  >
-                </div>
-              </div>
-              <p class="text-sm text-base-content/70 mb-4 leading-relaxed">
-                Labs, classrooms & maker programs needing safe, repeatable
-                workflows.
-              </p>
-              <div class="mb-6">
-                <span class="text-3xl font-semibold tracking-tight">Custom</span
-                >
-                <div class="text-[11px] text-base-content/50 mt-1">
-                  Institution & program based
-                </div>
-              </div>
-              <ul class="space-y-2 text-sm flex-1">
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Everything in Pro
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Lab / station management <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >PLANNED</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Central material & template
-                  sync
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-success">✓</span>Discounted expansion seats
-                  (founders)
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-accent">•</span>Classroom remote queue <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >COMING SOON</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span class="text-accent">•</span>Curriculum content packs <span
-                    class="badge badge-warning badge-soft whitespace-nowrap text-[10px] ml-1"
-                    >COMING SOON</span
-                  >
-                </li>
-              </ul>
-              <a
-                href="/contact?subject=Education%20Access%20Enquiry#contact-form"
-                class="mt-6 btn btn-outline w-full animate-[fadeIn_.6s_.2s_backwards]"
-                >Discuss Access</a
-              >
-              <p class="mt-3 text-[11px] text-base-content/50">
-                Founders lock permanent base seat allocation.
-              </p>
-            </div>
-          </div>
-        </div>
+    <meta name="generator" content={Astro.generator} />
+  </head>
+  <body>
+    <slot />
 
-        <div
-          class="mt-20 max-w-4xl mx-auto grid md:grid-cols-2 gap-10 items-start"
-          data-animate
-        >
-          <div class="space-y-4">
-            <h2 class="text-2xl font-semibold text-ll-gradient">
-              Why lock pricing now?
-            </h2>
-            <ul class="text-sm space-y-2 text-base-content/70">
-              <li class="flex gap-2">
-                <span class="text-accent">•</span>One-time founding purchase →
-                lifetime updates & features.
-              </li>
-              <li class="flex gap-2">
-                <span class="text-accent">•</span>Seat baseline guaranteed:
-                first seat can’t be clawed back.
-              </li>
-              <li class="flex gap-2">
-                <span class="text-accent">•</span>Permanent discounted rate on
-                future additional seats.
-              </li>
-              <li class="flex gap-2">
-                <span class="text-accent">•</span>Priority feedback channel
-                influences roadmap.
-              </li>
-              <li class="flex gap-2">
-                <span class="text-accent">•</span>Earlier access to controller &
-                remote tooling betas.
-              </li>
-            </ul>
-          </div>
-          <div
-            class="p-6 rounded-xl bg-base-200/60 border border-base-300 space-y-4 relative overflow-hidden"
-          >
-            <div
-              class="pointer-events-none absolute -top-10 -right-10 w-40 h-40 bg-[radial-gradient(circle_at_center,rgba(42,158,219,0.35),transparent_70%)]"
-            >
-            </div>
-            <h3 class="font-semibold text-base">Coming Soon Highlights</h3>
-            <ul class="text-sm text-base-content/70 space-y-2">
-              <li class="flex gap-2">
-                <span class="text-warning">→</span>Remote engraving & job
-                orchestration (Pro+)
-              </li>
-              <li class="flex gap-2">
-                <span class="text-warning">→</span>Multi-seat/team license
-                management
-              </li>
-              <li class="flex gap-2">
-                <span class="text-warning">→</span>Bulk device profile
-                deployment
-              </li>
-              <li class="flex gap-2">
-                <span class="text-warning">→</span>K40 / M2-Nano controller path
-              </li>
-              <li class="flex gap-2">
-                <span class="text-warning">→</span>White-label enterprise builds
-              </li>
-            </ul>
-            <p class="text-[11px] text-base-content/50">
-              All roadmap items above included for existing founders without
-              extra upgrade fees.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-  <Footer />
-</Layout>
+    <!-- Authentication Guard -->
+    <script src="/auth-guard.js" is:inline></script>
+
+    <!-- Journey Tracking System -->
+    <script src="/journey-tracker.js" is:inline></script>
+  </body>
+</html>

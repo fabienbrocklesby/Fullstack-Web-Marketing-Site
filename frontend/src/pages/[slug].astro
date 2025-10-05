@@ -20,7 +20,8 @@ let notFound = false;
 console.log(`[${slug}] Attempting to fetch page data...`);
 
 try {
-  const CMS_URL = "http://localhost:1337";
+  import { STRAPI_URL } from "../config/strapi";
+  const CMS_URL = STRAPI_URL;
   const url = `${CMS_URL}/api/pages?filters[slug][$eq]=${slug}&populate[sections][populate]=*`;
 
   console.log(`[${slug}] Fetching from: ${url}`);

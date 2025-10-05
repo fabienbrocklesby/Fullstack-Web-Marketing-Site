@@ -1,0 +1,39 @@
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Build stage - build in workspace root
+FROM base AS builder
+WORKDIR /workspace
+
+# Accept build arguments for environment variables needed at build time
+ARG PUBLIC_STRAPI_URL=https://api.lightlane.app
+ENV PUBLIC_STRAPI_URL=$PUBLIC_STRAPI_URL
+
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY frontend ./frontend
+COPY backend/package.json ./backend/package.json
+RUN pnpm install --filter=frontend...
+RUN cd frontend && pnpm build
+
+# Production stage - only frontend dist
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Copy package files first
+COPY --from=builder /workspace/pnpm-workspace.yaml /workspace/package.json /workspace/pnpm-lock.yaml* /workspace/
+COPY --from=builder /workspace/frontend/package.json /workspace/frontend/
+COPY --from=builder /workspace/backend/package.json /workspace/backend/
+
+# Install production dependencies only
+WORKDIR /workspace
+RUN pnpm install --filter=frontend... --prod
+
+# Copy built dist
+COPY --from=builder /workspace/frontend/dist ./frontend/dist
+
+# Set working directory to frontend
+WORKDIR /workspace/frontend
+
+EXPOSE 4321
+CMD ["node", "./dist/server/entry.mjs"]

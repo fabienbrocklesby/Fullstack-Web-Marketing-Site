@@ -11,7 +11,7 @@ export interface Props {
 }
 
 const {
-  title = "Lightlane - Laser Engraving Software",
+  title = "Lightlane – Laser Engraving Software",
   description = "Lightlane is the faster, smarter, gradient-driven laser engraving software: import → preview → engrave in fewer clicks.",
   keywords = "",
   image = "/og-lightlane.jpg",
@@ -23,19 +23,14 @@ const {
 
 // @ts-ignore - Astro injects import.meta.env at build time
 import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
+import { STRAPI_URL } from "../config/strapi";
+
 const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
 const imageUrl = new URL(image, siteUrl).href;
-// Prefer PUBLIC_CMS_URL from env (Astro public env var) or fallback to localhost
-// @ts-ignore Astro injects import.meta.env at build time
-const cmsUrl =
-  (import.meta as any).env.PUBLIC_CMS_URL || "http://localhost:1337";
-// import TopBanner from "../components/TopBanner.astro";
-const robotsContent =
-  (noindex ? "noindex" : "index") + ", " + (nofollow ? "nofollow" : "follow");
 ---
 
 <!doctype html>
-<html lang="en" data-cms-url={cmsUrl} data-theme="lightlane">
+<html lang="en" data-cms-url={STRAPI_URL} data-theme="lightlane">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -55,6 +50,10 @@ const robotsContent =
     <title>{title}</title>
     <meta name="description" content={description} />
     {keywords && <meta name="keywords" content={keywords} />}
+    <meta
+      name="robots"
+      content={`${noindex ? "noindex" : "index"}, ${nofollow ? "nofollow" : "follow"}`}
+    />
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
@@ -88,8 +87,6 @@ const robotsContent =
     <meta name="generator" content={Astro.generator} />
   </head>
   <body>
-    <!-- CMS-driven Top Banner temporarily disabled for debugging parser error -->
-    <!-- <TopBanner /> -->
     <slot />
 
     <!-- Authentication Guard -->

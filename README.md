@@ -1,53 +1,68 @@
-# Full-Stack SaaS Marketing Site Boilerplate
+# LightLane - Full-Stack Marketing Site
 
-A production-ready SaaS marketing site boilerplate built with Astro frontend and Strapi backend.
+A production-ready SaaS marketing site built with Astro frontend and Strapi backend, optimized for Docker deployment with Dokploy.
 
 ## 🚀 Tech Stack
 
 ### Frontend (Astro)
 
-- **Framework**: Astro with SSG/SSR capabilities
-- **Deployment**: Cloudflare Pages with `@astrojs/cloudflare` adapter
-- **Styling**: Tailwind CSS with DaisyUI components
-- **SEO**: Astro SEO plugin for meta tags, Open Graph, sitemap, and robots.txt
+- **Framework**: Astro with SSR capabilities
+- **Styling**: Tailwind CSS v4 with DaisyUI components
+- **SEO**: Astro SEO plugin for meta tags, Open Graph, sitemap
 - **Content**: Markdown/MDX support for blog posts
-- **Affiliate System**: Built-in affiliate tracking with cookies
+- **Affiliate System**: Built-in affiliate tracking
 
 ### Backend (Strapi)
 
 - **Framework**: Strapi v4 (JavaScript)
-- **Database**: PostgreSQL
-- **Deployment**: DigitalOcean App Platform
+- **Database**: PostgreSQL 16
 - **Payments**: Stripe integration with webhooks
 - **Content Types**: Pages, Affiliates, Purchases
+
+### Deployment
+
+- **Platform**: Dokploy (self-hosted PaaS)
+- **Reverse Proxy**: Traefik (managed by Dokploy)
+- **Database**: PostgreSQL with auto-backups (every 6 hours)
+- **SSL**: Automatic Let's Encrypt certificates
+- **CI/CD**: Auto-deploy on GitHub push
 
 ## 📁 Project Structure
 
 ```
-├── frontend/          # Astro application
-├── backend/           # Strapi CMS
-├── package.json       # Root package.json
-├── pnpm-workspace.yaml # PNPM workspace configuration
-└── README.md         # This file
+├── frontend/              # Astro SSR application
+├── backend/               # Strapi CMS & API
+├── Dockerfile.backend     # Backend Docker build
+├── Dockerfile.frontend    # Frontend Docker build
+├── docker-compose.yml     # Local development
+├── DOKPLOY-SETUP.md      # Production deployment guide
+├── QUICKSTART.md         # Quick start guide
+└── README.md             # This file
 ```
 
-## 🛠 Setup Instructions
+## 🛠 Quick Start
 
-### Prerequisites
+### Option 1: Production Deployment (Recommended)
 
-- Node.js 18+
-- pnpm 8+
-- PostgreSQL database
+**Deploy to production with Dokploy:**
 
-### 1. Clone and Install Dependencies
+1. Follow the complete guide: **[DOKPLOY-SETUP.md](./DOKPLOY-SETUP.md)**
+2. Push to GitHub → Auto-deploy in 2-3 minutes
+3. Get automatic backups, SSL, monitoring, and more!
 
-```bash
-git clone <your-repo-url>
-cd fullstack-saas-boilerplate
-pnpm install
-```
+### Option 2: Local Development
 
-### 2. Environment Variables
+**For local testing:**
+
+1. See [QUICKSTART.md](./QUICKSTART.md) for local Docker setup
+2. Configure PostgreSQL separately or use Dokploy
+
+## 📋 Prerequisites
+
+**For Production (Dokploy):**
+- VPS server (DigitalOcean, AWS, etc.) - 2GB+ RAM
+- Domain name (lightlane.app)
+- GitHub repository
 
 #### Frontend (.env)
 
