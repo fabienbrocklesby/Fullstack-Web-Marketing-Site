@@ -2,13 +2,14 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import LLButton from "../components/ui/LLButton.astro";
-import { enquirySchema } from "../lib/validation/enquiry";
+import BuyButton from "../components/BuyButton.astro";
+import DownloadButtons from "../components/DownloadButtons.astro";
+import Countdown from "../components/Countdown.astro";
 ---
 
 <Layout
-  title="Lightlane Early Access"
-  description="Request Early Access to Lightlane - faster import → preview → engrave workflows."
+  title="Lightlane Pricing"
+  description="Public launch pricing — limited time. Faster import → preview → engrave workflows."
 >
   <Header />
 
@@ -21,20 +22,20 @@ import { enquirySchema } from "../lib/validation/enquiry";
       <div class="container mx-auto px-4 relative">
         <div class="text-center mb-16 space-y-6 max-w-3xl mx-auto" data-animate>
           <h1 class="text-4xl md:text-5xl font-bold text-ll-gradient pb-1">
-            Founding Early Access Pricing
+            Launch Pricing (Limited Time)
           </h1>
           <p class="text-lg md:text-xl text-base-content/70">
-            Locked-in lifetime licenses. This launch pricing will never return.
-            Join now, get grandfathered priority support & discounted future
-            seats.
+            Prices increase on <span class="font-semibold">October 15</span>.
+            Lock in a <span class="font-semibold">one‑time lifetime</span> license
+            today and keep this rate forever.
           </p>
           <div
             class="flex flex-col md:flex-row gap-4 justify-center items-center"
           >
             <div
-              class="badge badge-info badge-soft text-xs py-3 px-4 tracking-wide"
+              class="badge badge-success badge-soft text-xs py-3 px-4 tracking-wide"
             >
-              LIMITED WAVE • INVITE ONLY
+              PUBLIC LAUNCH • LIMITED TIME
             </div>
             <div
               class="badge badge-primary badge-soft text-xs py-3 px-4 tracking-wide"
@@ -42,10 +43,24 @@ import { enquirySchema } from "../lib/validation/enquiry";
               GRANDFATHERED LIFETIME UPDATES
             </div>
           </div>
-          <p class="text-xs text-base-content/50">
-            Buy now: Your first seat is permanent. Future additional seats
-            (team, lab, enterprise) are discounted only for founding buyers.
-          </p>
+          <div class="mt-2">
+            <Countdown
+              target="2025-10-15T00:00:00Z"
+              label="Intro pricing ends in"
+            />
+          </div>
+          <div role="alert" class="alert alert-warning justify-center">
+            <span>
+              Founders deal: one-time lifetime pricing ends Oct 15. Future
+              prices will be higher.
+            </span>
+          </div>
+          <DownloadButtons align="center" />
+          <div class="text-sm">
+            <a href="/customer/register" class="link link-primary"
+              >Create an account</a
+            > to manage your license and checkout faster.
+          </div>
         </div>
 
         <div
@@ -105,10 +120,12 @@ import { enquirySchema } from "../lib/validation/enquiry";
                   >
                 </li>
               </ul>
-              <button
-                class="mt-6 btn btn-primary w-full enquire-btn animate-[fadeIn_.6s_.05s_backwards]"
-                data-plan="hobby">Request Invite</button
-              >
+              <BuyButton
+                className="mt-6 w-full animate-[fadeIn_.6s_.05s_backwards]"
+                variant="primary"
+                priceId="price_starter"
+                text="Buy Hobbyist"
+              />
             </div>
           </div>
 
@@ -180,10 +197,12 @@ import { enquirySchema } from "../lib/validation/enquiry";
                   >
                 </li>
               </ul>
-              <button
-                class="mt-6 btn btn-gradient w-full enquire-btn animate-[fadeIn_.6s_.1s_backwards]"
-                data-plan="pro">Request Invite</button
-              >
+              <BuyButton
+                className="mt-6 w-full animate-[fadeIn_.6s_.1s_backwards]"
+                variant="primary"
+                priceId="price_pro"
+                text="Buy Pro"
+              />
               <p class="mt-3 text-[11px] text-base-content/50">
                 Founders: future extra seats discounted permanently.
               </p>
@@ -249,9 +268,10 @@ import { enquirySchema } from "../lib/validation/enquiry";
                   >
                 </li>
               </ul>
-              <button
-                class="mt-6 btn btn-outline w-full enquire-btn animate-[fadeIn_.6s_.15s_backwards]"
-                data-plan="enterprise">Talk to Us</button
+              <a
+                href="/contact?subject=Enterprise%20Enquiry#contact-form"
+                class="mt-6 btn btn-outline w-full animate-[fadeIn_.6s_.15s_backwards]"
+                >Talk to Us</a
               >
               <p class="mt-3 text-[11px] text-base-content/50">
                 Founders lock discount on all future seat blocks.
@@ -318,9 +338,10 @@ import { enquirySchema } from "../lib/validation/enquiry";
                   >
                 </li>
               </ul>
-              <button
-                class="mt-6 btn btn-outline w-full enquire-btn animate-[fadeIn_.6s_.2s_backwards]"
-                data-plan="education">Discuss Access</button
+              <a
+                href="/contact?subject=Education%20Access%20Enquiry#contact-form"
+                class="mt-6 btn btn-outline w-full animate-[fadeIn_.6s_.2s_backwards]"
+                >Discuss Access</a
               >
               <p class="mt-3 text-[11px] text-base-content/50">
                 Founders lock permanent base seat allocation.
@@ -396,351 +417,6 @@ import { enquirySchema } from "../lib/validation/enquiry";
         </div>
       </div>
     </section>
-    <dialog id="enquiry_modal" class="modal">
-      <div
-        class="modal-box max-w-2xl p-0 overflow-hidden flex flex-col max-h-[calc(100vh-2rem)]"
-      >
-        <div
-          class="relative p-6 pb-4 border-b border-base-300 bg-gradient-to-br from-base-200/80 via-base-200/60 to-base-100 backdrop-blur-md shrink-0"
-        >
-          <h3 class="font-bold text-xl flex items-center gap-3">
-            Request Early Access
-            <span
-              id="enquiry-plan-label"
-              class="hidden badge badge-primary badge-soft text-[10px] tracking-wide"
-            ></span>
-          </h3>
-          <p class="mt-2 text-sm text-base-content/60 max-w-prose">
-            Tell us a little about your workflow so we can prioritise invites &
-            shape upcoming controller + remote features.
-          </p>
-        </div>
-        <form
-          id="enquiry-form"
-          novalidate
-          class="p-6 pt-5 space-y-8 overflow-y-auto flex-1"
-          aria-describedby="enquiry-error-summary"
-          aria-live="polite"
-        >
-          <input type="hidden" name="planInterested" id="planInterested" />
-          <input type="hidden" name="affiliateCode" id="affiliateCode" />
-          <div
-            id="enquiry-error-summary"
-            class="hidden alert alert-error text-sm items-start gap-2"
-            role="alert"
-          >
-          </div>
-
-          <!-- Section: Basic Info -->
-          <fieldset
-            class="fieldset rounded-xl border border-base-300/70 p-4 md:p-5 bg-base-200/40"
-          >
-            <legend class="fieldset-legend font-medium text-base mb-2"
-              >Your Details</legend
-            >
-            <div class="grid gap-5 md:grid-cols-2">
-              <div class="form-control flex flex-col gap-1">
-                <label
-                  for="fullName"
-                  class="text-xs font-medium tracking-wide text-base-content/70 uppercase"
-                  >Full Name <span class="text-error" aria-hidden="true">*</span
-                  ></label
-                >
-                <input
-                  id="fullName"
-                  name="fullName"
-                  required
-                  type="text"
-                  class="input input-md w-full"
-                  autocomplete="name"
-                />
-              </div>
-              <div class="form-control flex flex-col gap-1">
-                <label
-                  for="email"
-                  class="text-xs font-medium tracking-wide text-base-content/70 uppercase"
-                  >Email <span class="text-error" aria-hidden="true">*</span
-                  ></label
-                >
-                <input
-                  id="email"
-                  name="email"
-                  required
-                  type="email"
-                  class="input input-md w-full"
-                  autocomplete="email"
-                />
-              </div>
-              <div class="form-control flex flex-col gap-1 md:col-span-2">
-                <label
-                  for="company"
-                  class="text-xs font-medium tracking-wide text-base-content/70 uppercase"
-                  >Company / Org</label
-                >
-                <input
-                  id="company"
-                  name="company"
-                  type="text"
-                  class="input input-md w-full"
-                  autocomplete="organization"
-                />
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- Section: Project -->
-          <fieldset
-            class="fieldset rounded-xl border border-base-300/70 p-4 md:p-5 bg-base-200/40"
-          >
-            <legend class="fieldset-legend font-medium text-base mb-2"
-              >Workflow & Use</legend
-            >
-            <div class="grid gap-5">
-              <div class="form-control flex flex-col gap-1">
-                <label
-                  for="useCase"
-                  class="text-xs font-medium tracking-wide text-base-content/70 uppercase"
-                  >What are you engraving / building? <span
-                    class="text-error"
-                    aria-hidden="true">*</span
-                  ></label
-                >
-                <textarea
-                  id="useCase"
-                  name="useCase"
-                  required
-                  rows="4"
-                  class="textarea textarea-md w-full resize-y"
-                  placeholder="Devices, materials, controller (Ruida, K40, custom)..."
-                ></textarea>
-                <p class="text-[11px] text-base-content/50">
-                  Briefly outline devices, materials & any controller specifics.
-                </p>
-              </div>
-              <div class="form-control flex flex-col gap-1">
-                <label
-                  for="notes"
-                  class="text-xs font-medium tracking-wide text-base-content/70 uppercase"
-                  >Anything else (optional)</label
-                >
-                <textarea
-                  id="notes"
-                  name="notes"
-                  rows="3"
-                  class="textarea textarea-md w-full resize-y"
-                  placeholder="Remote/team needs, automation goals, etc."
-                ></textarea>
-                <p class="text-[11px] text-base-content/50">
-                  Remote / team needs, other controllers, automation goals, edge
-                  requirements.
-                </p>
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- Actions & Status -->
-          <div
-            class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6 md:justify-between"
-          >
-            <p class="text-[11px] text-base-content/50 order-2 md:order-1">
-              We reply within 1–2 business days. Founders keep pricing locked.
-            </p>
-            <div class="flex items-center gap-3 order-1 md:order-2">
-              <LLButton
-                variant="ghost"
-                type="button"
-                ariaLabel="Close"
-                id="close-enquiry"
-              >
-                Cancel
-              </LLButton>
-              <LLButton type="submit" variant="primary" id="submit-enquiry">
-                <span class="submit-label">Submit</span>
-                <span
-                  class="loading loading-spinner loading-xs hidden ml-1"
-                  id="enquiry-loading"></span>
-                <span class="sr-only"> enquiry</span>
-              </LLButton>
-            </div>
-          </div>
-          <div class="space-y-2">
-            <p
-              class="text-sm text-success hidden items-center gap-2"
-              id="enquiry-success"
-              role="status"
-            >
-              <span class="text-success font-semibold">✓</span>
-              <span>Thanks – check your inbox soon.</span>
-            </p>
-            <p
-              class="text-sm text-error hidden"
-              id="enquiry-error"
-              role="alert"
-            >
-            </p>
-          </div>
-        </form>
-      </div>
-      <form method="dialog" class="modal-backdrop"><button>close</button></form>
-    </dialog>
   </main>
-
   <Footer />
-
-  <script type="module">
-    // Lightweight inline script (no external imports) so modal works reliably in dev & production.
-    // Replaces previous zod-based validation with simple manual checks.
-    const modal = document.getElementById("enquiry_modal");
-    const form = document.getElementById("enquiry-form");
-    const successMsg = document.getElementById("enquiry-success");
-    const errorMsg = document.getElementById("enquiry-error");
-    const errorSummary = document.getElementById("enquiry-error-summary");
-    const affiliateCodeInput = document.getElementById("affiliateCode");
-    const planInput = document.getElementById("planInterested");
-    const planLabel = document.getElementById("enquiry-plan-label");
-    const loadingSpinner = document.getElementById("enquiry-loading");
-    const AFF_COOKIE = "ll_aff";
-    function getAffiliateCode() {
-      const p = new URLSearchParams(location.search).get("ref");
-      if (p) {
-        document.cookie = `${AFF_COOKIE}=${p};path=/;max-age=${60 * 60 * 24 * 30}`;
-        return p;
-      }
-      const ck = document.cookie
-        .split("; ")
-        .find((r) => r.startsWith(AFF_COOKIE + "="));
-      return (
-        p ||
-        (ck ? ck.split("=")[1] : localStorage.getItem("affiliateCode") || "")
-      );
-    }
-    if (affiliateCodeInput) affiliateCodeInput.value = getAffiliateCode();
-    document.querySelectorAll(".enquire-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (planInput) planInput.value = btn.getAttribute("data-plan") || "";
-        if (planLabel) {
-          const plan = planInput?.value;
-          const map = {
-            hobby: "Hobbyist",
-            pro: "Pro",
-            enterprise: "Enterprise",
-            education: "Education",
-          };
-          planLabel.textContent = map[plan] || "";
-          planLabel.classList.toggle("hidden", !plan);
-        }
-        modal?.showModal();
-      });
-    });
-    document
-      .getElementById("close-enquiry")
-      ?.addEventListener("click", () => modal?.close());
-    function setFieldError(name, msg) {
-      const field = form?.querySelector(`[name="${name}"]`);
-      if (!field) return;
-      let errEl = field.parentElement?.querySelector('[role="alert"]');
-      if (!msg) {
-        if (errEl) errEl.remove();
-        field.classList.remove("input-error");
-        return;
-      }
-      if (!errEl) {
-        errEl = document.createElement("p");
-        errEl.className = "mt-1 text-sm text-error";
-        errEl.setAttribute("role", "alert");
-        field.parentElement?.appendChild(errEl);
-      }
-      errEl.textContent = msg;
-      field.classList.add("input-error");
-    }
-    form?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      successMsg?.classList.add("hidden");
-      errorMsg?.classList.add("hidden");
-      errorSummary?.classList.add("hidden");
-      errorSummary.textContent = "";
-      const fd = Object.fromEntries(new FormData(form));
-      // Basic validation rules (mirrors previous zod schema intent)
-      const errors = {};
-      if (!fd.fullName || String(fd.fullName).trim().length < 2)
-        errors.fullName = "Full name required";
-      if (!fd.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(fd.email)))
-        errors.email = "Valid email required";
-      if (!fd.useCase || String(fd.useCase).trim().length < 5)
-        errors.useCase = "Tell us a bit more";
-      if (!fd.planInterested || String(fd.planInterested).trim().length === 0)
-        errors.planInterested = "Select a plan";
-      form
-        .querySelectorAll("[name]")
-        .forEach((i) => setFieldError(i.getAttribute("name"), undefined));
-      const errorKeys = Object.keys(errors);
-      if (errorKeys.length) {
-        errorKeys.forEach((k) => setFieldError(k, errors[k]));
-        errorSummary?.classList.remove("hidden");
-        errorSummary.textContent = "Please fix the highlighted fields.";
-        return;
-      }
-      const submitBtn = form.querySelector("#submit-enquiry");
-      submitBtn?.setAttribute("disabled", "true");
-      submitBtn?.classList.add("btn-disabled");
-      loadingSpinner?.classList.remove("hidden");
-      // Resolve CMS base URL safely without hard-crashing if import.meta.env is undefined in runtime
-      let cms;
-      // 1. Try data attribute injected by server/layout
-      cms = document.documentElement.getAttribute("data-cms-url");
-      // Final fallback (should rarely be needed since data-cms-url is set in Layout)
-      if (!cms) cms = "http://localhost:1337";
-      console.log("[enquiry] Submitting", {
-        cmsSource: document.documentElement.getAttribute("data-cms-url")
-          ? "data-attr"
-          : "fallback",
-        cms,
-        payload: fd,
-      });
-      try {
-        const res = await fetch(`${cms.replace(/\/$/, "")}/api/enquiries`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(fd),
-        });
-        console.log("[enquiry] Response status", res.status);
-        if (res.ok) {
-          successMsg?.classList.remove("hidden");
-          form
-            .querySelectorAll("input,textarea,button,select")
-            .forEach((el) => el.setAttribute("disabled", "true"));
-          // Hide spinner & reflect success state on button
-          loadingSpinner?.classList.add("hidden");
-          if (submitBtn) {
-            const label = submitBtn.querySelector(".submit-label");
-            if (label) label.textContent = "Sent";
-            submitBtn.classList.remove("btn-disabled");
-            submitBtn.classList.add("btn-success");
-          }
-        } else {
-          const text = await res.text().catch(() => "");
-          console.warn("[enquiry] Non-OK response", res.status, text);
-          errorMsg &&
-            (errorMsg.textContent = `Failed (${res.status}). Try again.`);
-          errorMsg?.classList.remove("hidden");
-          submitBtn?.removeAttribute("disabled");
-          submitBtn?.classList.remove("btn-disabled");
-          loadingSpinner?.classList.add("hidden");
-        }
-      } catch (err) {
-        console.error("[enquiry] Fetch error", err);
-        errorMsg &&
-          (errorMsg.textContent = "Network error. Check console & try again.");
-        errorMsg?.classList.remove("hidden");
-        submitBtn?.removeAttribute("disabled");
-        submitBtn?.classList.remove("btn-disabled");
-        loadingSpinner?.classList.add("hidden");
-      }
-      // Safety: if still visible after 12s, hide spinner to avoid indefinite perception of loading
-      setTimeout(() => {
-        if (!successMsg?.classList.contains("hidden")) return; // already handled
-        loadingSpinner?.classList.add("hidden");
-      }, 12000);
-    });
-  </script>
 </Layout>
