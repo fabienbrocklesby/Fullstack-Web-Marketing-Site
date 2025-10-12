@@ -5,11 +5,137 @@ import Footer from "../components/Footer.astro";
 import BuyButton from "../components/BuyButton.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import Countdown from "../components/Countdown.astro";
+import { pricingOffers, FOUNDERS_OFFER_DEADLINE } from "../data/pricing";
+
+const fallbackSite = new URL("https://lightlane.app");
+const siteBase = Astro.site ?? fallbackSite;
+const toAbsolute = (path: string) => new URL(path, siteBase).href;
+
+const pricingKeywords = [
+  "laser engraving software pricing",
+  "laser cutter software cost",
+  "Lightlane laser engraving license",
+  "laser engraving software lifetime license",
+  "Ruida laser software pricing",
+  "Lightlane pricing plans",
+];
+
+const offerSchemas = pricingOffers.map((offer) => {
+  const base: Record<string, unknown> = {
+    "@type": "Offer",
+    priceCurrency: offer.priceCurrency,
+    availability: offer.availability,
+    url: toAbsolute(offer.ctaPath),
+    name: offer.schemaName,
+    description: offer.description,
+    category: "Software",
+  };
+
+  if (offer.sku) base.sku = offer.sku;
+  if (typeof offer.price === "number") {
+    base.price = offer.price;
+    base.priceValidUntil = FOUNDERS_OFFER_DEADLINE;
+  } else {
+    base.priceType = "https://schema.org/CallForPrice";
+  }
+
+  return base;
+});
+
+const fixedOffers = pricingOffers.filter(
+  (offer) => typeof offer.price === "number",
+);
+
+const aggregateOffer =
+  fixedOffers.length > 0
+    ? {
+        "@type": "AggregateOffer",
+        priceCurrency: fixedOffers[0]?.priceCurrency ?? pricingOffers[0]?.priceCurrency ?? "USD",
+        lowPrice: Math.min(
+          ...fixedOffers.map((plan) => plan.price as number),
+        ),
+        highPrice: Math.max(
+          ...fixedOffers.map((plan) => plan.price as number),
+        ),
+        offerCount: fixedOffers.length,
+        offers: offerSchemas,
+      }
+    : undefined;
+
+const pricingFaq = [
+  {
+    question: "Is Lightlane laser engraving software a one-time purchase?",
+    answer:
+      "Yes. The Hobbyist and Pro plans are lifetime licenses—founders pay once and receive all future Lightlane laser engraving software updates without renewals or subscription fees.",
+  },
+  {
+    question: "Which laser cutters are supported on the paid plans?",
+    answer:
+      "Lightlane supports Ruida natively and GRBL or G-code laser cutters out of the box. K40 / M2-Nano support and additional controllers are actively being tested and roll out to Pro customers first.",
+  },
+  {
+    question: "Do you offer onboarding for enterprise or education teams?",
+    answer:
+      "Enterprise and Education tiers include tailored onboarding, governance, and roadmap alignment. Contact the team to scope multi-seat deployments, lab setups, or white-label requirements.",
+  },
+];
+
+const pricingFaqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": `${toAbsolute("/pricing")}#laser-engraving-pricing-faq`,
+  mainEntity: pricingFaq.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
+
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${toAbsolute("/")}#lightlane-pricing`,
+    name: "Lightlane Laser Engraving Software",
+    description:
+      "Pricing for Lightlane’s laser engraving workflow software with lifetime licensing options.",
+    brand: {
+      "@type": "Brand",
+      name: "Lightlane",
+    },
+    image: toAbsolute("/og-lightlane.png"),
+    offers: aggregateOffer ?? offerSchemas,
+    keywords: pricingKeywords.join(", "),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "OfferCatalog",
+    name: "Lightlane Pricing Plans",
+    url: toAbsolute("/pricing"),
+    itemListElement: offerSchemas.map((offer, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      item: {
+        ...offer,
+      },
+    })),
+  },
+  pricingFaqSchema,
+];
 ---
 
 <Layout
   title="Lightlane Pricing"
   description="Public launch pricing — limited time. Faster import → preview → engrave workflows."
+  keywords={pricingKeywords.join(", ")}
+  structuredData={structuredData}
+  breadcrumbs={[
+    { name: "Home", url: "/" },
+    { name: "Pricing", url: "/pricing" },
+  ]}
 >
   <Header />
 
@@ -414,6 +540,32 @@ import Countdown from "../components/Countdown.astro";
               extra upgrade fees.
             </p>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section bg-base-200/40">
+      <div class="container max-w-5xl" data-animate>
+        <div class="page-header text-center">
+          <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
+            Laser engraving software pricing FAQ
+          </h2>
+          <p class="mt-4 text-base-content/70 max-w-2xl mx-auto">
+            Answers to common questions about Lightlane laser cutter software
+            licenses, supported controllers, and enterprise onboarding.
+          </p>
+        </div>
+        <div class="mt-10 space-y-4">
+          {pricingFaq.map((faq) => (
+            <details class="group rounded-xl border border-base-300 bg-base-100/90 p-6 shadow-sm">
+              <summary class="cursor-pointer text-lg font-semibold text-base-content transition group-open:text-primary">
+                {faq.question}
+              </summary>
+              <p class="mt-3 text-sm text-base-content/70 leading-relaxed">
+                {faq.answer}
+              </p>
+            </details>
+          ))}
         </div>
       </div>
     </section>

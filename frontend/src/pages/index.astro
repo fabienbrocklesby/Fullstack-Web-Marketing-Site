@@ -2,14 +2,235 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import BuyButton from "../components/BuyButton.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import Countdown from "../components/Countdown.astro";
+import { pricingOffers, FOUNDERS_OFFER_DEADLINE } from "../data/pricing";
+
+const fallbackSite = new URL("https://lightlane.app");
+const siteBase = Astro.site ?? fallbackSite;
+const toAbsolute = (path: string) => new URL(path, siteBase).href;
+
+const homepageKeywords = [
+  "laser engraving software",
+  "laser cutter software",
+  "laser engraving workflow automation",
+  "laser engraving software for Ruida",
+  "laser cutter job optimizer",
+  "best laser engraving software",
+  "Lightlane laser engraving",
+];
+
+const workflowSteps = [
+  {
+    id: "workflow-step-1",
+    anchor: "/#workflow-step-1",
+    name: "Intelligent Import",
+    description:
+      "Drop SVG, DXF, PNG, or JPG assets and Lightlane laser engraving software auto-normalises layers, fonts, and paths with collision checks.",
+    video: "/landing/drag&drop.mp4",
+  },
+  {
+    id: "workflow-step-2",
+    anchor: "/#workflow-step-2",
+    name: "Real-time Preview",
+    description:
+      "GPU-accelerated preview shows engrave order, power maps, and cutter movement in real time so you catch issues before firing the laser.",
+    video: "/landing/preview.mp4",
+  },
+  {
+    id: "workflow-step-3",
+    anchor: "/#workflow-step-3",
+    name: "Smart Parameters",
+    description:
+      "Material-aware presets adapt power, speed, and passes to your laser cutter profile while enforcing guardrails against unsafe settings.",
+    video: "/landing/materials.mp4",
+  },
+  {
+    id: "workflow-step-4",
+    anchor: "/#workflow-step-4",
+    name: "Device Streaming",
+    description:
+      "Stream jobs directly to Ruida, GRBL, or G-code controllers with automatic fallbacks to packaged job bundles when you need to go offline.",
+    video: "/landing/stream.mp4",
+  },
+  {
+    id: "workflow-step-5",
+    anchor: "/#workflow-step-5",
+    name: "Analyze & Reuse",
+    description:
+      "Capture run analytics, generate post-job recommendations, and save the entire setup as a reusable laser engraving template.",
+    video: "/landing/templates.mp4",
+  },
+];
+
+const offerSchemas = pricingOffers.map((offer) => {
+  const base: Record<string, unknown> = {
+    "@type": "Offer",
+    priceCurrency: offer.priceCurrency,
+    availability: offer.availability,
+    url: toAbsolute(offer.ctaPath),
+    name: offer.schemaName,
+    description: offer.description,
+    category: "Software",
+  };
+
+  if (offer.sku) base.sku = offer.sku;
+  if (typeof offer.price === "number") {
+    base.price = offer.price;
+    base.priceValidUntil = FOUNDERS_OFFER_DEADLINE;
+  } else {
+    base.priceType = "https://schema.org/CallForPrice";
+  }
+
+  return base;
+});
+
+const faqEntries = [
+  {
+    question:
+      "Can I run Lightlane fully offline on a dedicated engraving machine?",
+    answer:
+      "Yes — Lightlane is engineered to operate entirely offline. You can activate and manage licenses locally and run full jobs without connectivity, ideal for shop floors, air-gapped or production-only machines.",
+  },
+  {
+    question:
+      "How fast is the workflow compared to other laser engraving software?",
+    answer:
+      "Lightlane trims the import→preview→engrave loop with smart defaults, instant visual feedback, and minimal dialog friction. Typical SVG or image jobs go from drop to ready in seconds with fewer context switches.",
+  },
+  {
+    question:
+      "Which laser cutter controllers does Lightlane currently support?",
+    answer:
+      "Lightlane ships with Ruida (native) and G-code/GRBL style output today. K40 / M2-Nano support is in prototyping and coming soon. The architecture is modular, so new controller targets can be added rapidly.",
+  },
+  {
+    question:
+      "What’s included at launch pricing for the laser engraving licenses?",
+    answer:
+      "Launch pricing is a limited-time lifetime license with no renewal. After purchase, we’ll email your downloads and assist with setup during early beta. Future pricing may increase after the founders window closes.",
+  },
+];
+
+const howToSchema = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "@id": `${toAbsolute("/")}#laser-engraving-workflow`,
+  name: "How to engrave with Lightlane laser engraving software",
+  description:
+    "Five-step workflow for preparing, previewing, and engraving jobs with Lightlane across Ruida, GRBL, and G-code laser cutters.",
+  image: toAbsolute("/landing/basicscreen.png"),
+  totalTime: "PT5M",
+  tool: [
+    {
+      "@type": "HowToTool",
+      name: "Lightlane laser engraving software",
+    },
+  ],
+  supply: [
+    {
+      "@type": "HowToSupply",
+      name: "Laser cutter with Ruida, GRBL, or G-code controller",
+    },
+    {
+      "@type": "HowToSupply",
+      name: "Material presets or saved Lightlane templates",
+    },
+  ],
+  step: workflowSteps.map((step, index) => ({
+    "@type": "HowToStep",
+    position: index + 1,
+    name: step.name,
+    text: step.description,
+    url: toAbsolute(step.anchor),
+  })),
+};
+
+const videoStructuredData = workflowSteps.map((step) => ({
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "@id": `${toAbsolute("/")}#${step.id}-video`,
+  name: `${step.name} – Lightlane laser engraving software`,
+  description: step.description,
+  thumbnailUrl: [toAbsolute("/og-lightlane.png")],
+  uploadDate: new Date().toISOString().slice(0, 10),
+  contentUrl: toAbsolute(step.video),
+  inLanguage: "en-US",
+  publisher: { "@id": `${toAbsolute("/")}#organization` },
+}));
+
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": `${toAbsolute("/")}#lightlane-software`,
+    name: "Lightlane",
+    description:
+      "Lightlane laser engraving software: import → preview → engrave in fewer clicks. Modern, fast, device-ready.",
+    applicationCategory: "DesignApplication",
+    operatingSystem: ["Windows", "macOS"],
+    softwareRequirements: "Ruida, GRBL/G-code compatible laser engravers",
+    downloadUrl: toAbsolute("/pricing"),
+    image: [
+      toAbsolute("/og-lightlane.png"),
+      toAbsolute("/landing/basicscreen.png"),
+    ],
+    publisher: { "@id": `${toAbsolute("/")}#organization` },
+    offers: offerSchemas,
+    keywords: homepageKeywords.join(", "),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${toAbsolute("/")}#lightlane-product`,
+    name: "Lightlane Laser Engraving Software",
+    description:
+      "Laser engraving workflow software that compresses import → preview → engrave into a single, reliable pipeline.",
+    brand: {
+      "@type": "Brand",
+      name: "Lightlane",
+      logo: toAbsolute("/LogoHorizontal.webp"),
+    },
+    category: "Software",
+    image: [
+      toAbsolute("/og-lightlane.png"),
+      toAbsolute("/landing/basicscreen.png"),
+    ],
+    audience: {
+      "@type": "Audience",
+      audienceType: [
+        "Laser engraver operators",
+        "Fabrication studios",
+        "Product designers",
+        "Makers",
+      ],
+    },
+    offers: offerSchemas,
+    keywords: homepageKeywords.join(", "),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": `${toAbsolute("/")}#lightlane-faq`,
+    mainEntity: faqEntries.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  },
+  howToSchema,
+  ...videoStructuredData,
+];
 ---
 
 <Layout
   title="Lightlane – Faster Laser Engraving Workflow"
   description="Lightlane laser engraving software: import → preview → engrave in fewer clicks. Modern, fast, device-ready."
+  keywords={homepageKeywords.join(", ")}
+  structuredData={structuredData}
 >
   <Header />
 
@@ -22,14 +243,15 @@ import Countdown from "../components/Countdown.astro";
         <div class="max-w-3xl mx-auto text-center space-y-6">
           <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">
             <span class="text-ll-gradient"
-              >Lightning-fast laser engraving workflow</span
+              >Lightning-fast laser engraving software</span
             >
           </h1>
           <p class="text-lg md:text-xl text-base-content/80">
-            Lightlane streamlines everything from SVG or image import to
-            device-ready engraving. Fewer clicks, smarter defaults, rapid
-            preview, offline activation, and seamless streaming to supported
-            hardware.
+            Lightlane is laser cutter software built for makers and production
+            shops—streamlining everything from SVG or image import to
+            device-ready engraving on Ruida, GRBL, and G-code controllers. Fewer
+            clicks, smarter defaults, rapid preview, offline activation, and
+            seamless streaming to supported hardware.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="/pricing" class="btn btn-gradient btn-lg">Buy Now</a>
@@ -126,6 +348,7 @@ import Countdown from "../components/Countdown.astro";
           <div class="sticky top-24 md:top-28">
             <ol id="workflow-steps" class="relative h-[70vh] md:h-[65vh]">
               <li
+                id="workflow-step-1"
                 data-step="0"
                 class="workflow-step absolute inset-0 opacity-0 pointer-events-none transition duration-700 ease-out"
               >
@@ -160,6 +383,7 @@ import Countdown from "../components/Countdown.astro";
                 </div>
               </li>
               <li
+                id="workflow-step-2"
                 data-step="1"
                 class="workflow-step absolute inset-0 opacity-0 pointer-events-none transition duration-700 ease-out"
               >
@@ -194,6 +418,7 @@ import Countdown from "../components/Countdown.astro";
                 </div>
               </li>
               <li
+                id="workflow-step-3"
                 data-step="2"
                 class="workflow-step absolute inset-0 opacity-0 pointer-events-none transition duration-700 ease-out"
               >
@@ -228,6 +453,7 @@ import Countdown from "../components/Countdown.astro";
                 </div>
               </li>
               <li
+                id="workflow-step-4"
                 data-step="3"
                 class="workflow-step absolute inset-0 opacity-0 pointer-events-none transition duration-700 ease-out"
               >
@@ -262,6 +488,7 @@ import Countdown from "../components/Countdown.astro";
                 </div>
               </li>
               <li
+                id="workflow-step-5"
                 data-step="4"
                 class="workflow-step absolute inset-0 opacity-0 pointer-events-none transition duration-700 ease-out"
               >
@@ -307,7 +534,7 @@ import Countdown from "../components/Countdown.astro";
       <div class="container grid gap-8 lg:grid-cols-3">
         <div class="lg:col-span-2 space-y-8" data-animate>
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Deep feature highlights
+            Laser engraving software highlights
           </h2>
           <div class="grid md:grid-cols-3 gap-6">
             <!-- Path Optimiser -->
@@ -671,7 +898,7 @@ import Countdown from "../components/Countdown.astro";
       <div class="container">
         <div class="page-header">
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Why Lightlane
+            Why Lightlane laser engraving software
           </h2>
           <p class="mt-4 text-base-content/70 max-w-2xl mx-auto">
             Purpose-built to collapse setup time and shave seconds off every
@@ -740,7 +967,7 @@ import Countdown from "../components/Countdown.astro";
       <div class="container max-w-5xl" data-animate>
         <div class="page-header text-center">
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Why Lightlane
+            Laser engraving workflow advantages
           </h2>
           <p class="mt-4 text-base-content/70 max-w-2xl mx-auto">
             A focused pipeline that turns “import → engrave” into a fast,
