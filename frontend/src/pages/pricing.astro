@@ -50,7 +50,7 @@ const aggregateOffer =
   fixedOffers.length > 0
     ? {
         "@type": "AggregateOffer",
-        priceCurrency: fixedOffers[0]?.priceCurrency ?? "USD",
+        priceCurrency: fixedOffers[0]?.priceCurrency ?? pricingOffers[0]?.priceCurrency ?? "USD",
         lowPrice: Math.min(
           ...fixedOffers.map((plan) => plan.price as number),
         ),
