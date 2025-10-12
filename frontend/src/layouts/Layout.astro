@@ -8,25 +8,104 @@ export interface Props {
   noindex?: boolean;
   nofollow?: boolean;
   ogType?: string; // default website, can be article for blog posts
+  structuredData?: Array<Record<string, unknown>>;
+  breadcrumbs?: Array<{ name: string; url: string }>;
 }
 
 const {
   title = "Lightlane – Laser Engraving Software",
   description = "Lightlane is the faster, smarter, gradient-driven laser engraving software: import → preview → engrave in fewer clicks.",
   keywords = "",
-  image = "/og-lightlane.jpg",
+  image = "/og-lightlane.png",
   canonical = Astro.url.href,
   noindex = false,
   nofollow = false,
   ogType = "website",
+  structuredData = [],
+  breadcrumbs,
 } = Astro.props;
 
 // @ts-ignore - Astro injects import.meta.env at build time
 import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
 import { STRAPI_URL } from "../config/strapi";
 
-const siteUrl = Astro.site?.href || "https://yoursite.pages.dev";
-const imageUrl = new URL(image, siteUrl).href;
+const fallbackSite = "https://lightlane.app/";
+const siteUrl = Astro.site?.href || fallbackSite;
+const absoluteUrl = (path: string) => new URL(path, siteUrl).href;
+const canonicalUrl = canonical
+  ? new URL(canonical, siteUrl).href
+  : Astro.url.href;
+const imageUrl = absoluteUrl(image);
+const logoUrl = absoluteUrl("/LogoHorizontal.webp");
+const organizationId = `${absoluteUrl("/")}#organization`;
+const websiteId = `${absoluteUrl("/")}#website`;
+
+const baseStructuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": organizationId,
+    name: "Lightlane",
+    url: absoluteUrl("/"),
+    logo: {
+      "@type": "ImageObject",
+      url: logoUrl,
+    },
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: "support@lightlane.app",
+        availableLanguage: ["en"],
+        areaServed: "Worldwide",
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "sales",
+        email: "sales@lightlane.app",
+        availableLanguage: ["en"],
+        areaServed: "Worldwide",
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "partnership",
+        email: "partners@lightlane.app",
+        availableLanguage: ["en"],
+        areaServed: "Worldwide",
+      },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": websiteId,
+    url: absoluteUrl("/"),
+    name: "Lightlane",
+    description,
+    inLanguage: "en-US",
+    publisher: { "@id": organizationId },
+  },
+];
+
+const breadcrumbStructuredData =
+  Array.isArray(breadcrumbs) && breadcrumbs.length > 0
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: breadcrumbs.map((crumb, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: crumb.name,
+          item: absoluteUrl(crumb.url),
+        })),
+      }
+    : null;
+
+const combinedStructuredData = [
+  ...baseStructuredData,
+  ...(breadcrumbStructuredData ? [breadcrumbStructuredData] : []),
+  ...structuredData,
+].filter(Boolean);
 ---
 
 <!doctype html>
@@ -44,7 +123,7 @@ const imageUrl = new URL(image, siteUrl).href;
     <!-- Optional: Safari pinned tab (provide a monochrome SVG named safari-pinned-tab.svg if available) -->
     <!-- <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#0F172A" /> -->
     <meta name="theme-color" content="#ffffff" />
-    <link rel="canonical" href={canonical} />
+    <link rel="canonical" href={canonicalUrl} />
 
     <!-- SEO Meta Tags -->
     <title>{title}</title>
@@ -54,26 +133,43 @@ const imageUrl = new URL(image, siteUrl).href;
       name="robots"
       content={`${noindex ? "noindex" : "index"}, ${nofollow ? "nofollow" : "follow"}`}
     />
+    <meta name="application-name" content="Lightlane" />
+    <meta name="author" content="Lightlane" />
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
-    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="Lightlane" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`Preview image for ${title}`} />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content={canonical} />
+    <meta name="twitter:url" content={canonicalUrl} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
+    <meta name="twitter:image:alt" content={`Preview image for ${title}`} />
     <link
       rel="alternate"
       type="application/rss+xml"
       title="Blog RSS"
       href="/blog/rss.xml"
     />
+    {
+      combinedStructuredData.map((schema) => (
+        <script
+          type="application/ld+json"
+          is:inline
+          set:html={JSON.stringify(schema)}
+        />
+      ))
+    }
     <slot name="headExtensions" />
 
     <!-- Fonts -->

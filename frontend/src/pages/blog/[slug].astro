@@ -57,6 +57,43 @@ const displayDate = currentPost
       day: "numeric",
     })
   : "";
+const fallbackSite = new URL("https://lightlane.app");
+const siteBase = Astro.site ?? fallbackSite;
+const toAbsolute = (path: string) => new URL(path, siteBase).href;
+const organizationId = `${toAbsolute("/")}#organization`;
+const blogKeywords = currentPost
+  ? ([
+      currentPost.title,
+      "laser engraving software blog",
+      "Lightlane product updates",
+      currentPost.author ? `${currentPost.author} Lightlane` : undefined,
+    ].filter(Boolean) as string[])
+  : ["laser engraving software blog", "Lightlane blog"];
+
+const structuredData = currentPost
+  ? [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "@id": `${Astro.url.href}#article`,
+        mainEntityOfPage: { "@type": "WebPage", "@id": Astro.url.href },
+        headline: currentPost.seoTitle || currentPost.title,
+        description: currentPost.seoDescription || metaDescription,
+        image: currentPost.coverImageUrl
+          ? [currentPost.coverImageUrl]
+          : [toAbsolute("/og-lightlane.png")],
+        author: {
+          "@type": "Person",
+          name: currentPost.author || "Lightlane Editorial",
+        },
+        datePublished: currentPost.date,
+        dateModified: currentPost.date,
+        wordCount,
+        publisher: { "@id": organizationId },
+        keywords: blogKeywords.join(", "),
+      },
+    ]
+  : [];
 ---
 
 <Layout
@@ -73,44 +110,16 @@ const displayDate = currentPost
       : currentPost.canonical
     : Astro.url.href}
   ogType={currentPost ? "article" : "website"}
+  keywords={blogKeywords.join(", ")}
+  structuredData={structuredData}
+  breadcrumbs={currentPost
+    ? [
+        { name: "Home", url: "/" },
+        { name: "Blog", url: "/blog" },
+        { name: currentPost.title, url: `/blog/${currentPost.slug}` },
+      ]
+    : undefined}
 >
-  {
-    currentPost && (
-      <fragment slot="headExtensions">
-        <script
-          type="application/ld+json"
-          is:inline
-          set:html={JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Article",
-            mainEntityOfPage: { "@type": "WebPage", "@id": Astro.url.href },
-            headline: currentPost.seoTitle || currentPost.title,
-            description: currentPost.seoDescription || metaDescription,
-            image: currentPost.coverImageUrl
-              ? [currentPost.coverImageUrl]
-              : undefined,
-            author: {
-              "@type": "Person",
-              name: currentPost.author || "Unknown",
-            },
-            datePublished: currentPost.date,
-            dateModified: currentPost.date,
-            wordCount: wordCount,
-            publisher: {
-              "@type": "Organization",
-              name: "Lightlane",
-              logo: {
-                "@type": "ImageObject",
-                url: Astro.site
-                  ? new URL("/og-lightlane.jpg", Astro.site).href
-                  : "/og-lightlane.jpg",
-              },
-            },
-          })}
-        />
-      </fragment>
-    )
-  }
   <Header />
 
   <main>

@@ -5,54 +5,78 @@ import Footer from "../../components/Footer.astro";
 import { getPaginatedPosts, type Post } from "../../lib/strapi";
 
 const { posts, pagination } = await getPaginatedPosts(1, 9);
+
+const blogTitle = "Lightlane Blog";
+const blogDescription =
+  "Laser engraving workflow guides, Lightlane product updates, and release notes.";
+const blogKeywords = [
+  "laser engraving software blog",
+  "laser cutter workflow tips",
+  "Lightlane product updates",
+  "laser engraving tutorials",
+  "laser cutter software news",
+];
+const blogUrl = Astro.site
+  ? new URL("/blog", Astro.site).href
+  : "/blog";
+const organizationId = Astro.site
+  ? `${new URL("/", Astro.site).href}#organization`
+  : "/#organization";
+
+const structuredData = posts.length
+  ? [
+      {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        "@id": `${blogUrl}#blog`,
+        name: blogTitle,
+        url: blogUrl,
+        description: blogDescription,
+        inLanguage: "en-US",
+        publisher: { "@id": organizationId },
+        keywords: blogKeywords.join(", "),
+        blogPost: posts.slice(0, 12).map((p, idx) => ({
+          "@type": "BlogPosting",
+          position: idx + 1,
+          headline: p.title,
+          url: Astro.site
+            ? new URL(`/blog/${p.slug}`, Astro.site).href
+            : `/blog/${p.slug}`,
+          datePublished: p.date,
+          dateModified: p.date,
+          image: p.coverImageUrl ? [p.coverImageUrl] : undefined,
+          description: p.preview || p.excerpt,
+          author: {
+            "@type": "Person",
+            name: p.author || "Lightlane Editorial",
+          },
+        })),
+      },
+    ]
+  : [];
 ---
 
 <Layout
-  title="Blog - SaaS Boilerplate"
-  description="Latest insights and tutorials about SaaS development"
-  canonical={Astro.site ? new URL("/blog", Astro.site).href : Astro.url.href}
+  title={blogTitle}
+  description={blogDescription}
+  canonical={blogUrl}
   ogType="website"
+  keywords={blogKeywords.join(", ")}
+  structuredData={structuredData}
+  breadcrumbs={[
+    { name: "Home", url: "/" },
+    { name: "Blog", url: "/blog" },
+  ]}
 >
-  <fragment slot="headExtensions">
-    {
-      posts.length > 0 && (
-        <script
-          type="application/ld+json"
-          is:inline
-          set:html={JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Blog",
-            name: "Blog - SaaS Boilerplate",
-            url: Astro.site
-              ? new URL("/blog", Astro.site).href
-              : Astro.url.href,
-            description: "Latest insights and tutorials about SaaS development",
-            blogPost: posts.slice(0, 12).map((p, idx) => ({
-              "@type": "BlogPosting",
-              position: idx + 1,
-              headline: p.title,
-              url: Astro.site
-                ? new URL(`/blog/${p.slug}`, Astro.site).href
-                : `/blog/${p.slug}`,
-              datePublished: p.date,
-              author: { "@type": "Person", name: p.author || "Unknown" },
-              image: p.coverImageUrl || undefined,
-              description: p.preview || p.excerpt,
-            })),
-          })}
-        />
-      )
-    }
-  </fragment>
   <Header />
 
   <main>
     <section class="py-20">
       <div class="container mx-auto px-4">
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-bold mb-4">Blog</h1>
+          <h1 class="text-4xl font-bold mb-4">{blogTitle}</h1>
           <p class="text-xl text-base-content/70">
-            Latest insights and tutorials about SaaS development
+            Laser engraving workflow guides, Lightlane product updates, and release notes.
           </p>
         </div>
 

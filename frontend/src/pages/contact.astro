@@ -3,11 +3,64 @@ import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import { STRAPI_URL } from "../config/strapi";
+
+const fallbackSite = new URL("https://lightlane.app");
+const siteBase = Astro.site ?? fallbackSite;
+const toAbsolute = (path: string) => new URL(path, siteBase).href;
+
+const contactKeywords = [
+  "contact Lightlane",
+  "laser engraving software support",
+  "laser cutter software sales",
+  "Lightlane partnerships",
+  "laser engraving software help",
+];
+
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "@id": `${toAbsolute("/contact")}#contact-page`,
+    name: "Contact Lightlane",
+    description: "Reach the Lightlane support, sales, and partnerships teams.",
+    url: toAbsolute("/contact"),
+    keywords: contactKeywords.join(", "),
+    mainEntity: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: "support@lightlane.app",
+        availableLanguage: ["en"],
+        areaServed: "Worldwide",
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "sales",
+        email: "sales@lightlane.app",
+        availableLanguage: ["en"],
+        areaServed: "Worldwide",
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "partnership",
+        email: "partners@lightlane.app",
+        availableLanguage: ["en"],
+        areaServed: "Worldwide",
+      },
+    ],
+  },
+];
 ---
 
 <Layout
   title="Contact – Lightlane"
   description="Reach the Lightlane team: support, sales & partnership enquiries."
+  keywords={contactKeywords.join(", ")}
+  structuredData={structuredData}
+  breadcrumbs={[
+    { name: "Home", url: "/" },
+    { name: "Contact", url: "/contact" },
+  ]}
 >
   <Header />
 
@@ -34,11 +87,10 @@ import { STRAPI_URL } from "../config/strapi";
               >We’d love to hear from you</span
             >
           </h1>
-          <p
-            class="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto"
-          >
-            Questions about licensing, partnerships or the product roadmap? Send
-            a note and the right team will reply shortly.
+          <p class="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto">
+            Questions about Lightlane laser engraving software licensing,
+            controller support, or partnerships? Send a note and the right team
+            will reply shortly with expert help for your laser cutter workflow.
           </p>
           <div
             class="flex flex-wrap gap-3 justify-center text-xs md:text-sm text-base-content/60"
