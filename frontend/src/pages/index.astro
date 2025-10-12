@@ -153,7 +153,7 @@ const videoStructuredData = workflowSteps.map((step) => ({
   name: `${step.name} – Lightlane laser engraving software`,
   description: step.description,
   thumbnailUrl: [toAbsolute("/og-lightlane.png")],
-  uploadDate: "2024-01-01",
+  uploadDate: new Date().toISOString().slice(0, 10),
   contentUrl: toAbsolute(step.video),
   inLanguage: "en-US",
   publisher: { "@id": `${toAbsolute("/")}#organization` },
