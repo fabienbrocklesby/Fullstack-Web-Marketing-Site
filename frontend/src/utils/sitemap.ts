@@ -54,11 +54,12 @@ export const buildUrlSet = (entries: SitemapEntry[]) => {
           );
         }
       }
-      return `<url>${parts.join("")}</url>`;
+      return `  <url>\n    ${parts.join("\n    ")}\n  </url>`;
     })
-    .join("");
+    .join("\n");
 
-  return `${XML_HEADER}${URLSET_OPEN}${urls}</urlset>`;
+  const body = urls ? `\n${urls}\n` : "\n";
+  return `${XML_HEADER}\n${URLSET_OPEN}${body}</urlset>`;
 };
 
 export const buildSitemapIndex = (entries: SitemapEntry[]) => {
@@ -68,9 +69,10 @@ export const buildSitemapIndex = (entries: SitemapEntry[]) => {
       if (entry.lastmod) {
         parts.push(`<lastmod>${formatDate(entry.lastmod)}</lastmod>`);
       }
-      return `<sitemap>${parts.join("")}</sitemap>`;
+      return `  <sitemap>\n    ${parts.join("\n    ")}\n  </sitemap>`;
     })
-    .join("");
+    .join("\n");
 
-  return `${XML_HEADER}${SITEMAPINDEX_OPEN}${urls}</sitemapindex>`;
+  const body = urls ? `\n${urls}\n` : "\n";
+  return `${XML_HEADER}\n${SITEMAPINDEX_OPEN}${body}</sitemapindex>`;
 };
