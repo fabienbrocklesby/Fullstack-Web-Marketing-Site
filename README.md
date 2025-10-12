@@ -20,6 +20,7 @@ A production-ready SaaS marketing site built with Astro frontend and Strapi back
 - **Robots & sitemap**: `frontend/public/robots.txt` now targets `https://lightlane.app/sitemap-index.xml`; adjust if a staging domain is used.
 - **Homepage FAQ schema**: When editing FAQ copy in `frontend/src/pages/index.astro`, keep the `faqEntries` array aligned with the visible questions and answers to preserve structured data accuracy.
 - **Keyword hubs**: Page-level keyword arrays and schema enrichments live alongside each Astro page (`homepageKeywords`, `pricingKeywords`, `contactKeywords`, blog keywords). Tweak them together with on-page copy so meta tags, structured data, and headings stay aligned.
+- **Sitemaps**: `astro.config.mjs` no longer relies on the auto sitemap integration. Hand-crafted sitemap endpoints live under `frontend/src/pages/sitemap-*.xml.ts` (static, blog, dynamic CMS pages, and the index). Extend those helpers in `frontend/src/utils/sitemap-data.ts` if you add new sections or Strapi collections.
 
 ### Backend (Strapi)
 
