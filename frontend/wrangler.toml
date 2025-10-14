@@ -4,9 +4,12 @@ compatibility_date = "2024-01-01"
 
 [env.production]
 PUBLIC_CMS_URL = "https://your-strapi-backend.ondigitalocean.app"
+PUBLIC_DOWNLOAD_VERSION = "v1.0.0"
 
 [env.preview]
 PUBLIC_CMS_URL = "https://your-strapi-backend.ondigitalocean.app"
+PUBLIC_DOWNLOAD_VERSION = "v1.0.0"
 
 [env.development]
 PUBLIC_CMS_URL = "http://localhost:1337"
+PUBLIC_DOWNLOAD_VERSION = "v1.0.0"

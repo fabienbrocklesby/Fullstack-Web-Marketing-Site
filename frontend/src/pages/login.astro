@@ -11,24 +11,26 @@ import Layout from "../layouts/Layout.astro";
             <h1 class="text-2xl font-bold mb-6">Team Portal</h1>
             <form id="login-form">
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="login-email">
                   <span class="label-text">Email</span>
                 </label>
                 <input
                   type="email"
-                  id="email"
+                  id="login-email"
+                  name="email"
                   placeholder="email@example.com"
                   class="input input-bordered"
                   required
                 />
               </div>
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="login-password">
                   <span class="label-text">Password</span>
                 </label>
                 <input
                   type="password"
-                  id="password"
+                  id="login-password"
+                  name="password"
                   placeholder="password"
                   class="input input-bordered"
                   required
@@ -63,9 +65,11 @@ import Layout from "../layouts/Layout.astro";
     ?.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const emailInput = document.getElementById("email") as HTMLInputElement;
+      const emailInput = document.getElementById(
+        "login-email",
+      ) as HTMLInputElement;
       const passwordInput = document.getElementById(
-        "password",
+        "login-password",
       ) as HTMLInputElement;
       const errorDiv = document.getElementById("error-message");
       const errorText = document.getElementById("error-text");

@@ -13,6 +13,18 @@ const {
   align = "left",
   class: klass = "",
 } = Astro.props as Props;
+
+const DOWNLOAD_BASE_URL = "https://downloads.lightlane.app";
+const fallbackVersion = "v1.0.0";
+// @ts-ignore - Astro injects env at build time
+const rawVersion = import.meta.env?.PUBLIC_DOWNLOAD_VERSION ?? fallbackVersion;
+const normalizedVersion = rawVersion.trim().replace(/^\/+|\/+$/g, "");
+const resolvedVersion =
+  normalizedVersion.length > 0 ? normalizedVersion : fallbackVersion;
+const baseUrl = `${DOWNLOAD_BASE_URL.replace(/\/$/, "")}/${resolvedVersion}`;
+const macHref = `${baseUrl}/Light-Lane-macOS.zip`;
+const windowsHref = `${baseUrl}/Light-Lane-Windows.zip`;
+const checksumsHref = `${baseUrl}/SHA256SUMS.txt`;
 ---
 
 <div
@@ -21,41 +33,18 @@ const {
   <a
     id="dl-mac"
     class={`btn ${soft ? "btn-soft" : "btn-primary"} btn-${size}`}
-    href="#">Download macOS</a
+    href={macHref}>Download macOS</a
   >
   <a
     id="dl-win"
     class={`btn ${soft ? "btn-soft" : "btn-primary"} btn-${size}`}
-    href="#">Download Windows</a
+    href={windowsHref}>Download Windows</a
   >
   {
     showChecksums && (
-      <a id="dl-sums" class={`btn btn-ghost btn-${size}`} href="#">
+      <a id="dl-sums" class={`btn btn-ghost btn-${size}`} href={checksumsHref}>
         Checksums
       </a>
     )
   }
 </div>
-
-<script>
-  (async function () {
-    try {
-      const cmsUrl =
-        document.documentElement.getAttribute("data-cms-url") ||
-        "http://localhost:1337";
-      const res = await fetch(
-        `${cmsUrl.replace(/\/$/, "")}/api/release/latest`,
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      const r = data && data.release ? data.release : null;
-      if (!r) return;
-      const mac = document.getElementById("dl-mac");
-      const win = document.getElementById("dl-win");
-      const sums = document.getElementById("dl-sums");
-      if (mac && r.macUrl) mac.setAttribute("href", r.macUrl);
-      if (win && r.windowsUrl) win.setAttribute("href", r.windowsUrl);
-      if (sums && r.checksumsUrl) sums.setAttribute("href", r.checksumsUrl);
-    } catch (e) {}
-  })();
-</script>

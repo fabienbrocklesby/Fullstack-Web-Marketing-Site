@@ -55,7 +55,7 @@ import Layout from "../layouts/Layout.astro";
             <h2 class="card-title text-2xl mb-4">🔓 Activate License</h2>
             <form id="activateForm" class="space-y-4">
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="licenseKey">
                   <span class="label-text font-medium">License Key</span>
                 </label>
                 <input
@@ -83,7 +83,7 @@ import Layout from "../layouts/Layout.astro";
             <h2 class="card-title text-2xl mb-4">🔒 Deactivate License</h2>
             <form id="deactivateForm" class="space-y-4">
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="deactivateLicenseKey">
                   <span class="label-text font-medium">License Key</span>
                 </label>
                 <input
@@ -96,7 +96,7 @@ import Layout from "../layouts/Layout.astro";
                 />
               </div>
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="deactivationCode">
                   <span class="label-text font-medium">Deactivation Code</span>
                 </label>
                 <input

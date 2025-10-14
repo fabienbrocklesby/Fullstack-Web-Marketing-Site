@@ -5,7 +5,13 @@
 <header class="navbar bg-base-100 shadow-lg border-b border-base-200">
   <div class="navbar-start">
     <div class="dropdown">
-      <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+      <button
+        type="button"
+        class="btn btn-ghost lg:hidden"
+        aria-label="Toggle navigation menu"
+        aria-controls="mobile-menu"
+        aria-expanded="false"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-5 w-5"
@@ -19,7 +25,7 @@
             stroke-width="2"
             d="M4 6h16M4 12h8m-8 6h16"></path>
         </svg>
-      </div>
+      </button>
       <!-- Mobile Menu -->
       <ul
         tabindex="0"
@@ -290,6 +296,28 @@
   // Initialize when DOM is loaded
   document.addEventListener("DOMContentLoaded", () => {
     new HeaderAuthManager();
+
+    const mobileToggle = document.querySelector<HTMLButtonElement>(
+      '[aria-controls="mobile-menu"]',
+    );
+    const dropdown = mobileToggle?.closest(".dropdown");
+    if (mobileToggle && dropdown) {
+      const setExpanded = (expanded: boolean) =>
+        mobileToggle.setAttribute("aria-expanded", String(expanded));
+
+      dropdown.addEventListener("focusin", () => setExpanded(true));
+      dropdown.addEventListener("focusout", (event) => {
+        const nextTarget = event.relatedTarget as Node | null;
+        if (!nextTarget || !dropdown.contains(nextTarget)) {
+          setExpanded(false);
+        }
+      });
+      document.addEventListener("click", (event) => {
+        if (!dropdown.contains(event.target as Node)) {
+          setExpanded(false);
+        }
+      });
+    }
   });
 
   // Re-check auth state when localStorage changes (for cross-tab sync)

@@ -16,12 +16,13 @@ import Layout from "../layouts/Layout.astro";
 
             <form id="register-form">
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="register-username">
                   <span class="label-text">Username</span>
                 </label>
                 <input
                   type="text"
-                  id="username"
+                  id="register-username"
+                  name="username"
                   placeholder="username"
                   class="input input-bordered"
                   required
@@ -29,12 +30,13 @@ import Layout from "../layouts/Layout.astro";
               </div>
 
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="register-email">
                   <span class="label-text">Email</span>
                 </label>
                 <input
                   type="email"
-                  id="email"
+                  id="register-email"
+                  name="email"
                   placeholder="email@example.com"
                   class="input input-bordered"
                   required
@@ -42,12 +44,13 @@ import Layout from "../layouts/Layout.astro";
               </div>
 
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="register-password">
                   <span class="label-text">Password</span>
                 </label>
                 <input
                   type="password"
-                  id="password"
+                  id="register-password"
+                  name="password"
                   placeholder="password"
                   class="input input-bordered"
                   required
@@ -56,12 +59,13 @@ import Layout from "../layouts/Layout.astro";
               </div>
 
               <div class="form-control">
-                <label class="label">
+                <label class="label" for="register-confirm-password">
                   <span class="label-text">Confirm Password</span>
                 </label>
                 <input
                   type="password"
-                  id="confirmPassword"
+                  id="register-confirm-password"
+                  name="confirmPassword"
                   placeholder="confirm password"
                   class="input input-bordered"
                   required
@@ -104,14 +108,16 @@ import Layout from "../layouts/Layout.astro";
       e.preventDefault();
 
       const usernameInput = document.getElementById(
-        "username",
+        "register-username",
       ) as HTMLInputElement;
-      const emailInput = document.getElementById("email") as HTMLInputElement;
+      const emailInput = document.getElementById(
+        "register-email",
+      ) as HTMLInputElement;
       const passwordInput = document.getElementById(
-        "password",
+        "register-password",
       ) as HTMLInputElement;
       const confirmPasswordInput = document.getElementById(
-        "confirmPassword",
+        "register-confirm-password",
       ) as HTMLInputElement;
       const errorDiv = document.getElementById("error-message");
       const errorText = document.getElementById("error-text");
