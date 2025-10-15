@@ -7,9 +7,9 @@ export interface PricingOffer {
   description: string;
   ctaPath: string;
   availability:
-    | "https://schema.org/InStock"
-    | "https://schema.org/PreOrder"
-    | "https://schema.org/OnlineOnly";
+  | "https://schema.org/InStock"
+  | "https://schema.org/PreOrder"
+  | "https://schema.org/OnlineOnly";
   type: PricingOfferType;
   sku?: string;
   price?: number;
