@@ -163,7 +163,7 @@ function showHelp() {
   }));
 
   if (dryRun) {
-    console.log("🧪 Dry run mode — generated codes (not sent to Strapi):");
+    console.log("🧪 Dry run mode - generated codes (not sent to Strapi):");
     codes.forEach((c) => console.log(c.code));
   } else if (internal) {
     // Programmatic Strapi mode (no HTTP, respects full permissions)
