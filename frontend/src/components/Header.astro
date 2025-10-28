@@ -6,11 +6,14 @@
   <div class="navbar-start">
     <div class="dropdown">
       <button
+        id="mobile-menu-toggle"
         type="button"
         class="btn btn-ghost lg:hidden"
         aria-label="Toggle navigation menu"
         aria-controls="mobile-menu"
         aria-expanded="false"
+        tabindex="0"
+        role="button"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -184,7 +187,7 @@
 </header>
 
 <script>
-  // Authentication state manager for the header
+  // Authentication state manager for the header (vanilla JS)
   class HeaderAuthManager {
     constructor() {
       this.init();
@@ -205,15 +208,12 @@
       this.hideAllAuthSections();
 
       if (customerToken && customer) {
-        // Customer is authenticated
         this.showCustomerUI(customer);
         console.log("🔐 Customer authenticated:", customer.email);
       } else if (affiliateJWT && user) {
-        // Affiliate is authenticated
         this.showAffiliateUI(user);
         console.log("🔐 Affiliate authenticated:", user.email);
       } else {
-        // No authentication - show default
         this.showDefaultUI();
         console.log("🔓 No authentication found");
       }
@@ -223,23 +223,23 @@
       const sections = [".auth-default", ".auth-customer", ".auth-affiliate"];
       sections.forEach((selector) => {
         document.querySelectorAll(selector).forEach((el) => {
-          (el as HTMLElement).style.display = "none";
+          el.classList.add("hidden");
         });
       });
     }
 
     showDefaultUI() {
       document.querySelectorAll(".auth-default").forEach((el) => {
-        (el as HTMLElement).style.display = "flex";
+        el.classList.remove("hidden");
+        el.classList.add("flex");
       });
     }
 
     showCustomerUI(customer) {
       document.querySelectorAll(".auth-customer").forEach((el) => {
-        (el as HTMLElement).style.display = "flex";
+        el.classList.remove("hidden");
+        el.classList.add("flex");
       });
-
-      // Update customer name display
       const customerNameEl = document.getElementById("customer-name");
       if (customerNameEl && customer) {
         const displayName = customer.firstName
@@ -251,10 +251,9 @@
 
     showAffiliateUI(user) {
       document.querySelectorAll(".auth-affiliate").forEach((el) => {
-        (el as HTMLElement).style.display = "flex";
+        el.classList.remove("hidden");
+        el.classList.add("flex");
       });
-
-      // Update affiliate name display
       const affiliateNameEl = document.getElementById("affiliate-name");
       if (affiliateNameEl && user) {
         const displayName = user.username || user.email;
@@ -272,15 +271,11 @@
     }
 
     handleLogout() {
-      // Clear all authentication data
       localStorage.removeItem("customerToken");
       localStorage.removeItem("customer");
       localStorage.removeItem("jwt");
       localStorage.removeItem("user");
-
       console.log("🚪 User logged out");
-
-      // Redirect to home page
       window.location.href = "/";
     }
 
@@ -297,25 +292,41 @@
   document.addEventListener("DOMContentLoaded", () => {
     new HeaderAuthManager();
 
-    const mobileToggle = document.querySelector<HTMLButtonElement>(
+    // Mobile dropdown toggle (DaisyUI)
+    const mobileToggle = document.querySelector(
       '[aria-controls="mobile-menu"]',
     );
-    const dropdown = mobileToggle?.closest(".dropdown");
-    if (mobileToggle && dropdown) {
-      const setExpanded = (expanded: boolean) =>
+    const dropdown = mobileToggle ? mobileToggle.closest(".dropdown") : null;
+    const menu = document.getElementById("mobile-menu");
+    if (mobileToggle && dropdown && menu) {
+      const setExpanded = (expanded) => {
         mobileToggle.setAttribute("aria-expanded", String(expanded));
+        if (expanded) dropdown.classList.add("dropdown-open");
+        else dropdown.classList.remove("dropdown-open");
+      };
 
-      dropdown.addEventListener("focusin", () => setExpanded(true));
-      dropdown.addEventListener("focusout", (event) => {
-        const nextTarget = event.relatedTarget as Node | null;
-        if (!nextTarget || !dropdown.contains(nextTarget)) {
+      mobileToggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        const expanded = mobileToggle.getAttribute("aria-expanded") === "true";
+        setExpanded(!expanded);
+      });
+
+      // Close on outside click
+      document.addEventListener("click", (event) => {
+        const t = event.target;
+        if (!(t instanceof Node) || !dropdown.contains(t)) {
           setExpanded(false);
         }
       });
-      document.addEventListener("click", (event) => {
-        if (!dropdown.contains(event.target as Node)) {
-          setExpanded(false);
-        }
+
+      // Close when a menu item is clicked
+      menu.querySelectorAll("a, button").forEach((el) => {
+        el.addEventListener("click", () => setExpanded(false));
+      });
+
+      // Close on Escape
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") setExpanded(false);
       });
     }
   });
