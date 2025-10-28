@@ -31,7 +31,7 @@ try {
   if (envObj.PUBLIC_STRAPI_URL) CMS_URL = envObj.PUBLIC_STRAPI_URL;
   if (envObj.PUBLIC_STRAPI_API_TOKEN)
     CMS_TOKEN = envObj.PUBLIC_STRAPI_API_TOKEN;
-} catch {}
+} catch { }
 
 function absolutizeMedia(html: string, base: string): string {
   if (!html) return html;
@@ -152,7 +152,7 @@ async function safeFetch(url: string): Promise<any | null> {
   try {
     const headers: Record<string, string> = {};
     if (CMS_TOKEN) headers["Authorization"] = `Bearer ${CMS_TOKEN}`;
-    const res = await fetch(url, { 
+    const res = await fetch(url, {
       headers,
       cache: 'no-store' // Disable caching to always fetch fresh data
     });

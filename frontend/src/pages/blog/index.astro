@@ -19,9 +19,7 @@ const blogKeywords = [
   "laser engraving tutorials",
   "laser cutter software news",
 ];
-const blogUrl = Astro.site
-  ? new URL("/blog", Astro.site).href
-  : "/blog";
+const blogUrl = Astro.site ? new URL("/blog", Astro.site).href : "/blog";
 const organizationId = Astro.site
   ? `${new URL("/", Astro.site).href}#organization`
   : "/#organization";
@@ -79,7 +77,8 @@ const structuredData = posts.length
         <div class="text-center mb-12">
           <h1 class="text-4xl font-bold mb-4">{blogTitle}</h1>
           <p class="text-xl text-base-content/70">
-            Laser engraving workflow guides, Lightlane product updates, and release notes.
+            Laser engraving workflow guides, Lightlane product updates, and
+            release notes.
           </p>
         </div>
 
