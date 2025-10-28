@@ -55,6 +55,8 @@ services:
     restart: unless-stopped
     environment:
       PUBLIC_STRAPI_URL: ${PUBLIC_STRAPI_URL:-http://localhost:1337}
+      STRAPI_URL: ${STRAPI_URL:-http://backend:1337}
+      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
       NODE_ENV: production
     ports:
       - "4321:4321"

@@ -25,12 +25,35 @@ import MarkdownIt from "markdown-it";
 const DEFAULT_CMS_URL = "http://localhost:1337";
 let CMS_URL: string = DEFAULT_CMS_URL;
 let CMS_TOKEN: string | undefined;
+
+// Try to get server-side env vars first (for SSR), then fall back to PUBLIC_ vars
 try {
-  // @ts-ignore
-  const envObj = (import.meta as any)?.env || {};
-  if (envObj.PUBLIC_STRAPI_URL) CMS_URL = envObj.PUBLIC_STRAPI_URL;
-  if (envObj.PUBLIC_STRAPI_API_TOKEN)
-    CMS_TOKEN = envObj.PUBLIC_STRAPI_API_TOKEN;
+  // For server-side (SSR), check process.env first for non-PUBLIC variables
+  // This allows different URLs for internal Docker networking vs external API
+  if (typeof process !== 'undefined' && process.env) {
+    if (process.env.STRAPI_URL) {
+      CMS_URL = process.env.STRAPI_URL;
+    } else if (process.env.PUBLIC_STRAPI_URL) {
+      CMS_URL = process.env.PUBLIC_STRAPI_URL;
+    }
+
+    if (process.env.STRAPI_API_TOKEN) {
+      CMS_TOKEN = process.env.STRAPI_API_TOKEN;
+    } else if (process.env.PUBLIC_STRAPI_API_TOKEN) {
+      CMS_TOKEN = process.env.PUBLIC_STRAPI_API_TOKEN;
+    }
+  }
+
+  // Fallback to import.meta.env for PUBLIC_ vars (works both SSR and client-side)
+  if (!CMS_URL || CMS_URL === DEFAULT_CMS_URL) {
+    const envObj = (import.meta as any)?.env || {};
+    if (envObj.PUBLIC_STRAPI_URL) {
+      CMS_URL = envObj.PUBLIC_STRAPI_URL;
+    }
+    if (!CMS_TOKEN && envObj.PUBLIC_STRAPI_API_TOKEN) {
+      CMS_TOKEN = envObj.PUBLIC_STRAPI_API_TOKEN;
+    }
+  }
 } catch { }
 
 function absolutizeMedia(html: string, base: string): string {

@@ -1,10 +1,4 @@
 module.exports = async ({ strapi }) => {
-  // Check if strapi is properly initialized
-  if (!strapi || !strapi.query) {
-    console.log("Strapi not fully initialized, skipping bootstrap");
-    return;
-  }
-
   try {
     // Verify ZeptoMail SMTP (non-fatal) if credentials present
     if (process.env.SMTP_USERNAME && process.env.SMTP_PASSWORD) {
@@ -18,11 +12,56 @@ module.exports = async ({ strapi }) => {
       console.log("SMTP credentials missing; email disabled");
     }
 
-    // Set up permissions for authenticated users
-    const pluginStore = strapi.store({
-      type: "plugin",
-      name: "users-permissions",
-    });
+    // Set up permissions for public and authenticated users
+    // Get the public role
+    const publicRole = await strapi
+      .query("plugin::users-permissions.role")
+      .findOne({ where: { type: "public" } });
+
+    console.log("🔍 Found public role:", publicRole ? publicRole.id : "NOT FOUND");
+
+    if (publicRole) {
+      // Enable blogposts find and findOne for public users
+      const publicActionsToEnable = [
+        "api::blogpost.blogpost.find",
+        "api::blogpost.blogpost.findOne",
+      ];
+
+      console.log("🔍 Attempting to enable blogpost permissions for public...");
+
+      for (const action of publicActionsToEnable) {
+        const existingPermission = await strapi
+          .query("plugin::users-permissions.permission")
+          .findOne({
+            where: {
+              role: publicRole.id,
+              action: action,
+            },
+          });
+
+        if (existingPermission) {
+          await strapi.query("plugin::users-permissions.permission").update({
+            where: { id: existingPermission.id },
+            data: { enabled: true },
+          });
+          console.log(`✅ Updated blogpost permission: ${action}`);
+        } else {
+          await strapi.query("plugin::users-permissions.permission").create({
+            data: {
+              action,
+              subject: null,
+              properties: {},
+              conditions: [],
+              role: publicRole.id,
+              enabled: true,
+            },
+          });
+          console.log(`✅ Created blogpost permission: ${action}`);
+        }
+      }
+
+      console.log("✅ Blogpost permissions enabled for public users");
+    }
 
     // Get the authenticated role
     const authenticatedRole = await strapi
