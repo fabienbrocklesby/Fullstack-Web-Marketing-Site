@@ -23,24 +23,31 @@ export interface Post {
 import MarkdownIt from "markdown-it";
 
 const DEFAULT_CMS_URL = "http://localhost:1337";
-let CMS_URL: string = DEFAULT_CMS_URL;
+let CMS_URL: string = DEFAULT_CMS_URL; // API base used for server fetches (SSR)
+let PUBLIC_CMS_URL: string | undefined; // Public base used for media URLs in rendered HTML
 let CMS_TOKEN: string | undefined;
 
 // Try to get server-side env vars first (for SSR), then fall back to PUBLIC_ vars
 try {
   // For server-side (SSR), check process.env first for non-PUBLIC variables
   // This allows different URLs for internal Docker networking vs external API
-  if (typeof process !== 'undefined' && process.env) {
-    if (process.env.STRAPI_URL) {
-      CMS_URL = process.env.STRAPI_URL;
-    } else if (process.env.PUBLIC_STRAPI_URL) {
-      CMS_URL = process.env.PUBLIC_STRAPI_URL;
+  const nodeEnv = (globalThis as any)?.process?.env;
+  if (nodeEnv) {
+    if (nodeEnv.STRAPI_URL) {
+      CMS_URL = nodeEnv.STRAPI_URL;
+    } else if (nodeEnv.PUBLIC_STRAPI_URL) {
+      CMS_URL = nodeEnv.PUBLIC_STRAPI_URL;
     }
 
-    if (process.env.STRAPI_API_TOKEN) {
-      CMS_TOKEN = process.env.STRAPI_API_TOKEN;
-    } else if (process.env.PUBLIC_STRAPI_API_TOKEN) {
-      CMS_TOKEN = process.env.PUBLIC_STRAPI_API_TOKEN;
+    // Prefer explicitly provided public URL for media
+    if (nodeEnv.PUBLIC_STRAPI_URL) {
+      PUBLIC_CMS_URL = nodeEnv.PUBLIC_STRAPI_URL;
+    }
+
+    if (nodeEnv.STRAPI_API_TOKEN) {
+      CMS_TOKEN = nodeEnv.STRAPI_API_TOKEN;
+    } else if (nodeEnv.PUBLIC_STRAPI_API_TOKEN) {
+      CMS_TOKEN = nodeEnv.PUBLIC_STRAPI_API_TOKEN;
     }
   }
 
@@ -52,6 +59,11 @@ try {
     }
     if (!CMS_TOKEN && envObj.PUBLIC_STRAPI_API_TOKEN) {
       CMS_TOKEN = envObj.PUBLIC_STRAPI_API_TOKEN;
+    }
+
+    // Also set public base for media if available
+    if (envObj.PUBLIC_STRAPI_URL) {
+      PUBLIC_CMS_URL = envObj.PUBLIC_STRAPI_URL;
     }
   }
 } catch { }
@@ -129,15 +141,16 @@ function normalizePost(raw: any): Post | null {
       contentRaw,
     );
   if (!hasBlockTags) {
-    const paragraphs = contentRaw
+    const paragraphs: string[] = contentRaw
       .split(/\n{2,}/)
-      .map((seg) => seg.trim())
-      .filter(Boolean);
+      .map((seg: string) => seg.trim())
+      .filter(Boolean) as string[];
     contentRaw = paragraphs
-      .map((p) => `<p>${p.replace(/\n/g, "<br />")}</p>`)
+      .map((p: string) => `<p>${p.replace(/\n/g, "<br />")}</p>`)
       .join("\n");
   }
-  const contentHtml = absolutizeMedia(contentRaw, CMS_URL);
+  const mediaBase = (PUBLIC_CMS_URL || CMS_URL).replace(/\/$/, "");
+  const contentHtml = absolutizeMedia(contentRaw, mediaBase);
   const preview: string | undefined = a.preview || undefined;
   // cover image extraction
   let coverImageUrl: string | undefined;
@@ -148,7 +161,7 @@ function normalizePost(raw: any): Post | null {
   if (coverAttr?.url) {
     coverImageUrl = coverAttr.url.startsWith("http")
       ? coverAttr.url
-      : `${CMS_URL.replace(/\/$/, "")}${coverAttr.url}`;
+      : `${mediaBase}${coverAttr.url}`;
     coverImageAlt =
       coverAttr.alternativeText || coverAttr.name || a.title || "Cover image";
   }
@@ -265,4 +278,4 @@ export async function getPaginatedPosts(
   return { posts, pagination: meta };
 }
 
-export { CMS_URL, CMS_TOKEN };
+export { CMS_URL, CMS_TOKEN, PUBLIC_CMS_URL };
