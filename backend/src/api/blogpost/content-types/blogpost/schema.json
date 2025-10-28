@@ -17,6 +17,8 @@
     "content": { "type": "richtext" },
     "preview": { "type": "text", "config": { "short": true } },
     "author": { "type": "string", "required": true },
+    "coverImageUrl": { "type": "string" },
+    "coverImageAlt": { "type": "string" },
     "coverImage": {
       "type": "media",
       "multiple": false,

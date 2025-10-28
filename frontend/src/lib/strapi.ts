@@ -152,18 +152,29 @@ function normalizePost(raw: any): Post | null {
   const mediaBase = (PUBLIC_CMS_URL || CMS_URL).replace(/\/$/, "");
   const contentHtml = absolutizeMedia(contentRaw, mediaBase);
   const preview: string | undefined = a.preview || undefined;
-  // cover image extraction
+  // cover image extraction: prefer URL fields, fallback to media
   let coverImageUrl: string | undefined;
   let coverImageAlt: string | undefined;
-  const cover = a.coverImage || a.cover_image || a.thumbnail;
-  const coverData = cover?.data;
-  const coverAttr = coverData?.attributes;
-  if (coverAttr?.url) {
-    coverImageUrl = coverAttr.url.startsWith("http")
-      ? coverAttr.url
-      : `${mediaBase}${coverAttr.url}`;
-    coverImageAlt =
-      coverAttr.alternativeText || coverAttr.name || a.title || "Cover image";
+
+  const directUrl: string | undefined =
+    a.coverImageUrl || a.cover_image_url || undefined;
+  const directAlt: string | undefined =
+    a.coverImageAlt || a.cover_image_alt || undefined;
+
+  if (directUrl && typeof directUrl === "string" && directUrl.trim()) {
+    coverImageUrl = directUrl.trim();
+    coverImageAlt = directAlt || a.title || "Cover image";
+  } else {
+    const cover = a.coverImage || a.cover_image || a.thumbnail;
+    const coverData = cover?.data;
+    const coverAttr = coverData?.attributes;
+    if (coverAttr?.url) {
+      coverImageUrl = coverAttr.url.startsWith("http")
+        ? coverAttr.url
+        : `${mediaBase}${coverAttr.url}`;
+      coverImageAlt =
+        coverAttr.alternativeText || coverAttr.name || a.title || "Cover image";
+    }
   }
   return {
     id: raw.id,
