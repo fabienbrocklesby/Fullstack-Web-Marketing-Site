@@ -4,6 +4,9 @@ import Header from "../../components/Header.astro";
 import Footer from "../../components/Footer.astro";
 import { getPaginatedPosts, type Post } from "../../lib/strapi";
 
+// Disable prerendering to always fetch fresh posts from Strapi
+export const prerender = false;
+
 const { posts, pagination } = await getPaginatedPosts(1, 9);
 
 const blogTitle = "Lightlane Blog";

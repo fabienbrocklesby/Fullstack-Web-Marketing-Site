@@ -152,7 +152,10 @@ async function safeFetch(url: string): Promise<any | null> {
   try {
     const headers: Record<string, string> = {};
     if (CMS_TOKEN) headers["Authorization"] = `Bearer ${CMS_TOKEN}`;
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { 
+      headers,
+      cache: 'no-store' // Disable caching to always fetch fresh data
+    });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.warn(
