@@ -16,7 +16,7 @@ export interface PricingOffer {
   priceId?: string;
 }
 
-export const FOUNDERS_OFFER_DEADLINE = "2025-10-31T23:59:59Z";
+export const FOUNDERS_OFFER_DEADLINE = "2025-12-01T00:00:00Z";
 
 export const pricingOffers: PricingOffer[] = [
   {
