@@ -1,6 +1,5 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import Header from "../../components/Header.astro";
 import Footer from "../../components/Footer.astro";
 import { getPaginatedPosts, type Post } from "../../lib/strapi";
 
@@ -69,7 +68,7 @@ const structuredData = posts.length
     { name: "Blog", url: "/blog" },
   ]}
 >
-  <Header />
+  <!-- Header rendered by Layout.astro -->
 
   <main>
     <section class="py-20">

@@ -54,27 +54,21 @@
         </li>
 
         <!-- Customer Mobile Menu (shown when customer is authenticated) -->
-        <li
-          class="border-t border-base-200 mt-2 pt-2 auth-customer"
-          style="display: none;"
-        >
+        <li class="border-t border-base-200 mt-2 pt-2 auth-customer hidden">
           <a href="/customer/dashboard" class="text-base">Dashboard</a>
         </li>
-        <li class="auth-customer" style="display: none;">
+        <li class="auth-customer hidden">
           <a href="/customer/profile" class="text-base">Profile</a>
         </li>
-        <li class="auth-customer" style="display: none;">
+        <li class="auth-customer hidden">
           <button class="btn btn-ghost btn-sm mt-2 logout-btn">Logout</button>
         </li>
 
         <!-- Affiliate Mobile Menu (shown when affiliate is authenticated) -->
-        <li
-          class="border-t border-base-200 mt-2 pt-2 auth-affiliate"
-          style="display: none;"
-        >
+        <li class="border-t border-base-200 mt-2 pt-2 auth-affiliate hidden">
           <a href="/dashboard" class="text-base">Dashboard</a>
         </li>
-        <li class="auth-affiliate" style="display: none;">
+        <li class="auth-affiliate hidden">
           <button class="btn btn-ghost btn-sm mt-2 logout-btn">Logout</button>
         </li>
       </ul>
@@ -113,7 +107,7 @@
     id="desktop-menu"
   >
     <!-- Default Desktop Menu (shown when not authenticated) -->
-    <div class="auth-default items-center gap-2" style="display: none;">
+    <div class="auth-default items-center gap-2">
       <a href="/customer/login" class="btn btn-ghost btn-sm">Login</a>
       <a href="/customer/register" class="btn btn-ghost btn-sm"
         >Create Account</a
@@ -124,7 +118,7 @@
     </div>
 
     <!-- Customer Desktop Menu (shown when customer is authenticated) -->
-    <div class="auth-customer gap-2" style="display: none;">
+    <div class="auth-customer gap-2 hidden">
       <div class="dropdown dropdown-end">
         <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
           <span id="customer-name">Customer</span>
@@ -155,7 +149,7 @@
     </div>
 
     <!-- Affiliate Desktop Menu (shown when affiliate is authenticated) -->
-    <div class="auth-affiliate gap-2" style="display: none;">
+    <div class="auth-affiliate gap-2 hidden">
       <div class="dropdown dropdown-end">
         <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
           <span id="affiliate-name">Affiliate</span>

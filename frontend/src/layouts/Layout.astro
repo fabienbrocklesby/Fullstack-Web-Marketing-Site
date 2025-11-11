@@ -27,6 +27,7 @@ const {
 
 // @ts-ignore - Astro injects import.meta.env at build time
 import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
+import Header from "../components/Header.astro";
 import { STRAPI_URL } from "../config/strapi";
 
 const fallbackSite = "https://lightlane.app/";
@@ -224,6 +225,7 @@ const combinedStructuredData = [
     </script>
   </head>
   <body>
+    <Header />
     <slot />
 
     <!-- Authentication Guard -->

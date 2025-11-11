@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import { STRAPI_URL } from "../config/strapi";
 
@@ -62,7 +61,7 @@ const structuredData = [
     { name: "Contact", url: "/contact" },
   ]}
 >
-  <Header />
+  <!-- Header rendered by Layout.astro -->
 
   <main>
     <!-- Hero / Intro -->
@@ -87,7 +86,9 @@ const structuredData = [
               >We’d love to hear from you</span
             >
           </h1>
-          <p class="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto">
+          <p
+            class="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto"
+          >
             Questions about Lightlane laser engraving software licensing,
             controller support, or partnerships? Send a note and the right team
             will reply shortly with expert help for your laser cutter workflow.

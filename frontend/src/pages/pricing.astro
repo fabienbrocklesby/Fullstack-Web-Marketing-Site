@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import BuyButton from "../components/BuyButton.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
@@ -136,7 +135,7 @@ const structuredData = [
     { name: "Pricing", url: "/pricing" },
   ]}
 >
-  <Header />
+  <!-- Header rendered by Layout.astro -->
 
   <main>
     <section class="relative py-24 overflow-hidden">

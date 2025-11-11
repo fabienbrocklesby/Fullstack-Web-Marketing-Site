@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import Countdown from "../components/Countdown.astro";
@@ -232,7 +231,7 @@ const structuredData = [
   keywords={homepageKeywords.join(", ")}
   structuredData={structuredData}
 >
-  <Header />
+  <!-- Header rendered by Layout.astro -->
 
   <main>
     <section
