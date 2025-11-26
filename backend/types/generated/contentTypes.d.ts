@@ -941,6 +941,8 @@ export interface ApiBlogpostBlogpost extends Schema.CollectionType {
     content: Attribute.RichText;
     preview: Attribute.Text;
     author: Attribute.String & Attribute.Required;
+    coverImageUrl: Attribute.String;
+    coverImageAlt: Attribute.String;
     coverImage: Attribute.Media<'images'>;
     seoTitle: Attribute.String &
       Attribute.SetMinMaxLength<{
