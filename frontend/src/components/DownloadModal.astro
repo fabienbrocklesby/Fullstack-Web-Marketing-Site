@@ -1,0 +1,33 @@
+---
+import DownloadButtons from "./DownloadButtons.astro";
+---
+
+<dialog id="download-modal" class="modal">
+  <div class="modal-box max-w-lg space-y-4">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+        ✕
+      </button>
+    </form>
+    <div class="space-y-2 text-center">
+      <p class="text-sm font-medium uppercase tracking-wide text-primary">
+        Download the app
+      </p>
+      <h3 class="text-2xl font-semibold">Choose your platform</h3>
+      <p class="text-sm text-base-content/70">
+        Lightlane installs on macOS and Windows with a full-featured 14-day
+        trial included in every download. Pick your OS to get started.
+      </p>
+    </div>
+    <DownloadButtons align="center" />
+    <div class="text-xs text-base-content/60 text-center">
+      Already purchased? <a href="/customer/login" class="link link-primary"
+        >Sign in</a
+      >
+      to activate your license.
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button type="submit" aria-label="Close download modal">close</button>
+  </form>
+</dialog>

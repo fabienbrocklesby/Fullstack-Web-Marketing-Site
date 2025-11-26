@@ -28,6 +28,7 @@ const {
 // @ts-ignore - Astro injects import.meta.env at build time
 import "../styles/app.css"; // ensure Tailwind + daisyUI processed & bundled
 import Header from "../components/Header.astro";
+import DownloadModal from "../components/DownloadModal.astro";
 import { STRAPI_URL } from "../config/strapi";
 
 const fallbackSite = "https://lightlane.app/";
@@ -233,5 +234,20 @@ const combinedStructuredData = [
 
     <!-- Journey Tracking System -->
     <script src="/journey-tracker.js" is:inline></script>
+    <DownloadModal />
+    <script is:inline>
+      (() => {
+        const modal = document.getElementById("download-modal");
+        if (!(modal instanceof HTMLDialogElement)) return;
+        document.addEventListener("click", (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          const trigger = target.closest("[data-download-modal-trigger]");
+          if (!trigger) return;
+          event.preventDefault();
+          modal.showModal();
+        });
+      })();
+    </script>
   </body>
 </html>

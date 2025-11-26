@@ -1,9 +1,11 @@
 ---
+type CountdownSize = "xs" | "sm" | "md" | "lg" | "xl";
+
 interface Props {
   target: string; // ISO date e.g. 2025-10-15T00:00:00Z
   label?: string;
   align?: "left" | "center" | "right";
-  size?: "sm" | "md" | "lg";
+  size?: CountdownSize;
   class?: string;
 }
 const {
@@ -19,57 +21,173 @@ const justifyClass =
     : align === "right"
       ? "justify-end"
       : "justify-start";
-const sizeClass =
-  size === "lg" ? "text-3xl" : size === "sm" ? "text-lg" : "text-2xl";
-const numWidthClass = size === "lg" ? "w-14" : size === "sm" ? "w-10" : "w-12";
+const sizePresets: Record<
+  CountdownSize,
+  {
+    valueTextClass: string;
+    valueWidthClass: string;
+    valueHeightClass: string;
+    unitTextClass: string;
+    labelTextClass: string;
+    gapClass: string;
+  }
+> = {
+  xs: {
+    valueTextClass: "text-base",
+    valueWidthClass: "w-9",
+    valueHeightClass: "h-[1.15em]",
+    unitTextClass: "text-[9px]",
+    labelTextClass: "text-xs",
+    gapClass: "gap-3",
+  },
+  sm: {
+    valueTextClass: "text-lg",
+    valueWidthClass: "w-10",
+    valueHeightClass: "h-[1.25em]",
+    unitTextClass: "text-[10px]",
+    labelTextClass: "text-sm",
+    gapClass: "gap-4",
+  },
+  md: {
+    valueTextClass: "text-2xl",
+    valueWidthClass: "w-12",
+    valueHeightClass: "h-[1.4em]",
+    unitTextClass: "text-[11px]",
+    labelTextClass: "text-sm",
+    gapClass: "gap-4",
+  },
+  lg: {
+    valueTextClass: "text-3xl",
+    valueWidthClass: "w-14",
+    valueHeightClass: "h-[1.5em]",
+    unitTextClass: "text-xs",
+    labelTextClass: "text-base",
+    gapClass: "gap-5",
+  },
+  xl: {
+    valueTextClass: "text-4xl md:text-5xl",
+    valueWidthClass: "w-20",
+    valueHeightClass: "h-[1.7em]",
+    unitTextClass: "text-sm",
+    labelTextClass: "text-base md:text-lg",
+    gapClass: "gap-6",
+  },
+};
+
+const sizeConfig = sizePresets[size] ?? sizePresets.md;
 ---
 
 <div
   class={`ll-countdown space-y-3 ${align === "center" ? "text-center" : align === "right" ? "text-right" : ""} ${klass}`}
   data-target={target}
 >
-  {label && <div class="text-sm opacity-70">{label}</div>}
-  <div class={`flex gap-4 items-end ${justifyClass}`}>
+  {
+    label && (
+      <div class={`${sizeConfig.labelTextClass} opacity-70`}>{label}</div>
+    )
+  }
+  <div class={`flex ${sizeConfig.gapClass} items-end ${justifyClass}`}>
     <span class="flex flex-col items-center">
       <span
-        class={`value value-days ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm`}
+        class={`value value-days ${sizeConfig.valueTextClass} ${sizeConfig.valueWidthClass} ${sizeConfig.valueHeightClass} relative overflow-hidden font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded-xl px-2 py-1 shadow-sm`}
       >
-        <span class="cd-days">0</span>
+        <span class="cd-days current">0</span>
       </span>
-      <span class="opacity-60 text-[10px] mt-1">days</span>
+      <span class={`opacity-60 ${sizeConfig.unitTextClass} mt-1`}> days</span>
     </span>
 
     <span class="flex flex-col items-center">
       <span
-        class={`value value-hours ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm`}
+        class={`value value-hours ${sizeConfig.valueTextClass} ${sizeConfig.valueWidthClass} ${sizeConfig.valueHeightClass} relative overflow-hidden font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded-xl px-2 py-1 shadow-sm`}
       >
-        <span class="cd-hours">0</span>
+        <span class="cd-hours current">0</span>
       </span>
-      <span class="opacity-60 text-[10px] mt-1">h</span>
+      <span class={`opacity-60 ${sizeConfig.unitTextClass} mt-1`}>h</span>
     </span>
 
     <span class="flex flex-col items-center">
       <span
-        class={`value value-mins ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm`}
+        class={`value value-mins ${sizeConfig.valueTextClass} ${sizeConfig.valueWidthClass} ${sizeConfig.valueHeightClass} relative overflow-hidden font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded-xl px-2 py-1 shadow-sm`}
       >
-        <span class="cd-mins">0</span>
+        <span class="cd-mins current">0</span>
       </span>
-      <span class="opacity-60 text-[10px] mt-1">m</span>
+      <span class={`opacity-60 ${sizeConfig.unitTextClass} mt-1`}>m</span>
     </span>
 
     <span class="flex flex-col items-center">
       <span
-        class={`value value-secs ${sizeClass} ${numWidthClass} h-[1.4em] font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded px-2 py-1 shadow-sm relative overflow-hidden`}
+        class={`value value-secs ${sizeConfig.valueTextClass} ${sizeConfig.valueWidthClass} ${sizeConfig.valueHeightClass} relative overflow-hidden font-mono tabular-nums inline-flex items-center justify-center bg-base-200/60 border border-base-300 rounded-xl px-2 py-1 shadow-sm`}
       >
-        <span class="current cd-secs">0</span>
+        <span class="cd-secs current">0</span>
       </span>
-      <span class="opacity-60 text-[10px] mt-1">s</span>
+      <span class={`opacity-60 ${sizeConfig.unitTextClass} mt-1`}>s</span>
     </span>
   </div>
 </div>
 
 <script>
   (function () {
+    const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+    const DURATION = 320;
+    const buildClassName = (state: string, unitClass?: string) =>
+      [state, unitClass].filter(Boolean).join(" ");
+    const animateValue = (
+      container: HTMLElement | null,
+      value: number,
+      unitClass?: string,
+    ) => {
+      if (!container) return;
+      const current = container.querySelector(".current") as HTMLElement | null;
+      const nextText = String(value);
+      if (current && current.textContent === nextText) return;
+      container
+        .querySelectorAll(":scope > span:not(.current)")
+        .forEach((node) => node.remove());
+      const transition = `transform ${DURATION}ms ${EASE}, opacity ${DURATION}ms ${EASE}`;
+      const next = document.createElement("span");
+      next.className = buildClassName("next", unitClass);
+      next.textContent = nextText;
+      Object.assign(next.style, {
+        position: "absolute",
+        left: "0",
+        right: "0",
+        transform: "translateY(100%)",
+        opacity: "0",
+        transition,
+      });
+      container.appendChild(next);
+      if (current) {
+        Object.assign(current.style, {
+          position: "absolute",
+          left: "0",
+          right: "0",
+          transform: "translateY(0)",
+          opacity: "1",
+          transition,
+        });
+      }
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (current) {
+            current.style.transform = "translateY(-100%)";
+            current.style.opacity = "0";
+          }
+          next.style.transform = "translateY(0)";
+          next.style.opacity = "1";
+        });
+      });
+      const finalize = () => {
+        next.removeEventListener("transitionend", finalize);
+        if (current && current.parentElement === container) current.remove();
+        next.className = buildClassName("current", unitClass);
+        next.removeAttribute("style");
+        container
+          .querySelectorAll(":scope > span:not(.current)")
+          .forEach((node) => node.remove());
+      };
+      next.addEventListener("transitionend", finalize);
+      setTimeout(finalize, DURATION + 100);
+    };
     const roots = document.querySelectorAll(
       ".ll-countdown:not([data-initialized])",
     );
@@ -79,62 +197,18 @@ const numWidthClass = size === "lg" ? "w-14" : size === "sm" ? "w-10" : "w-12";
       const targetStr = root.getAttribute("data-target") || "";
       const end = new Date(targetStr).getTime();
       if (!end || isNaN(end)) return;
-      const daysEl = root.querySelector(".cd-days") as HTMLElement | null;
-      const hoursEl = root.querySelector(".cd-hours") as HTMLElement | null;
-      const minsEl = root.querySelector(".cd-mins") as HTMLElement | null;
+      const daysContainer = root.querySelector(
+        ".value-days",
+      ) as HTMLElement | null;
+      const hoursContainer = root.querySelector(
+        ".value-hours",
+      ) as HTMLElement | null;
+      const minsContainer = root.querySelector(
+        ".value-mins",
+      ) as HTMLElement | null;
       const secsContainer = root.querySelector(
         ".value-secs",
       ) as HTMLElement | null;
-      const animateSeconds = (container: HTMLElement | null, value: number) => {
-        if (!container) return;
-        if (container.getAttribute("data-animating") === "1") return;
-        const current = container.querySelector(
-          ".current",
-        ) as HTMLElement | null;
-        const prevVal = current?.textContent ?? "";
-        const nextVal = String(value);
-        if (prevVal === nextVal) return;
-        // Build next element below the current
-        const next = document.createElement("span");
-        next.className = "next";
-        next.textContent = nextVal;
-        next.style.position = "absolute";
-        next.style.left = "0";
-        next.style.right = "0";
-        next.style.top = "100%";
-        next.style.opacity = "0";
-        next.style.display = "flex";
-        next.style.alignItems = "center";
-        next.style.justifyContent = "center";
-        container.appendChild(next);
-        if (current) {
-          current.style.position = "absolute";
-          current.style.left = "0";
-          current.style.right = "0";
-          current.style.top = "0";
-        }
-        // Force reflow
-        void container.getBoundingClientRect().height;
-        // Animate both
-        container.setAttribute("data-animating", "1");
-        const D = 300;
-        if (current) {
-          current.style.transition = `transform ${D}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${D}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-          current.style.transform = "translateY(-100%)";
-          current.style.opacity = "0";
-        }
-        next.style.transition = `transform ${D}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${D}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-        next.style.transform = "translateY(-100%)";
-        next.style.opacity = "1";
-        const onDone = () => {
-          container.removeEventListener("transitionend", onDone);
-          if (current && current.parentElement === container) current.remove();
-          next.className = "current cd-secs";
-          next.removeAttribute("style");
-          container.removeAttribute("data-animating");
-        };
-        container.addEventListener("transitionend", onDone);
-      };
       const update = () => {
         const now = Date.now();
         let diff = Math.max(0, Math.floor((end - now) / 1000));
@@ -145,13 +219,10 @@ const numWidthClass = size === "lg" ? "w-14" : size === "sm" ? "w-10" : "w-12";
         const mins = Math.floor(diff / 60);
         diff -= mins * 60;
         const secs = diff;
-        if (daysEl && daysEl.textContent !== String(days))
-          daysEl.textContent = String(days);
-        if (hoursEl && hoursEl.textContent !== String(hours))
-          hoursEl.textContent = String(hours);
-        if (minsEl && minsEl.textContent !== String(mins))
-          minsEl.textContent = String(mins);
-        animateSeconds(secsContainer, secs);
+        animateValue(daysContainer, days, "cd-days");
+        animateValue(hoursContainer, hours, "cd-hours");
+        animateValue(minsContainer, mins, "cd-mins");
+        animateValue(secsContainer, secs, "cd-secs");
       };
       update();
       const t = setInterval(update, 1000);
@@ -163,8 +234,6 @@ const numWidthClass = size === "lg" ? "w-14" : size === "sm" ? "w-10" : "w-12";
 <style is:global>
   .ll-countdown .value {
     min-width: 2ch;
-  }
-  .ll-countdown .value-secs {
     position: relative;
     overflow: hidden;
   }

@@ -235,7 +235,7 @@ const structuredData = [
 
   <main>
     <section
-      class="relative overflow-hidden min-h-[80vh] flex items-center pt-20 md:pt-24 pb-12 md:pb-16"
+      class="relative overflow-hidden flex items-center pt-20 md:pt-24 pb-12 md:pb-16"
     >
       <div class="absolute inset-0 bg-ll-gradient opacity-10"></div>
       <div class="container relative">
@@ -250,23 +250,44 @@ const structuredData = [
             shops - streamlining everything from SVG or image import to
             device-ready engraving on Ruida, GRBL, and G-code controllers. Fewer
             clicks, smarter defaults, rapid preview, offline activation, and
-            seamless streaming to supported hardware.
+            seamless streaming to supported hardware. Download the desktop app
+            and unlock the full-featured free trial instantly.
           </p>
-          <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/pricing" class="btn btn-gradient btn-lg">Buy Now</a>
-            <a href="/customer/register" class="btn btn-outline btn-lg"
-              >Create Account</a
+          <div class="flex justify-center">
+            <div
+              class="alert alert-info shadow-sm text-sm max-w-xl mx-auto bg-base-100/80 text-base-content"
             >
+              <span class="font-semibold">14-day free trial:</span>
+              Download Lightlane on macOS or Windows and explore every pro feature
+              before you buy.
+            </div>
           </div>
-          <DownloadButtons align="center" />
-          <div class="mt-4">
-            <Countdown
-              target="2025-12-01T00:00:00Z"
-              label="Founders pricing ends in"
-            />
+          <div class="flex gap-4 justify-center">
+            <a
+              href="#download-app"
+              class="btn btn-gradient"
+              data-download-modal-trigger>Start Free Trial</a
+            >
+            <a href="/pricing" class="btn btn-outline">View Pricing</a>
+          </div>
+
+          <div id="download-app" class="space-y-3">
+            <DownloadButtons align="center" />
+            <p class="text-sm text-base-content/70">
+              Pick your platform to install Lightlane. Every download on a new
+              machine unlocks a 14-day pro trial automatically.
+            </p>
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="bg-secondary/40 border-y-1 border-primary py-10">
+      <Countdown
+        target="2025-12-01T00:00:00Z"
+        label="Founders pricing ends in"
+        size="xl"
+      />
     </section>
 
     <section class="section pt-0">
@@ -306,7 +327,11 @@ const structuredData = [
             engineered for speed, clarity, and trust.
           </p>
           <div class="flex flex-wrap gap-4">
-            <a href="/pricing" class="btn btn-gradient">Buy Now</a>
+            <a
+              href="#download-app"
+              class="btn btn-gradient"
+              data-download-modal-trigger>Start Free Trial</a
+            >
             <a href="#workflow" class="btn btn-outline">See Workflow</a>
           </div>
         </div>
@@ -538,6 +563,22 @@ const structuredData = [
           <!-- Dynamic spacer height set via JS to drive scroll -->
           <div id="workflow-spacer" aria-hidden="true"></div>
         </div>
+        <div class="mt-12 flex justify-center" data-animate>
+          <div
+            class="alert alert-info bg-base-100/80 border border-info/30 flex flex-col gap-3 sm:flex-row sm:items-center max-w-2xl"
+          >
+            <div>
+              <span class="font-semibold">Workflow unlocked:</span>
+              Test every step above with the 14-day pro trial — no credit card, no
+              feature caps.
+            </div>
+            <a
+              href="#download-app"
+              class="btn btn-info btn-sm"
+              data-download-modal-trigger>Start Free Trial</a
+            >
+          </div>
+        </div>
       </div>
     </section>
 
@@ -729,9 +770,20 @@ const structuredData = [
               </p>
             </div>
           </div>
+          <div
+            class="alert alert-success bg-base-100/80 border border-success/20 text-sm"
+          >
+            <span class="font-semibold">Free trial included:</span>
+            Every download starts with the same pro build you’ll use in production,
+            so you can validate workflows before committing.
+          </div>
           <div class="flex gap-4">
-            <a href="/pricing" class="btn btn-gradient">Buy Now</a>
-            <a href="/pricing" class="btn btn-outline">Pricing</a>
+            <a
+              href="#download-app"
+              class="btn btn-gradient"
+              data-download-modal-trigger>Start Free Trial</a
+            >
+            <a href="/pricing" class="btn btn-outline">View Pricing</a>
           </div>
         </div>
         <div class="space-y-8" data-animate>
@@ -847,6 +899,22 @@ const structuredData = [
                 production-only machines.
               </div>
             </div>
+            <!-- Q: Free Trial -->
+            <div
+              class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40"
+            >
+              <input type="radio" name="faq-new" />
+              <div class="collapse-title text-sm font-semibold">
+                Does Lightlane include a free trial when I download the app?
+              </div>
+              <div
+                class="collapse-content text-sm text-base-content/70 leading-relaxed"
+              >
+                Yes. Every macOS and Windows download activates a 14-day
+                full-featured trial automatically. No credit card or purchase is
+                required—just sign in and start engraving.
+              </div>
+            </div>
             <!-- Q2 -->
             <div
               class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40"
@@ -899,7 +967,11 @@ const structuredData = [
             </div>
           </div>
           <div class="pt-4 text-center">
-            <a href="/pricing" class="btn btn-gradient btn-sm">Buy Now</a>
+            <a
+              href="#download-app"
+              class="btn btn-gradient btn-sm"
+              data-download-modal-trigger>Start Free Trial</a
+            >
           </div>
         </div>
       </div>
@@ -1161,7 +1233,11 @@ const structuredData = [
           </div>
         </div>
         <div class="mt-10 flex flex-wrap gap-4 justify-center">
-          <a href="/pricing" class="btn btn-gradient">Buy Now</a>
+          <a
+            href="#download-app"
+            class="btn btn-gradient"
+            data-download-modal-trigger>Start Free Trial</a
+          >
           <a href="/pricing" class="btn btn-outline">View Tiers</a>
         </div>
       </div>
@@ -1179,9 +1255,26 @@ const structuredData = [
         <p class="text-lg text-base-content/70 mb-8">
           We’ve launched - get yours now. Grandfathered price available for a
           limited time. After purchase, we’ll email your downloads and provide
-          hands‑on setup support during early beta.
+          hands‑on setup support during early beta. Prefer to trial first?
+          Download Lightlane today and explore every pro feature for 14 days,
+          free.
         </p>
-        <a href="/pricing" class="btn btn-gradient btn-lg">Buy Now</a>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="#download-app"
+            class="btn btn-gradient btn-lg"
+            data-download-modal-trigger>Start Free Trial</a
+          >
+          <a href="/pricing" class="btn btn-outline btn-lg"
+            >Buy Lifetime License</a
+          >
+        </div>
+        <div class="mt-4 flex justify-center">
+          <div class="badge badge-outline badge-lg gap-2">
+            <span class="text-success">Free trial</span>Included with every
+            download
+          </div>
+        </div>
       </div>
     </section>
   </main>
