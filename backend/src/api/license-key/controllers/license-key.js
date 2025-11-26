@@ -36,7 +36,7 @@ module.exports = createCoreController(
           isUsed: key.status === "active",
         }));
 
-        // Removed raw SQL diagnostic (caused sqlite column error) – rely on entityService abstraction
+        // Removed raw SQL diagnostic (caused sqlite column error) - rely on entityService abstraction
 
         ctx.body = { licenseKeys: licenseKeysWithStatus };
       } catch (error) {

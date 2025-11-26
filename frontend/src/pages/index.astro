@@ -149,7 +149,7 @@ const videoStructuredData = workflowSteps.map((step) => ({
   "@context": "https://schema.org",
   "@type": "VideoObject",
   "@id": `${toAbsolute("/")}#${step.id}-video`,
-  name: `${step.name} – Lightlane laser engraving software`,
+  name: `${step.name} - Lightlane laser engraving software`,
   description: step.description,
   thumbnailUrl: [toAbsolute("/og-lightlane.png")],
   uploadDate: new Date().toISOString().slice(0, 10),
@@ -226,7 +226,7 @@ const structuredData = [
 ---
 
 <Layout
-  title="Lightlane – Faster Laser Engraving Workflow"
+  title="Lightlane - Faster Laser Engraving Workflow"
   description="Lightlane laser engraving software: import → preview → engrave in fewer clicks. Modern, fast, device-ready."
   keywords={homepageKeywords.join(", ")}
   structuredData={structuredData}

@@ -146,7 +146,7 @@ function getTransporter() {
         if (typeof strapi !== "undefined") strapi.log.info(msg);
         else console.log(msg);
       });
-    } catch (_) {}
+    } catch (_) { }
   }
   return transporter;
 }
@@ -176,7 +176,7 @@ module.exports = {
       ? `<tr><td style="padding:24px 32px 8px 32px;font-family:Inter,Arial,sans-serif;font-size:14px;color:#444;line-height:1.5">
             <p style="margin:0 0 16px 0;">Regards,</p>
             <p style="margin:0 0 12px 0;font-weight:500;">Fabien Brocklesby<br/>
-              <span style="font-weight:400;">CEO & Founder – Light Lane</span><br/>
+              <span style="font-weight:400;">CEO & Founder - Light Lane</span><br/>
               <a href="mailto:fabien@lightlane.app" style="color:#4f46e5;text-decoration:none">fabien@lightlane.app</a>
             </p>
             <div style="margin-top:8px;">${brandBlock}</div>
@@ -310,8 +310,7 @@ module.exports = {
       const tStart = Date.now();
       if (typeof strapi !== "undefined")
         strapi.log.info(
-          `📤 Sending mail to ${to} subject="${subject}" (timeout=${
-            process.env.MAIL_TIMEOUT_MS || 15000
+          `📤 Sending mail to ${to} subject="${subject}" (timeout=${process.env.MAIL_TIMEOUT_MS || 15000
           }ms)`,
         );
       const timeoutMs = parseInt(process.env.MAIL_TIMEOUT_MS || "15000", 10);

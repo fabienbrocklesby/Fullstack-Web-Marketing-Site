@@ -90,11 +90,11 @@ module.exports = {
       mailer.sendTemplate({
         to: data.email,
         subject: "We received your enquiry",
-        heading: "Thanks – we got it!",
+        heading: "Thanks - we got it!",
         intro: `Hi ${data.fullName.split(" ")[0]}, thanks for your interest in Light Lane.`,
         paragraphs: [
           data.planInterested
-            ? `You asked about the <strong>${data.planInterested}</strong> plan – we\'ll review and follow up soon.`
+            ? `You asked about the <strong>${data.planInterested}</strong> plan - we\'ll review and follow up soon.`
             : `We\'ll review your details and be in touch shortly.`,
           "In the meantime you can reply directly to this email if you have any extra context you'd like to share.",
         ],

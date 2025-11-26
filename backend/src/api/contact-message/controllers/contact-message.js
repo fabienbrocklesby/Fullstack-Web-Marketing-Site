@@ -68,7 +68,7 @@ module.exports = {
           intro: `Hi ${fullName.split(" ")[0]}, thanks for reaching out to Light Lane.`,
           paragraphs: [
             "We've logged your message and will reply as soon as possible.",
-            "If you have extra details, just reply to this email – it goes straight to the support team.",
+            "If you have extra details, just reply to this email - it goes straight to the support team.",
           ],
           includeSignature: true,
           replyTo: supportRecipient,

@@ -33,7 +33,7 @@ module.exports = {
       await strapi
         .service("api::journey-tracker.journey-tracker")
         ?.track("invite_issued", { code, email });
-    } catch (e) {}
+    } catch (e) { }
     const joinUrl = `${process.env.PUBLIC_SITE_URL || ""}/join?code=${code}`;
     // Send invite email (non-blocking)
     mailer.sendTemplate({
@@ -123,7 +123,7 @@ module.exports = {
       intro: `Hi ${firstName}, your account is live.`,
       paragraphs: [
         "You can now explore the dashboard and start configuring your environment.",
-        "If you have any questions just hit reply – I read everything.",
+        "If you have any questions just hit reply - I read everything.",
       ],
       cta: {
         label: "Open Dashboard",
@@ -136,7 +136,7 @@ module.exports = {
       await strapi
         .service("api::journey-tracker.journey-tracker")
         ?.track("invite_redeemed", { code });
-    } catch (e) {}
+    } catch (e) { }
     ctx.body = { customerId: customer.id };
   },
 };

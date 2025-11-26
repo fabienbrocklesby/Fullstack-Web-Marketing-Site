@@ -6,7 +6,7 @@ const corsOrigins = [
   // Production domains
   "https://lightlane.app",
   "https://www.lightlane.app",
-  // Cloudflare Pages preview (pattern kept – note wildcard matching may require custom logic if needed)
+  // Cloudflare Pages preview (pattern kept - note wildcard matching may require custom logic if needed)
   "https://*.pages.dev",
   // Explicit FRONTEND_URL env (can override localhost during staging)
   process.env.FRONTEND_URL,
