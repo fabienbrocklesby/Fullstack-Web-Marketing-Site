@@ -1,0 +1,28 @@
+---
+const bulbColors = [
+  "bg-success",
+  "bg-primary",
+  "bg-error",
+  "bg-accent",
+  "bg-warning",
+  "bg-primary",
+  "bg-success",
+  "bg-error",
+  "bg-accent",
+  "bg-warning",
+  "bg-primary",
+  "bg-success",
+];
+---
+
+<div class="holiday-decor" aria-hidden="true">
+  <div class="holiday-lights">
+    <div class="holiday-string">
+      {
+        bulbColors.map((color, index) => (
+          <span class={`holiday-bulb ${color}`} style={`--i:${index};`} />
+        ))
+      }
+    </div>
+  </div>
+</div>
