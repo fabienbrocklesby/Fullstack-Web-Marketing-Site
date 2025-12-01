@@ -298,13 +298,22 @@ const structuredData = [
       </div>
     </section>
 
-    <section class="bg-secondary/20 border-y border-base-300 py-10">
+    <section class="bg-secondary/20 border-y border-base-300 py-10 px-4 sm:px-0">
       <div class="container text-center space-y-4">
-        <Countdown
-          target={FOUNDERS_OFFER_DEADLINE}
-          label="Holiday pricing ends in"
-          size="xl"
-        />
+        <div class="md:hidden">
+          <Countdown
+            target={FOUNDERS_OFFER_DEADLINE}
+            label="Holiday pricing ends in"
+            size="lg"
+          />
+        </div>
+        <div class="hidden md:block">
+          <Countdown
+            target={FOUNDERS_OFFER_DEADLINE}
+            label="Holiday pricing ends in"
+            size="xl"
+          />
+        </div>
         <p class="text-base-content/80 text-sm md:text-base max-w-2xl mx-auto">
           Lock lifetime Lightlane pricing before <strong>January 1, 2026</strong
           >. The founders rate retires at midnight Pacific.
