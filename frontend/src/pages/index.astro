@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import Countdown from "../components/Countdown.astro";
+import HolidayDecor from "../components/HolidayDecor.astro";
 import { pricingOffers, FOUNDERS_OFFER_DEADLINE } from "../data/pricing";
 
 const fallbackSite = new URL("https://lightlane.app");
@@ -237,21 +238,34 @@ const structuredData = [
     <section
       class="relative overflow-hidden flex items-center pt-20 md:pt-24 pb-12 md:pb-16"
     >
-      <div class="absolute inset-0 bg-ll-gradient opacity-10"></div>
-      <div class="container relative">
+      <div class="absolute inset-0 holiday-aurora" aria-hidden="true"></div>
+
+      <div class="holiday-hero-lights" aria-hidden="true">
+        <HolidayDecor />
+      </div>
+      <div class="container relative z-[2]">
         <div class="max-w-3xl mx-auto text-center space-y-6">
+          <div class="flex justify-center">
+            <div class="badge badge-success badge-soft text-xs tracking-wide">
+              Holiday pricing now live
+            </div>
+          </div>
           <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">
             <span class="text-ll-gradient"
               >Lightning-fast laser engraving software</span
             >
           </h1>
           <p class="text-lg md:text-xl text-base-content/80">
-            Lightlane is laser cutter software built for makers and production
+            Lightlane is a laser cutter software built for makers and production
             shops - streamlining everything from SVG or image import to
             device-ready engraving on Ruida, GRBL, and G-code controllers. Fewer
             clicks, smarter defaults, rapid preview, offline activation, and
             seamless streaming to supported hardware. Download the desktop app
             and unlock the full-featured free trial instantly.
+          </p>
+          <p class="text-sm text-base-content/70">
+            Limited holiday lifetime pricing is available through January 1,
+            2026.
           </p>
           <div class="flex justify-center">
             <div
@@ -282,12 +296,21 @@ const structuredData = [
       </div>
     </section>
 
-    <section class="bg-secondary/40 border-y-1 border-primary py-10">
-      <Countdown
-        target="2025-12-01T00:00:00Z"
-        label="Founders pricing ends in"
-        size="xl"
-      />
+    <section class="bg-secondary/20 border-y border-base-300 py-10">
+      <div class="container text-center space-y-4">
+        <Countdown
+          target={FOUNDERS_OFFER_DEADLINE}
+          label="Holiday pricing ends in"
+          size="xl"
+        />
+        <p class="text-base-content/80 text-sm md:text-base max-w-2xl mx-auto">
+          Lock lifetime Lightlane pricing before <strong>January 1, 2026</strong
+          >. The founders rate retires at midnight Pacific.
+        </p>
+        <div class="flex justify-center">
+          <a href="#plans" class="btn btn-gradient">See plans</a>
+        </div>
+      </div>
     </section>
 
     <section class="section pt-0">

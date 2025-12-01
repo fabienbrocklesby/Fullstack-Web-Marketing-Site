@@ -151,11 +151,11 @@ const structuredData = [
       <div class="container mx-auto px-4 relative">
         <div class="text-center mb-16 space-y-6 max-w-3xl mx-auto" data-animate>
           <h1 class="text-4xl md:text-5xl font-bold text-ll-gradient pb-1">
-            Launch Pricing (Limited Time)
+            Limited Holiday Pricing
           </h1>
           <p class="text-lg md:text-xl text-base-content/70">
-            Prices increase on <span class="font-semibold">December 1</span>.
-            Lock in a <span class="font-semibold">one‑time lifetime</span> license
+            Prices increase on <span class="font-semibold">January 1, 2026</span
+            >. Lock in a <span class="font-semibold">one‑time lifetime</span> license
             today and keep this rate forever.
           </p>
           <div
@@ -174,16 +174,13 @@ const structuredData = [
           </div>
           <div class="mt-2">
             <Countdown
-              target="2025-12-01T00:00:00Z"
-              label="Intro pricing ends in"
+              target={FOUNDERS_OFFER_DEADLINE}
+              label="Holiday pricing ends in"
               size="lg"
             />
           </div>
-          <div role="alert" class="alert alert-warning justify-center">
-            <span>
-              Founders deal: one-time lifetime pricing ends December 1. Future
-              prices will be higher.
-            </span>
+          <div role="alert" class="alert alert-info justify-center">
+            <span>Holiday founders window closes January 1, 2026.</span>
           </div>
           <div id="pricing-download" class="space-y-3">
             <DownloadButtons align="center" />

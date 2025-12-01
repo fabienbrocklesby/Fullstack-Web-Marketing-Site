@@ -120,6 +120,10 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+body {
+  background-color: var(--color-base-100);
+}
+
 .container {
   @apply mx-auto px-4 max-w-7xl;
 }
@@ -385,4 +389,145 @@ body {
   border-radius: 0.5rem;
   font-weight: 500;
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.holiday-aurora {
+  background: radial-gradient(circle at 20% 30%, rgba(42, 158, 219, 0.2), transparent 60%),
+    linear-gradient(120deg, rgba(13, 59, 102, 0.35), rgba(13, 59, 102, 0));
+}
+
+.holiday-decor {
+  pointer-events: none;
+  display: block;
+  width: 100%;
+}
+
+.holiday-hero-snow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.holiday-snowflake {
+  position: absolute;
+  top: -10%;
+  width: calc(var(--size, 1) * 0.4rem + 2px);
+  height: calc(var(--size, 1) * 0.4rem + 2px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  animation: holidaySnowfall var(--duration, 10s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  filter: blur(calc(var(--blur, 0.5) * 1px));
+  transform-origin: center;
+  transform: scale(var(--depth, 1)) translateZ(0);
+}
+
+.holiday-hero-lights {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.holiday-lights {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.holiday-string {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 5vw;
+  gap: clamp(0.4rem, 1vw, 1.5rem);
+}
+
+.holiday-string::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0.25rem;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(13, 59, 102, 0.8), rgba(34, 197, 94, 0.8));
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+@keyframes holidaySnowfall {
+  0% {
+    transform: translate3d(0, -10%, 0);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: var(--opacity, 0.8);
+  }
+
+  100% {
+    transform: translate3d(var(--drift, 0px), 120%, 0) scale(var(--depth, 1));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holiday-hero-snow {
+    display: block;
+    opacity: 0.6;
+  }
+
+  .holiday-snowflake {
+    animation: none;
+    opacity: calc(var(--opacity, 0.8) * 0.85);
+    transform: translate3d(0, 35%, 0) scale(var(--depth, 1));
+  }
+}
+
+.holiday-bulb {
+  display: inline-flex;
+  width: clamp(1rem, 2vw, 1.4rem);
+  height: clamp(1.4rem, 2.4vw, 2rem);
+  border-radius: 999px 999px 45% 45%;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.45);
+  position: relative;
+  animation: holidaySwing 4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.2s);
+  opacity: 0.95;
+}
+
+.holiday-bulb::after {
+  content: "";
+  position: absolute;
+  top: -0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.6rem;
+  height: 0.4rem;
+  border-radius: 0.25rem;
+  background: #374151;
+}
+
+@keyframes holidaySwing {
+  0% {
+    transform: rotate(-6deg) translateY(0);
+  }
+
+  50% {
+    transform: rotate(4deg) translateY(3px);
+  }
+
+  100% {
+    transform: rotate(-4deg) translateY(0);
+  }
 }
