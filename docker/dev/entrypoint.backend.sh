@@ -8,11 +8,9 @@ export CI=${CI:-true}
 
 cd /workspace
 
-# Install backend dependencies if not already present
-if [ ! -d /workspace/backend/node_modules ] || [ -z "$(ls -A /workspace/backend/node_modules 2>/dev/null)" ]; then
-  echo "Installing backend dependencies..."
-  pnpm install --filter backend... --no-frozen-lockfile
-fi
+# Always reinstall dependencies in dev mode to ensure correct native binaries
+echo "Installing backend dependencies..."
+pnpm install --filter backend... --no-frozen-lockfile --force
 
 # Optional: ensure frontend dependencies exist for shared workspace (prevents pnpm errors)
 cd /workspace/backend

@@ -7,10 +7,9 @@ export CI=${CI:-true}
 
 cd /workspace
 
-if [ ! -d /workspace/frontend/node_modules ] || [ -z "$(ls -A /workspace/frontend/node_modules 2>/dev/null)" ]; then
-  echo "Installing frontend dependencies..."
-  pnpm install --filter frontend... --no-frozen-lockfile
-fi
+# Always reinstall dependencies in dev mode to ensure correct native binaries
+echo "Installing frontend dependencies..."
+pnpm install --filter frontend... --no-frozen-lockfile --force
 
 cd /workspace/frontend
 
