@@ -1,0 +1,40 @@
+{
+  "kind": "collectionType",
+  "collectionName": "mailing_list_signups",
+  "info": {
+    "singularName": "mailing-list-signup",
+    "pluralName": "mailing-list-signups",
+    "displayName": "Mailing List Signup",
+    "description": "Homepage holiday mailing list opt-ins"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "i18n": {
+      "localized": false
+    }
+  },
+  "attributes": {
+    "fullName": {
+      "type": "string",
+      "required": true
+    },
+    "email": {
+      "type": "email",
+      "required": true
+    },
+    "source": {
+      "type": "string"
+    },
+    "campaign": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

@@ -1,4 +1,17 @@
-module.exports = async ({ strapi }) => {
+module.exports = async (ctx = {}) => {
+  const strapi = ctx?.strapi ?? ctx;
+  const queryFn =
+    typeof strapi?.query === "function"
+      ? strapi.query.bind(strapi)
+      : strapi?.db?.query?.bind(strapi.db);
+
+  if (!strapi || !queryFn) {
+    console.warn("Bootstrap skipped: strapi instance unavailable");
+    return;
+  }
+
+  const query = (uid) => queryFn(uid);
+
   try {
     // Verify ZeptoMail SMTP (non-fatal) if credentials present
     if (process.env.SMTP_USERNAME && process.env.SMTP_PASSWORD) {
@@ -14,8 +27,7 @@ module.exports = async ({ strapi }) => {
 
     // Set up permissions for public and authenticated users
     // Get the public role
-    const publicRole = await strapi
-      .query("plugin::users-permissions.role")
+    const publicRole = await query("plugin::users-permissions.role")
       .findOne({ where: { type: "public" } });
 
     console.log("🔍 Found public role:", publicRole ? publicRole.id : "NOT FOUND");
@@ -30,8 +42,7 @@ module.exports = async ({ strapi }) => {
       console.log("🔍 Attempting to enable blogpost permissions for public...");
 
       for (const action of publicActionsToEnable) {
-        const existingPermission = await strapi
-          .query("plugin::users-permissions.permission")
+        const existingPermission = await query("plugin::users-permissions.permission")
           .findOne({
             where: {
               role: publicRole.id,
@@ -40,13 +51,13 @@ module.exports = async ({ strapi }) => {
           });
 
         if (existingPermission) {
-          await strapi.query("plugin::users-permissions.permission").update({
+          await query("plugin::users-permissions.permission").update({
             where: { id: existingPermission.id },
             data: { enabled: true },
           });
           console.log(`✅ Updated blogpost permission: ${action}`);
         } else {
-          await strapi.query("plugin::users-permissions.permission").create({
+          await query("plugin::users-permissions.permission").create({
             data: {
               action,
               subject: null,
@@ -64,14 +75,12 @@ module.exports = async ({ strapi }) => {
     }
 
     // Get the authenticated role
-    const authenticatedRole = await strapi
-      .query("plugin::users-permissions.role")
+    const authenticatedRole = await query("plugin::users-permissions.role")
       .findOne({ where: { type: "authenticated" } });
 
     if (authenticatedRole) {
       // Enable custom affiliate routes for authenticated users
-      const permissions = await strapi
-        .query("plugin::users-permissions.permission")
+      const permissions = await query("plugin::users-permissions.permission")
         .findMany({
           where: {
             role: authenticatedRole.id,
@@ -99,12 +108,12 @@ module.exports = async ({ strapi }) => {
       for (const action of actionsToEnable) {
         const existingPermission = permissions.find((p) => p.action === action);
         if (existingPermission) {
-          await strapi.query("plugin::users-permissions.permission").update({
+          await query("plugin::users-permissions.permission").update({
             where: { id: existingPermission.id },
             data: { enabled: true },
           });
         } else {
-          await strapi.query("plugin::users-permissions.permission").create({
+          await query("plugin::users-permissions.permission").create({
             data: {
               action,
               subject: null,

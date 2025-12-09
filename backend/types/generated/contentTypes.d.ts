@@ -1294,6 +1294,47 @@ export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
   };
 }
 
+export interface ApiMailingListSignupMailingListSignup
+  extends Schema.CollectionType {
+  collectionName: 'mailing_list_signups';
+  info: {
+    singularName: 'mailing-list-signup';
+    pluralName: 'mailing-list-signups';
+    displayName: 'Mailing List Signup';
+    description: 'Homepage holiday mailing list opt-ins';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    i18n: {
+      localized: false;
+    };
+  };
+  attributes: {
+    fullName: Attribute.String & Attribute.Required;
+    email: Attribute.Email & Attribute.Required;
+    source: Attribute.String;
+    campaign: Attribute.String;
+    notes: Attribute.Text;
+    metadata: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::mailing-list-signup.mailing-list-signup',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::mailing-list-signup.mailing-list-signup',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiPagePage extends Schema.CollectionType {
   collectionName: 'pages';
   info: {
@@ -1462,6 +1503,7 @@ declare module '@strapi/types' {
       'api::lead.lead': ApiLeadLead;
       'api::license.license': ApiLicenseLicense;
       'api::license-key.license-key': ApiLicenseKeyLicenseKey;
+      'api::mailing-list-signup.mailing-list-signup': ApiMailingListSignupMailingListSignup;
       'api::page.page': ApiPagePage;
       'api::purchase.purchase': ApiPurchasePurchase;
       'api::release.release': ApiReleaseRelease;
