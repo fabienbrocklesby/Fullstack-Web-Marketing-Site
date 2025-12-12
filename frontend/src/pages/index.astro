@@ -1655,6 +1655,7 @@ const structuredData = [
         "translate-y-4",
         "pointer-events-none",
       ];
+      const popupDelayMs = 0;
 
       function persistPopupState() {
         try {
@@ -1715,7 +1716,8 @@ const structuredData = [
         shouldShowPopup = window.localStorage.getItem(popupKey) !== "dismissed";
       } catch {}
       if (mailingPopup && shouldShowPopup) {
-        window.setTimeout(showMailingPopup, 2000);
+        if (popupDelayMs <= 0) showMailingPopup();
+        else window.setTimeout(showMailingPopup, popupDelayMs);
       } else if (!shouldShowPopup) {
         showReopenButton();
       }

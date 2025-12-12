@@ -15,7 +15,8 @@ const {
 } = Astro.props as Props;
 
 const DOWNLOAD_BASE_URL = "https://downloads.lightlane.app";
-const fallbackVersion = "v1.0.0";
+// Default to the rolling "latest" folder in R2 unless an explicit version is provided via env
+const fallbackVersion = "latest";
 // @ts-ignore - Astro injects env at build time
 const rawVersion = import.meta.env?.PUBLIC_DOWNLOAD_VERSION ?? fallbackVersion;
 const normalizedVersion = rawVersion.trim().replace(/^\/+|\/+$/g, "");
