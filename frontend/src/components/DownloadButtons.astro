@@ -23,8 +23,9 @@ const normalizedVersion = rawVersion.trim().replace(/^\/+|\/+$/g, "");
 const resolvedVersion =
   normalizedVersion.length > 0 ? normalizedVersion : fallbackVersion;
 const baseUrl = `${DOWNLOAD_BASE_URL.replace(/\/$/, "")}/${resolvedVersion}`;
-const macHref = `${baseUrl}/Light-Lane-macOS.zip`;
-const windowsHref = `${baseUrl}/Light-Lane-Windows.zip`;
+const macArmHref = `${baseUrl}/Light-Lane-macOS-arm64.dmg`;
+const macIntelHref = `${baseUrl}/Light-Lane-macOS-amd64.dmg`;
+const windowsHref = `${baseUrl}/Light-Lane-Windows-amd64.exe`;
 const checksumsHref = `${baseUrl}/SHA256SUMS.txt`;
 ---
 
@@ -32,9 +33,14 @@ const checksumsHref = `${baseUrl}/SHA256SUMS.txt`;
   class={`flex flex-wrap gap-2 ${align === "center" ? "justify-center" : align === "right" ? "justify-end" : ""} ${klass}`}
 >
   <a
-    id="dl-mac"
+    id="dl-mac-arm"
     class={`btn ${soft ? "btn-soft" : "btn-primary"} btn-${size}`}
-    href={macHref}>Download macOS</a
+    href={macArmHref}>Download macOS (Apple Silicon)</a
+  >
+  <a
+    id="dl-mac-intel"
+    class={`btn ${soft ? "btn-soft" : "btn-primary"} btn-${size}`}
+    href={macIntelHref}>Download macOS (Intel)</a
   >
   <a
     id="dl-win"
