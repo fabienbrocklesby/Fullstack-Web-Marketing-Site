@@ -5,6 +5,21 @@ import BuyButton from "../components/BuyButton.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import Countdown from "../components/Countdown.astro";
 import { pricingOffers, FOUNDERS_OFFER_DEADLINE } from "../data/pricing";
+import {
+  shouldShowCountdownTimer,
+  isSalePricingActive,
+  getSaleTitle,
+  getSaleDescription,
+  getSaleAlertMessage,
+  getCurrentSaleType,
+} from "../utils/sale-dates";
+
+const showCountdown = shouldShowCountdownTimer();
+const saleActive = isSalePricingActive();
+const saleTitle = getSaleTitle();
+const saleDescription = getSaleDescription();
+const saleAlertMessage = getSaleAlertMessage();
+const saleType = getCurrentSaleType();
 
 const fallbackSite = new URL("https://lightlane.app");
 const siteBase = Astro.site ?? fallbackSite;
@@ -151,42 +166,58 @@ const structuredData = [
       <div class="container mx-auto px-4 relative">
         <div class="text-center mb-16 space-y-6 max-w-3xl mx-auto" data-animate>
           <h1 class="text-4xl md:text-5xl font-bold text-ll-gradient pb-1">
-            Limited Holiday Pricing
+            {saleTitle}
           </h1>
-          <p class="text-lg md:text-xl text-base-content/70">
-            Prices increase on <span class="font-semibold">January 1, 2026</span
-            >. Lock in a <span class="font-semibold">one‑time lifetime</span> license
-            today and keep this rate forever.
-          </p>
+          <p
+            class="text-lg md:text-xl text-base-content/70"
+            set:html={saleDescription}
+          />
           <div
             class="flex flex-col md:flex-row gap-4 justify-center items-center"
           >
-            <div
-              class="badge badge-success badge-soft text-xs py-3 px-4 tracking-wide"
-            >
-              PUBLIC LAUNCH • LIMITED TIME
-            </div>
+            {
+              saleType === "holiday" && (
+                <div class="badge badge-success badge-soft text-xs py-3 px-4 tracking-wide">
+                  PUBLIC LAUNCH • LIMITED TIME
+                </div>
+              )
+            }
+            {
+              saleType === "newyear" && (
+                <div class="badge badge-warning badge-soft text-xs py-3 px-4 tracking-wide">
+                  🎉 NEW YEAR'S SALE • EXTENDED
+                </div>
+              )
+            }
             <div
               class="badge badge-primary badge-soft text-xs py-3 px-4 tracking-wide"
             >
               GRANDFATHERED LIFETIME UPDATES
             </div>
           </div>
-          <div class="mt-2">
-            <Countdown
-              target={FOUNDERS_OFFER_DEADLINE}
-              label="Holiday pricing ends in"
-              size="lg"
-            />
-          </div>
-          <div role="alert" class="alert alert-info justify-center">
-            <span>Holiday founders window closes January 1, 2026.</span>
-          </div>
+          {
+            showCountdown && (
+              <div class="mt-2">
+                <Countdown
+                  target={FOUNDERS_OFFER_DEADLINE}
+                  label="Holiday pricing ends in"
+                  size="lg"
+                />
+              </div>
+            )
+          }
+          {
+            saleAlertMessage && (
+              <div role="alert" class="alert alert-info justify-center">
+                <span>{saleAlertMessage}</span>
+              </div>
+            )
+          }
           <div id="pricing-download" class="space-y-3">
             <DownloadButtons align="center" />
             <p class="text-sm text-base-content/70 max-w-2xl mx-auto">
               Download Lightlane for macOS or Windows and unlock every pro
-              feature for 14 days — no credit card required.
+              feature for 14 days - no credit card required.
             </p>
             <div
               class="alert alert-info bg-base-100/80 border border-info/30 justify-between flex-col gap-3 sm:flex-row flex justify-center"

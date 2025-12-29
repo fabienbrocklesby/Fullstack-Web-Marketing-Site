@@ -1,3 +1,5 @@
+import { HOLIDAY_SALE_END, NEW_YEAR_SALE_END, getCurrentSaleType } from "../utils/sale-dates";
+
 export type PricingOfferType = "fixed" | "contact";
 
 export interface PricingOffer {
@@ -16,7 +18,20 @@ export interface PricingOffer {
   priceId?: string;
 }
 
-export const FOUNDERS_OFFER_DEADLINE = "2026-01-01T00:00:00Z";
+// For countdown timer (holiday sale countdown)
+export const FOUNDERS_OFFER_DEADLINE = HOLIDAY_SALE_END;
+
+// For schema.org priceValidUntil (extends through new year sale)
+export function getPriceValidUntil(): string {
+  const saleType = getCurrentSaleType();
+  if (saleType === "holiday") {
+    return HOLIDAY_SALE_END;
+  } else if (saleType === "newyear") {
+    return NEW_YEAR_SALE_END;
+  }
+  // No active sale, return far future date or empty
+  return "";
+}
 
 export const pricingOffers: PricingOffer[] = [
   {
