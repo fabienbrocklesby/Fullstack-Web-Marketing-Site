@@ -1,5 +1,3 @@
-import { HOLIDAY_SALE_END, NEW_YEAR_SALE_END, getCurrentSaleType } from "../utils/sale-dates";
-
 export type PricingOfferType = "fixed" | "contact";
 
 export interface PricingOffer {
@@ -18,18 +16,8 @@ export interface PricingOffer {
   priceId?: string;
 }
 
-// For countdown timer (holiday sale countdown)
-export const FOUNDERS_OFFER_DEADLINE = HOLIDAY_SALE_END;
-
-// For schema.org priceValidUntil (extends through new year sale)
+// For schema.org priceValidUntil - empty string means no expiry date shown
 export function getPriceValidUntil(): string {
-  const saleType = getCurrentSaleType();
-  if (saleType === "holiday") {
-    return HOLIDAY_SALE_END;
-  } else if (saleType === "newyear") {
-    return NEW_YEAR_SALE_END;
-  }
-  // No active sale, return far future date or empty
   return "";
 }
 

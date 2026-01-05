@@ -3,23 +3,16 @@ import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import BuyButton from "../components/BuyButton.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
-import Countdown from "../components/Countdown.astro";
-import { pricingOffers, FOUNDERS_OFFER_DEADLINE } from "../data/pricing";
+import { pricingOffers } from "../data/pricing";
 import {
-  shouldShowCountdownTimer,
-  isSalePricingActive,
   getSaleTitle,
   getSaleDescription,
   getSaleAlertMessage,
-  getCurrentSaleType,
 } from "../utils/sale-dates";
 
-const showCountdown = shouldShowCountdownTimer();
-const saleActive = isSalePricingActive();
 const saleTitle = getSaleTitle();
 const saleDescription = getSaleDescription();
 const saleAlertMessage = getSaleAlertMessage();
-const saleType = getCurrentSaleType();
 
 const fallbackSite = new URL("https://lightlane.app");
 const siteBase = Astro.site ?? fallbackSite;
@@ -48,7 +41,6 @@ const offerSchemas = pricingOffers.map((offer) => {
   if (offer.sku) base.sku = offer.sku;
   if (typeof offer.price === "number") {
     base.price = offer.price;
-    base.priceValidUntil = FOUNDERS_OFFER_DEADLINE;
   } else {
     base.priceType = "https://schema.org/CallForPrice";
   }
@@ -175,37 +167,15 @@ const structuredData = [
           <div
             class="flex flex-col md:flex-row gap-4 justify-center items-center"
           >
-            {
-              saleType === "holiday" && (
-                <div class="badge badge-success badge-soft text-xs py-3 px-4 tracking-wide">
-                  PUBLIC LAUNCH • LIMITED TIME
-                </div>
-              )
-            }
-            {
-              saleType === "newyear" && (
-                <div class="badge badge-warning badge-soft text-xs py-3 px-4 tracking-wide">
-                  🎉 NEW YEAR'S SALE • EXTENDED
-                </div>
-              )
-            }
+            <div class="badge badge-success badge-soft text-xs py-3 px-4 tracking-wide">
+              FOUNDERS LIFETIME • LIMITED AVAILABILITY
+            </div>
             <div
               class="badge badge-primary badge-soft text-xs py-3 px-4 tracking-wide"
             >
               GRANDFATHERED LIFETIME UPDATES
             </div>
           </div>
-          {
-            showCountdown && (
-              <div class="mt-2">
-                <Countdown
-                  target={FOUNDERS_OFFER_DEADLINE}
-                  label="Holiday pricing ends in"
-                  size="lg"
-                />
-              </div>
-            )
-          }
           {
             saleAlertMessage && (
               <div role="alert" class="alert alert-info justify-center">

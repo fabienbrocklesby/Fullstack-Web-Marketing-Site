@@ -2,20 +2,12 @@
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
-import Countdown from "../components/Countdown.astro";
-import HolidayDecor from "../components/HolidayDecor.astro";
-import { STRAPI_URL } from "../config/strapi";
-import { pricingOffers, FOUNDERS_OFFER_DEADLINE } from "../data/pricing";
+import { pricingOffers } from "../data/pricing";
 import {
-  shouldShowHolidayDecorations,
-  shouldShowCountdownTimer,
-  isSalePricingActive,
   getSaleBadgeText,
   getHeroPricingNote,
 } from "../utils/sale-dates";
 
-const showHolidayDecor = shouldShowHolidayDecorations();
-const showCountdown = shouldShowCountdownTimer();
 const saleBadgeText = getSaleBadgeText();
 const heroPricingNote = getHeroPricingNote();
 
@@ -90,7 +82,6 @@ const offerSchemas = pricingOffers.map((offer) => {
   if (offer.sku) base.sku = offer.sku;
   if (typeof offer.price === "number") {
     base.price = offer.price;
-    base.priceValidUntil = FOUNDERS_OFFER_DEADLINE;
   } else {
     base.priceType = "https://schema.org/CallForPrice";
   }
@@ -251,24 +242,15 @@ const structuredData = [
     <section
       class="relative overflow-hidden flex items-center pt-20 md:pt-24 pb-12 md:pb-16"
     >
-      <div class="absolute inset-0 holiday-aurora" aria-hidden="true"></div>
+      <div
+        class="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(42,158,219,0.2),transparent_60%)]"
+        aria-hidden="true"
+      ></div>
 
-      {
-        showHolidayDecor && (
-          <div class="holiday-hero-lights" aria-hidden="true">
-            <HolidayDecor />
-          </div>
-        )
-      }
       <div class="container relative z-[2]">
         <div class="max-w-3xl mx-auto text-center space-y-6">
           <div class="flex justify-center">
-            <div
-              class:list={[
-                "badge badge-success badge-soft badge-xl tracking-wide",
-                showHolidayDecor && "holiday-badge",
-              ]}
-            >
+            <div class="badge badge-success badge-soft badge-xl tracking-wide">
               {saleBadgeText}
             </div>
           </div>
@@ -316,39 +298,6 @@ const structuredData = [
         </div>
       </div>
     </section>
-
-    {
-      showCountdown && (
-        <section class="bg-secondary/20 border-y border-base-300 py-10 px-4 sm:px-0">
-          <div class="container text-center space-y-4">
-            <div class="md:hidden">
-              <Countdown
-                target={FOUNDERS_OFFER_DEADLINE}
-                label="Holiday pricing ends in"
-                size="lg"
-              />
-            </div>
-            <div class="hidden md:block">
-              <Countdown
-                target={FOUNDERS_OFFER_DEADLINE}
-                label="Holiday pricing ends in"
-                size="xl"
-              />
-            </div>
-            <p class="text-base-content/80 text-sm md:text-base max-w-2xl mx-auto">
-              Lock lifetime Lightlane pricing before{" "}
-              <strong>January 1, 2026</strong>. The founders rate retires at
-              midnight Pacific.
-            </p>
-            <div class="flex justify-center">
-              <a href="#plans" class="btn btn-gradient">
-                See plans
-              </a>
-            </div>
-          </div>
-        </section>
-      )
-    }
 
     <section class="section pt-0">
       <div class="container grid gap-12 lg:grid-cols-2 items-center">
@@ -1337,190 +1286,6 @@ const structuredData = [
         </div>
       </div>
     </section>
-
-    {/* Holiday mailing list popup + modal - only shown during holiday sale */}
-    {
-      showHolidayDecor && (
-        <div
-          class="fixed z-40 bottom-4 left-4 right-4 md:left-auto md:right-6 md:w-[22rem] rounded-3xl border border-white/20 bg-gradient-to-br from-emerald-700/95 via-emerald-600/95 to-rose-600/90 text-white shadow-2xl p-4 md:p-5 flex gap-4 items-start transition-all duration-300 ease-out opacity-0 translate-y-4 pointer-events-none hidden"
-          data-mailing-popup
-          aria-hidden="true"
-        >
-          <div
-            class="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0"
-            aria-hidden="true"
-          >
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              class="text-white"
-            >
-              <path
-                d="M16 4l-5 8h4l-6 10h5v6h4v-6h5l-6-10h4L16 4z"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </div>
-          <div class="space-y-3 text-sm">
-            <div>
-              <p class="text-[10px] uppercase tracking-[0.35em] text-white/70 font-semibold">
-                Holiday exclusive
-              </p>
-              <h3 class="text-lg font-semibold leading-snug">
-                12 Days of Lightlane
-              </h3>
-            </div>
-            <p class="text-xs text-white/90 leading-relaxed">
-              Join the festive list to catch the daily drops from December
-              12-24: new features, limited bundles, and workshop surprises.
-            </p>
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="btn btn-sm bg-white text-emerald-700 font-semibold border-none hover:bg-white/90"
-                data-mailing-open
-              >
-                Join for updates
-              </button>
-              <button
-                type="button"
-                class="btn btn-sm btn-ghost text-white/80 border-white/40 hover:bg-white/10"
-                data-mailing-dismiss
-              >
-                Maybe later
-              </button>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    {
-      showHolidayDecor && (
-        <button
-          type="button"
-          class="fixed z-30 bottom-4 right-4 md:right-6 px-4 py-2 rounded-full text-xs font-semibold tracking-wide bg-gradient-to-r from-emerald-600 to-rose-500 text-white shadow-lg border border-white/20 hidden opacity-0 translate-y-4 pointer-events-none transition-all duration-300"
-          data-mailing-reopen
-          aria-label="Open mailing list popup"
-        >
-          Open holiday updates
-        </button>
-      )
-    }
-
-    {
-      showHolidayDecor && (
-        <dialog id="mailing-modal" class="modal" data-mailing-modal>
-          <div class="modal-box max-w-xl space-y-6 bg-base-100/95 border border-base-300/60 shadow-2xl">
-            <form method="dialog" class="absolute right-4 top-4">
-              <button
-                class="btn btn-sm btn-circle btn-ghost"
-                aria-label="Close dialog"
-              >
-                &times;
-              </button>
-            </form>
-            <div class="space-y-4">
-              <div class="badge badge-success badge-soft gap-2 w-fit">
-                <span class="w-2 h-2 rounded-full bg-success" />
-                Mailing list
-              </div>
-              <div class="space-y-3">
-                <h3 class="text-2xl font-bold">
-                  Celebrate the 12 Days of Lightlane
-                </h3>
-                <p class="text-base-content/70 text-sm leading-relaxed">
-                  From December 12-24 we'll announce a fresh feature, package,
-                  or giveaway every day. Join the list to hear about them first
-                  and grab the limited promos before they disappear.
-                </p>
-                <ul class="list-disc pl-5 text-sm text-base-content/70 space-y-1">
-                  <li>Daily spotlight on upcoming Lightlane capabilities</li>
-                  <li>First dibs on seasonal bundles and partner perks</li>
-                  <li>Behind-the-scenes looks at the engraving roadmap</li>
-                </ul>
-              </div>
-            </div>
-            <form
-              id="mailing-form"
-              class="space-y-4"
-              data-strapi-url={STRAPI_URL}
-              data-endpoint="/api/mailing-list-signups"
-            >
-              <div class="space-y-2">
-                <label for="mailing-name" class="text-sm font-medium">
-                  Full name
-                </label>
-                <input
-                  id="mailing-name"
-                  name="name"
-                  type="text"
-                  class="input input-bordered w-full"
-                  placeholder="Holly Engraver"
-                  required
-                />
-              </div>
-              <div class="space-y-2">
-                <label for="mailing-email" class="text-sm font-medium">
-                  Email
-                </label>
-                <input
-                  id="mailing-email"
-                  name="email"
-                  type="email"
-                  class="input input-bordered w-full"
-                  placeholder="you@workshop.com"
-                  required
-                />
-              </div>
-              <p class="text-xs text-base-content/60 leading-relaxed">
-                Expect one merry update per day during the campaign and the
-                occasional Lightlane launch recap. Unsubscribe anytime.
-              </p>
-              <button
-                type="submit"
-                class="btn btn-primary w-full"
-                data-mailing-submit
-              >
-                <span data-mailing-btn-label>Save my seat</span>
-                <span
-                  class="loading loading-dots loading-sm hidden"
-                  aria-hidden="true"
-                  data-mailing-btn-loading
-                />
-              </button>
-              <div
-                class="alert alert-success hidden"
-                data-mailing-success
-                role="status"
-              >
-                <span>
-                  Thanks! You're on the list. Watch your inbox on December 12.
-                </span>
-              </div>
-              <div
-                class="alert alert-error hidden"
-                data-mailing-error
-                role="alert"
-              >
-                <span data-mailing-error-text>
-                  Something went wrong. Please retry in a moment.
-                </span>
-              </div>
-            </form>
-          </div>
-          <form method="dialog" class="modal-backdrop">
-            <button aria-label="Close">close</button>
-          </form>
-        </dialog>
-      )
-    }
   </main>
   <script>
     (function () {
@@ -1655,209 +1420,6 @@ const structuredData = [
         });
         // Initial call after layout
         setTimeout(onScroll, 50);
-      }
-
-      // Holiday mailing popup + modal
-      const mailingPopup = document.querySelector(
-        "[data-mailing-popup]",
-      ) as HTMLElement | null;
-      const mailingModal = document.querySelector(
-        "[data-mailing-modal]",
-      ) as HTMLDialogElement | null;
-      const popupOpeners = Array.from(
-        document.querySelectorAll("[data-mailing-open]"),
-      ) as HTMLElement[];
-      const popupDismissBtns = Array.from(
-        document.querySelectorAll("[data-mailing-dismiss]"),
-      ) as HTMLElement[];
-      const reopenButton = document.querySelector(
-        "[data-mailing-reopen]",
-      ) as HTMLElement | null;
-      const popupKey = "ll-holiday-mailing-popup-v1";
-      const popupVisibleClasses = [
-        "opacity-100",
-        "translate-y-0",
-        "pointer-events-auto",
-      ];
-      const popupHiddenClasses = [
-        "opacity-0",
-        "translate-y-4",
-        "pointer-events-none",
-      ];
-      const reopenVisibleClasses = [
-        "opacity-100",
-        "translate-y-0",
-        "pointer-events-auto",
-      ];
-      const reopenHiddenClasses = [
-        "opacity-0",
-        "translate-y-4",
-        "pointer-events-none",
-      ];
-      const popupDelayMs = 0;
-
-      function persistPopupState() {
-        try {
-          window.localStorage.setItem(popupKey, "dismissed");
-        } catch {}
-      }
-
-      function showReopenButton() {
-        if (!reopenButton) return;
-        reopenButton.classList.remove("hidden");
-        reopenButton.setAttribute("aria-hidden", "false");
-        reopenButton.classList.remove(...reopenHiddenClasses);
-        reopenButton.classList.add(...reopenVisibleClasses);
-      }
-
-      function hideReopenButton() {
-        if (!reopenButton) return;
-        reopenButton.classList.add(...reopenHiddenClasses);
-        reopenButton.classList.remove(...reopenVisibleClasses);
-        reopenButton.setAttribute("aria-hidden", "true");
-        window.setTimeout(() => {
-          if (
-            reopenButton &&
-            reopenHiddenClasses.every((cls) =>
-              reopenButton.classList.contains(cls),
-            )
-          ) {
-            reopenButton.classList.add("hidden");
-          }
-        }, 320);
-      }
-
-      function showMailingPopup() {
-        if (!mailingPopup) return;
-        mailingPopup.classList.remove("hidden");
-        mailingPopup.setAttribute("aria-hidden", "false");
-        mailingPopup.classList.remove(...popupHiddenClasses);
-        mailingPopup.classList.add(...popupVisibleClasses);
-        hideReopenButton();
-      }
-
-      function hideMailingPopup(
-        options: { persist?: boolean; showReopen?: boolean } = {},
-      ) {
-        const { persist = false, showReopen = false } = options;
-        if (!mailingPopup) return;
-        mailingPopup.classList.add(...popupHiddenClasses);
-        mailingPopup.classList.remove(...popupVisibleClasses);
-        mailingPopup.setAttribute("aria-hidden", "true");
-        window.setTimeout(() => mailingPopup.classList.add("hidden"), 320);
-        if (persist) persistPopupState();
-        if (showReopen) showReopenButton();
-        else hideReopenButton();
-      }
-
-      let shouldShowPopup = true;
-      try {
-        shouldShowPopup = window.localStorage.getItem(popupKey) !== "dismissed";
-      } catch {}
-      if (mailingPopup && shouldShowPopup) {
-        if (popupDelayMs <= 0) showMailingPopup();
-        else window.setTimeout(showMailingPopup, popupDelayMs);
-      } else if (!shouldShowPopup) {
-        showReopenButton();
-      }
-
-      popupOpeners.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          if (mailingModal && typeof mailingModal.showModal === "function") {
-            mailingModal.showModal();
-          }
-          hideMailingPopup({ persist: true, showReopen: false });
-        });
-      });
-      popupDismissBtns.forEach((btn) => {
-        btn.addEventListener("click", (event) => {
-          event.preventDefault();
-          hideMailingPopup({ persist: true, showReopen: true });
-        });
-      });
-
-      reopenButton?.addEventListener("click", () => {
-        showMailingPopup();
-      });
-
-      // Form submission to Strapi
-      const mailingForm = document.getElementById("mailing-form");
-      if (mailingForm instanceof HTMLFormElement) {
-        const submitBtn = mailingForm.querySelector(
-          "[data-mailing-submit]",
-        ) as HTMLButtonElement | null;
-        const btnLabel = mailingForm.querySelector(
-          "[data-mailing-btn-label]",
-        ) as HTMLElement | null;
-        const btnLoading = mailingForm.querySelector(
-          "[data-mailing-btn-loading]",
-        ) as HTMLElement | null;
-        const successEl = mailingForm.querySelector(
-          "[data-mailing-success]",
-        ) as HTMLElement | null;
-        const errorEl = mailingForm.querySelector(
-          "[data-mailing-error]",
-        ) as HTMLElement | null;
-        const errorText = mailingForm.querySelector(
-          "[data-mailing-error-text]",
-        ) as HTMLElement | null;
-        const defaultLabel = btnLabel?.textContent || "Save my seat";
-        const attrUrl = mailingForm.getAttribute("data-strapi-url") || "";
-        const endpointAttr =
-          mailingForm.getAttribute("data-endpoint") ||
-          "/api/mailing-list-signups";
-        const strapiBase = attrUrl.replace(/\/$/, "");
-        const endpoint = endpointAttr.startsWith("/")
-          ? endpointAttr
-          : `/${endpointAttr}`;
-
-        mailingForm.addEventListener("submit", async (event) => {
-          event.preventDefault();
-          if (!mailingForm.checkValidity()) {
-            mailingForm.reportValidity();
-            return;
-          }
-          successEl?.classList.add("hidden");
-          errorEl?.classList.add("hidden");
-          submitBtn?.setAttribute("disabled", "true");
-          btnLoading?.classList.remove("hidden");
-          if (btnLabel) btnLabel.textContent = "Saving...";
-          const nameInput =
-            mailingForm.querySelector<HTMLInputElement>("#mailing-name");
-          const emailInput =
-            mailingForm.querySelector<HTMLInputElement>("#mailing-email");
-          const payload = {
-            fullName: nameInput ? nameInput.value.trim() : "",
-            email: emailInput ? emailInput.value.trim() : "",
-            source: "homepage_popup",
-            campaign: "12_days_of_lightlane",
-          };
-          try {
-            const res = await fetch(strapiBase + endpoint, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ data: payload }),
-            });
-            if (!res.ok) throw new Error("Request failed");
-            successEl?.classList.remove("hidden");
-            mailingForm.reset();
-            hideMailingPopup({ persist: true, showReopen: false });
-            window.setTimeout(() => mailingModal?.close(), 1500);
-          } catch (err) {
-            const fallbackMessage = "Something went wrong. Please retry.";
-            if (errorText) {
-              errorText.textContent =
-                err instanceof Error && err.message
-                  ? err.message
-                  : fallbackMessage;
-            }
-            errorEl?.classList.remove("hidden");
-          } finally {
-            submitBtn?.removeAttribute("disabled");
-            btnLoading?.classList.add("hidden");
-            if (btnLabel) btnLabel.textContent = defaultLabel;
-          }
-        });
       }
     })();
   </script>
