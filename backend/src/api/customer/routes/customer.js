@@ -1,19 +1,23 @@
 module.exports = {
   routes: [
+    // Rate limited to prevent brute force registration
     {
       method: "POST",
       path: "/customers/register",
       handler: "customer.register",
       config: {
         auth: false,
+        middlewares: ["global::auth-rate-limit"],
       },
     },
+    // Rate limited to prevent brute force login
     {
       method: "POST",
       path: "/customers/login",
       handler: "customer.login",
       config: {
         auth: false,
+        middlewares: ["global::auth-rate-limit"],
       },
     },
     {

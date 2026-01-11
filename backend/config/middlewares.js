@@ -16,6 +16,9 @@ const corsOrigins = [
   "http://209.38.91.37:4321",
 ].filter(Boolean);
 
+// Import rate limiting middleware factory
+const rateLimitModule = require("../src/middlewares/rate-limit");
+
 module.exports = [
   "strapi::logger",
   "strapi::errors",
@@ -40,9 +43,15 @@ module.exports = [
   "strapi::session",
   "strapi::favicon",
   "strapi::public",
-  // Debug middleware disabled to prevent console spam
-  // {
-  //   name: 'global::auth-debug',
-  //   config: {},
-  // },
+  // Security middlewares registered globally
+  {
+    name: "global::dev-only",
+    config: {},
+  },
+  {
+    name: "global::admin-internal",
+    config: {},
+  },
+  // Rate limiting middlewares - configured in src/middlewares/rate-limit.js
+  // These are used by routes that reference them explicitly
 ];
