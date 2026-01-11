@@ -7,6 +7,8 @@
  * Pass token via X-Admin-Token header
  */
 
+const { audit } = require("../utils/audit-logger");
+
 module.exports = (config, { strapi }) => {
   return async (ctx, next) => {
     const adminToken = process.env.ADMIN_INTERNAL_TOKEN;
@@ -55,7 +57,7 @@ module.exports = (config, { strapi }) => {
 
     const crypto = require('crypto');
     if (!crypto.timingSafeEqual(tokenBuffer, providedBuffer)) {
-      strapi.log.warn(`Invalid admin token attempt for: ${ctx.request.path}`);
+      audit.adminTokenInvalid(ctx, ctx.request.path);
       ctx.status = 403;
       ctx.body = {
         error: 'Forbidden',

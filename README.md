@@ -106,6 +106,31 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 FRONTEND_URL=http://localhost:4321
 ```
 
+### Admin Internal Token
+
+Some endpoints (e.g., license management, internal tools) are protected by an admin token for server-to-server requests.
+
+**Setup:**
+
+1. Generate a secure token: `openssl rand -hex 32`
+2. Set `ADMIN_INTERNAL_TOKEN` in your backend `.env` file
+3. Pass the token via the `X-Admin-Token` header when calling protected endpoints
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:1337/api/internal/some-endpoint \
+  -H "X-Admin-Token: your-secret-token" \
+  -H "Content-Type: application/json"
+```
+
+**Behaviour:**
+
+- **Production**: Requests without a valid token receive `403 Forbidden`
+- **Development**: If `ADMIN_INTERNAL_TOKEN` is not set, access is allowed with a warning logged
+
+**Note:** This is for server-to-server communication only. Never expose this token to frontend code or client-side requests.
+
 ### 3. Development
 
 ```bash

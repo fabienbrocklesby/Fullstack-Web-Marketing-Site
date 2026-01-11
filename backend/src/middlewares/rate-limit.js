@@ -4,6 +4,8 @@
  * For multi-instance deployments, replace with Redis-backed solution
  */
 
+const { audit } = require("../utils/audit-logger");
+
 const buckets = new Map();
 
 // Cleanup stale buckets periodically (every 5 minutes)
@@ -44,6 +46,7 @@ function createRateLimiter(options = {}) {
     bucket.lastAccess = now;
 
     if (bucket.timestamps.length >= max) {
+      audit.rateLimited(ctx, keyPrefix, { ip, requestCount: bucket.timestamps.length, max });
       ctx.status = 429;
       ctx.set('Retry-After', Math.ceil(windowMs / 1000));
       ctx.body = {

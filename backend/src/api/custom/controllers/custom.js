@@ -1,13 +1,12 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const { audit, maskSensitive } = require("../../../utils/audit-logger");
 
 // Helper: generate a unique-ish license key. This used to live in the license-key controller
 // but was referenced here without being in scope, causing a ReferenceError and aborting the
 // purchase processing before creating the license key. We inline it here to ensure availability.
 // Format: <PROD>-<CUST>-<BASE36TIME>-<RANDHEX>
-function generateLicenseKey(productName, customerId, attempt = 0) {
-  const MAX_ATTEMPTS = 5;
+function generateLicenseKey(productName, customerId) {
   const timestamp = Date.now().toString(36).toUpperCase();
   const randomString = crypto.randomBytes(8).toString("hex").toUpperCase();
   const productCode = (productName || "PRD").substring(0, 3).toUpperCase();
@@ -717,6 +716,7 @@ module.exports = {
 
       // Validate input
       if (!licenceKey || !machineId) {
+        audit.licenseActivation(ctx, "denied", "missing_fields", { licenceKey: maskSensitive(licenceKey), machineId });
         ctx.status = 400;
         ctx.body = { error: "licenceKey and machineId are required" };
         return;
@@ -732,6 +732,7 @@ module.exports = {
       );
 
       if (!license || license.length === 0) {
+        audit.licenseActivation(ctx, "denied", "not_found", { licenceKey: maskSensitive(licenceKey), machineId });
         ctx.status = 404;
         ctx.body = { error: "License key not found" };
         return;
@@ -741,6 +742,7 @@ module.exports = {
 
       // Check if license is already active
       if (licenseRecord.status === "active") {
+        audit.licenseActivation(ctx, "denied", "already_active", { licenseId: licenseRecord.id, machineId });
         ctx.status = 400;
         ctx.body = { error: "License is already active on another device" };
         return;
@@ -748,6 +750,7 @@ module.exports = {
 
       // For trial licenses, only allow one-time activation
       if (licenseRecord.typ === "trial" && licenseRecord.status !== "unused") {
+        audit.licenseActivation(ctx, "denied", "trial_already_used", { licenseId: licenseRecord.id, machineId });
         ctx.status = 400;
         ctx.body = { error: "Trial license has already been used" };
         return;
@@ -809,7 +812,7 @@ module.exports = {
       );
 
       // Update license record with new key and encrypted deactivation code
-      const updatedLicense = await strapi.entityService.update(
+      await strapi.entityService.update(
         "api::license-key.license-key",
         licenseRecord.id,
         {
@@ -860,9 +863,7 @@ module.exports = {
         noTimestamp: true, // We set iat manually
       });
 
-      console.log(
-        `✅ License activated: ${newLicenseKey} for machine: ${machineId}`,
-      );
+      audit.licenseActivation(ctx, "success", "activated", { licenseId: licenseRecord.id, typ: licenseRecord.typ, machineId });
 
       ctx.status = 200;
       ctx.body = {
@@ -876,6 +877,7 @@ module.exports = {
     } catch (error) {
       console.error("License activation error:", error);
       console.error("Error stack:", error.stack);
+      audit.licenseActivation(ctx, "error", "internal_error", { error: error.message });
       ctx.status = 500;
       ctx.body = { error: "Internal server error", details: error.message };
     }
@@ -891,6 +893,7 @@ module.exports = {
 
       // Validate input
       if (!licenceKey || !deactivationCode) {
+        audit.licenseDeactivation(ctx, "denied", "missing_fields", { licenceKey: maskSensitive(licenceKey) });
         ctx.status = 400;
         ctx.body = { error: "licenceKey and deactivationCode are required" };
         return;
@@ -909,6 +912,7 @@ module.exports = {
       );
 
       if (!license || license.length === 0) {
+        audit.licenseDeactivation(ctx, "denied", "not_found_or_inactive", { licenceKey: maskSensitive(licenceKey) });
         ctx.status = 404;
         ctx.body = { error: "License key not found or not active" };
         return;
@@ -929,7 +933,7 @@ module.exports = {
           let decrypted = decipher.update(encrypted, "hex", "utf8");
           decrypted += decipher.final("utf8");
           return decrypted;
-        } catch (error) {
+        } catch {
           return null; // Invalid encryption/decryption
         }
       };
@@ -940,6 +944,7 @@ module.exports = {
       );
 
       if (!decryptedCode || decryptedCode !== deactivationCode) {
+        audit.licenseDeactivation(ctx, "denied", "invalid_deactivation_code", { licenseId: licenseRecord.id });
         ctx.status = 400;
         ctx.body = { error: "Invalid deactivation code" };
         return;
@@ -989,9 +994,7 @@ module.exports = {
         },
       );
 
-      console.log(
-        `✅ License deactivated and reset: ${licenceKey} -> ${newLicenseKey}`,
-      );
+      audit.licenseDeactivation(ctx, "success", "deactivated", { licenseId: licenseRecord.id, typ: licenseRecord.typ });
 
       ctx.status = 200;
       ctx.body = {
@@ -1001,6 +1004,7 @@ module.exports = {
       };
     } catch (error) {
       console.error("License deactivation error:", error);
+      audit.licenseDeactivation(ctx, "error", "internal_error", { error: error.message });
       ctx.status = 500;
       ctx.body = {
         error: "Failed to deactivate license",
@@ -1372,7 +1376,7 @@ module.exports = {
         user = await strapi.query("plugin::users-permissions.user").findOne({
           where: { id: decoded.id },
         });
-      } catch (error) {
+      } catch {
         return ctx.unauthorized("Invalid token");
       }
 
@@ -1656,7 +1660,7 @@ module.exports = {
         user = await strapi.query("plugin::users-permissions.user").findOne({
           where: { id: decoded.id },
         });
-      } catch (error) {
+      } catch {
         return ctx.unauthorized("Invalid token");
       }
 
@@ -1730,7 +1734,7 @@ module.exports = {
         user = await strapi.query("plugin::users-permissions.user").findOne({
           where: { id: decoded.id },
         });
-      } catch (error) {
+      } catch {
         return ctx.unauthorized("Invalid token");
       }
 

@@ -23,6 +23,7 @@ const getSanitizedCustomer = async (strapi, customerId) => {
     return null;
   }
 
+  // eslint-disable-next-line no-unused-vars
   const { password, ...customerData } = customer;
   return customerData;
 };
@@ -99,6 +100,7 @@ module.exports = createCoreController(
         );
 
         // Remove password from response
+        // eslint-disable-next-line no-unused-vars
         const { password: _, ...customerData } = customer;
 
         const hydratedCustomer =
@@ -155,6 +157,7 @@ module.exports = createCoreController(
 
         await linkPendingLicensesToCustomer(strapi, customer.id, customer.email);
 
+        // eslint-disable-next-line no-unused-vars
         const { password: __, ...customerData } = customer;
 
         const hydratedCustomer =
@@ -209,6 +212,7 @@ module.exports = createCoreController(
         }
 
         // Remove password from response
+        // eslint-disable-next-line no-unused-vars
         const { password: _, ...customerData } = customer;
 
         ctx.body = { customer: customerData };
@@ -262,6 +266,7 @@ module.exports = createCoreController(
           updatedCustomer.email,
         );
 
+        // eslint-disable-next-line no-unused-vars
         const { password: __, ...customerData } = updatedCustomer;
 
         const hydratedCustomer =

@@ -1,12 +1,16 @@
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
-const crypto = require("crypto");
+// Note: crypto import removed - this controller's routes are disabled
+// See license-portal/routes/license-portal.js for details
 
 module.exports = {
   /**
    * Activate a license key
    * POST /license/activate
    * Body: { licenceKey, machineId }
+   * 
+   * NOTE: This route is DISABLED. The canonical route is in api::custom
+   * See: src/api/custom/routes/custom.js - /license/activate
    */
   async activate(ctx) {
     try {
@@ -56,7 +60,7 @@ module.exports = {
       const trialStart = licenseRecord.typ === "trial" ? now : undefined;
 
       // Update license record
-      const updatedLicense = await strapi.entityService.update(
+      await strapi.entityService.update(
         "api::license-key.license-key",
         licenseRecord.id,
         {

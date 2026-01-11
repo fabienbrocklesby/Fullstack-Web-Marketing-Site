@@ -16,9 +16,6 @@ const corsOrigins = [
   "http://209.38.91.37:4321",
 ].filter(Boolean);
 
-// Import rate limiting middleware factory
-const rateLimitModule = require("../src/middlewares/rate-limit");
-
 module.exports = [
   "strapi::logger",
   "strapi::errors",
