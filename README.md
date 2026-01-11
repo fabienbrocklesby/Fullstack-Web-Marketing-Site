@@ -16,7 +16,7 @@ A production-ready SaaS marketing site built with Astro frontend and Strapi back
 
 - **Global schema**: `frontend/src/layouts/Layout.astro` now emits Organization/WebSite JSON-LD and accepts per-page `structuredData` and `breadcrumbs`. Wire these props up on new routes so search engines receive canonical context.
 - **Pricing source of truth**: Update names, SKUs, or deadlines in `frontend/src/data/pricing.ts` to keep landing copy, schema markup, and rich results synchronized.
-- **Rich media assets**: Social previews and PWA icons live in `frontend/public/` (`og-lightlane.png`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `site.webmanifest`). Regenerate them if branding or messaging changes.
+- **Rich media assets**: Social previews and PWA icons live in `frontend/public/` (`og-lightlane.png`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `NotRoundedLogo.png`, `site.webmanifest`). Regenerate them if branding or messaging changes.
 - **Robots & sitemap**: `frontend/public/robots.txt` now targets `https://lightlane.app/sitemap-index.xml`; adjust if a staging domain is used.
 - **Homepage FAQ schema**: When editing FAQ copy in `frontend/src/pages/index.astro`, keep the `faqEntries` array aligned with the visible questions and answers to preserve structured data accuracy.
 - **Keyword hubs**: Page-level keyword arrays and schema enrichments live alongside each Astro page (`homepageKeywords`, `pricingKeywords`, `contactKeywords`, blog keywords). Tweak them together with on-page copy so meta tags, structured data, and headings stay aligned.
@@ -74,6 +74,7 @@ See [QUICKSTART.md](./QUICKSTART.md) for detailed instructions and troubleshooti
 ## 📋 Prerequisites
 
 **For Production (Dokploy):**
+
 - VPS server (DigitalOcean, AWS, etc.) - 2GB+ RAM
 - Domain name (lightlane.app)
 - GitHub repository

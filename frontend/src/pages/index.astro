@@ -153,7 +153,7 @@ const videoStructuredData = workflowSteps.map((step) => ({
   "@id": `${toAbsolute("/")}#${step.id}-video`,
   name: `${step.name} - Lightlane laser engraving software`,
   description: step.description,
-  thumbnailUrl: [toAbsolute("/og-lightlane.png")],
+  thumbnailUrl: [toAbsolute("/NotRoundedLogo.png")],
   uploadDate: new Date().toISOString().slice(0, 10),
   contentUrl: toAbsolute(step.video),
   inLanguage: "en-US",
@@ -173,7 +173,7 @@ const structuredData = [
     softwareRequirements: "Ruida, GRBL/G-code compatible laser engravers",
     downloadUrl: toAbsolute("/pricing"),
     image: [
-      toAbsolute("/og-lightlane.png"),
+      toAbsolute("/NotRoundedLogo.png"),
       toAbsolute("/landing/basicscreen.png"),
     ],
     publisher: { "@id": `${toAbsolute("/")}#organization` },
@@ -194,7 +194,7 @@ const structuredData = [
     },
     category: "Software",
     image: [
-      toAbsolute("/og-lightlane.png"),
+      toAbsolute("/NotRoundedLogo.png"),
       toAbsolute("/landing/basicscreen.png"),
     ],
     audience: {
