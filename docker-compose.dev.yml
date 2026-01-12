@@ -26,6 +26,8 @@ services:
       dockerfile: Dockerfile.backend.dev
     container_name: lightlane-backend-dev
     restart: unless-stopped
+    env_file:
+      - backend/.env
     environment:
       NODE_ENV: development
       DATABASE_CLIENT: postgres

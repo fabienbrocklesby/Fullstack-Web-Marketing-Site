@@ -1,6 +1,7 @@
 # LightLane Licensing Portal - Current State (Verified)
 
 **Audit Date:** 2026-01-12  
+**Last Updated:** Stage 2 Fix-up (Entitlements per License-Key 1:1)
 **Scope:** Website/Portal licensing system only (not desktop app internals)
 
 ---
@@ -28,21 +29,22 @@
 Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 
 1. `custom` (L:47-54 in `custom/routes/custom.js`) → **WINS** (loads first)
-2. `license` (would be shadowed)
-3. `license-portal` (would be shadowed)
+
+**Note:** Legacy `license` and `license-portal` APIs have been removed (Stage 2 cleanup).
 
 **Evidence:** `backend/src/api/custom/routes/custom.js:47-54`
 
 ### Environment Variables (Actually Read)
 
-| Variable                | Usage                          | File:Line                                                                                                                   |
-| ----------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `STRIPE_SECRET_KEY`     | Stripe API authentication      | `custom/controllers/custom.js:1`                                                                                            |
-| `STRIPE_WEBHOOK_SECRET` | Webhook signature verification | `custom/controllers/custom.js:256`                                                                                          |
-| `JWT_SECRET`            | Customer token signing (HS256) | `customer/controllers/customer.js:97,170`, `middlewares/customer-auth.js:13`                                                |
-| `JWT_PRIVATE_KEY`       | License token signing (RS256)  | `custom/controllers/custom.js:849`, `license-portal/controllers/license-portal.js:90`, `license/controllers/license.js:101` |
-| `JWT_ISSUER`            | JWT issuer claim               | `custom/controllers/custom.js:833`, `license-portal/controllers/license-portal.js:76`                                       |
-| `NODE_ENV`              | Dev mode checks                | Multiple files                                                                                                              |
+| Variable                | Usage                          | File:Line                                                                    |
+| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`     | Stripe API authentication      | `custom/controllers/custom.js:1`                                             |
+| `STRIPE_WEBHOOK_SECRET` | Webhook signature verification | `custom/controllers/custom.js:256`                                           |
+| `JWT_SECRET`            | Customer token signing (HS256) | `customer/controllers/customer.js:97,170`, `middlewares/customer-auth.js:13` |
+| `JWT_PRIVATE_KEY`       | License token signing (RS256)  | `custom/controllers/custom.js:849`                                           |
+| `JWT_ISSUER`            | JWT issuer claim               | `custom/controllers/custom.js:833`                                           |
+| `NODE_ENV`              | Dev mode checks                | Multiple files                                                               |
+| `FOUNDERS_SALE_END_ISO` | Founders sale end override     | `utils/entitlement-mapping.js` (default: 2026-01-11T23:59:59Z)               |
 
 ---
 
@@ -60,6 +62,7 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 | `customer`           | relation | -        | -          | manyToOne → customer                                |
 | `customerEmail`      | email    | -        | -          |                                                     |
 | `purchase`           | relation | -        | -          | oneToOne → purchase                                 |
+| `entitlement`        | relation | -        | -          | oneToOne → entitlement (Stage 2 Fix-up: 1:1)        |
 | `isActive`           | boolean  | -        | `true`     |                                                     |
 | `status`             | enum     | -        | `"unused"` | `["unused", "active"]`                              |
 | `jti`                | string   | -        | -          | JWT ID for current activation                       |
@@ -117,6 +120,44 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 | `commissionPaid`   | boolean  | -        | `false` |                                   |
 | `metadata`         | json     | -        | -       |                                   |
 
+### entitlement (Stage 2 Fix-up - 1:1 with License-Key)
+
+**File:** `backend/src/api/entitlement/content-types/entitlement/schema.json`
+
+| Field        | Type     | Required | Default             | Notes                                           |
+| ------------ | -------- | -------- | ------------------- | ----------------------------------------------- |
+| `customer`   | relation | -        | -                   | manyToOne → customer                            |
+| `licenseKey` | relation | -        | -                   | oneToOne → license-key (Stage 2 Fix-up)         |
+| `purchase`   | relation | -        | -                   | oneToOne → purchase (optional)                  |
+| `tier`       | enum     | ✓        | -                   | `["maker", "pro", "education", "enterprise"]`   |
+| `status`     | enum     | ✓        | `"active"`          | `["active", "inactive", "expired", "canceled"]` |
+| `isLifetime` | boolean  | ✓        | `false`             | True for founders purchases                     |
+| `expiresAt`  | datetime | -        | -                   | Null for lifetime entitlements                  |
+| `maxDevices` | integer  | -        | `1`                 | Tier-based: maker=1, pro=2, edu=5, ent=10       |
+| `source`     | enum     | -        | `"legacy_purchase"` | `["legacy_purchase", "manual", "subscription"]` |
+| `metadata`   | json     | -        | -                   |                                                 |
+| `devices`    | relation | -        | -                   | oneToMany → device                              |
+
+**Stage 2 Fix-up: Per-License Entitlements (1:1)**
+
+Each license-key has exactly ONE entitlement (1:1 relationship).
+A customer can have MULTIPLE entitlements (one per owned license-key).
+This supports customers owning licenses of different tiers with separate billing.
+
+**Tier to Device Mapping:**
+
+| Tier       | maxDevices | Description              |
+| ---------- | ---------- | ------------------------ |
+| maker      | 1          | Single device (default)  |
+| pro        | 2          | Professional use         |
+| education  | 5          | Educational institutions |
+| enterprise | 10         | Enterprise deployments   |
+
+**Founders Sale Window:**
+
+Purchases made during the founders sale window (2024-01-01 to 2026-01-11) get `isLifetime: true`.
+Override via `FOUNDERS_SALE_END_ISO` environment variable.
+
 ---
 
 ## 2. Public Surfaces (Routes)
@@ -130,6 +171,7 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 | GET    | `/api/customers/me`                              | customer-auth | `customer.me`                        | `customer/routes/customer.js:18-26`       |
 | PUT    | `/api/customers/profile`                         | customer-auth | `customer.updateProfile`             | `customer/routes/customer.js:27-35`       |
 | PUT    | `/api/customers/password`                        | customer-auth | `customer.changePassword`            | `customer/routes/customer.js:36-44`       |
+| GET    | `/api/customers/entitlements`                    | customer-auth | `customer.entitlements`              | `customer/routes/customer.js:45-53`       |
 | GET    | `/api/license-keys`                              | customer-auth | `license-key.find`                   | `license-key/routes/license-key.js:2-11`  |
 | GET    | `/api/license-keys/:id`                          | customer-auth | `license-key.findOne`                | `license-key/routes/license-key.js:12-21` |
 | POST   | `/api/license-keys/:id/generate-activation-code` | customer-auth | `license-key.generateActivationCode` | `license-key/routes/license-key.js:22-31` |
@@ -152,14 +194,10 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 | POST   | `/api/license/deactivate` | None | `custom.licenseDeactivate` | `custom/routes/custom.js:55-62` |
 | POST   | `/api/license/reset`      | None | `custom.licenseReset`      | `custom/routes/custom.js:63-70` |
 
-### Shadowed Routes (PRESENT but NOT reachable)
+### Shadowed Routes (REMOVED in Stage 2)
 
-| Method | Path                      | Would-be Handler            | Why Shadowed                        |
-| ------ | ------------------------- | --------------------------- | ----------------------------------- |
-| POST   | `/api/license/activate`   | `license-portal.activate`   | `custom` loads first alphabetically |
-| POST   | `/api/license/deactivate` | `license-portal.deactivate` | `custom` loads first alphabetically |
-| POST   | `/api/license/activate`   | `license.activate`          | `custom` loads first alphabetically |
-| POST   | `/api/license/deactivate` | `license.deactivate`        | `custom` loads first alphabetically |
+The legacy `api::license` and `api::license-portal` APIs have been removed.
+All license activation/deactivation is now handled exclusively by `custom.licenseActivate` and `custom.licenseDeactivate`.
 
 ---
 
@@ -372,12 +410,12 @@ The `typ` field only matters during activation:
 
 ### System Classification
 
-| System                      | Controller          | Routes File                               | Status                       |
-| --------------------------- | ------------------- | ----------------------------------------- | ---------------------------- |
-| **Customer Portal Offline** | `license-key.js`    | `license-key/routes/license-key.js`       | **ACTIVE** (customer portal) |
-| **Desktop App Online**      | `custom.js`         | `custom/routes/custom.js`                 | **ACTIVE** (public API)      |
-| Legacy Online               | `license-portal.js` | `license-portal/routes/license-portal.js` | **SHADOWED**                 |
-| Legacy Online (hashed)      | `license.js`        | `license/routes/license.js`               | **SHADOWED**                 |
+| System                      | Controller       | Routes File                         | Status                       |
+| --------------------------- | ---------------- | ----------------------------------- | ---------------------------- |
+| **Customer Portal Offline** | `license-key.js` | `license-key/routes/license-key.js` | **ACTIVE** (customer portal) |
+| **Desktop App Online**      | `custom.js`      | `custom/routes/custom.js`           | **ACTIVE** (public API)      |
+
+**Note:** Legacy `license-portal.js` and `license.js` controllers have been removed (Stage 2 cleanup).
 
 ---
 
@@ -500,15 +538,18 @@ Where `base64payload` decodes to:
 **Algorithm:**
 
 1. Find license by key
-2. Validate status is not `"active"`
-3. For trial: validate status is `"unused"` (one-time only)
-4. Generate new license key with type prefix: `{TYPE}-{12_CHAR_SHORT_KEY}`
+2. **Stage 2 Fix-up: Auto-create entitlement if missing** (deterministically based on purchase/license data)
+3. **Enforce entitlement status** - must be "active" (reject if expired/canceled/inactive)
+4. **Enforce expiry** - if non-lifetime and expiresAt is past, auto-mark expired and reject
+5. Validate status is not `"active"`
+6. For trial: validate status is `"unused"` (one-time only)
+7. Generate new license key with type prefix: `{TYPE}-{12_CHAR_SHORT_KEY}`
    - Short key format: `XXXX-XXXX-XXXX` (alphanumeric, no confusing chars)
-5. Generate 8-char deactivation code
-6. Encrypt deactivation code with AES-256-CBC (key = SHA-256(newLicenseKey))
-7. Store encrypted deactivation code
-8. Update license with new key, status="active", machineId (raw), jti (UUID)
-9. Sign JWT with RS256 using `JWT_PRIVATE_KEY`
+8. Generate 8-char deactivation code
+9. Encrypt deactivation code with AES-256-CBC (key = SHA-256(newLicenseKey))
+10. Store encrypted deactivation code
+11. Update license with new key, status="active", machineId (raw), jti (UUID)
+12. Sign JWT with RS256 using `JWT_PRIVATE_KEY`
 
 **Response:**
 
@@ -587,6 +628,55 @@ Where `base64payload` decodes to:
 | Desktop App (custom.js)          | Raw string     | Whatever client sends |
 | Legacy license.js                | SHA-256 hash   | 64-char hex           |
 | Legacy license-portal.js         | Raw string     | Whatever client sends |
+
+---
+
+## 6.5 Entitlement Model (Stage 2 Fix-up)
+
+### Data Model
+
+**Each license-key has exactly ONE entitlement (1:1 relationship)**
+
+```
+customer (1) ──┬─ entitlement (N) ── licenseKey (1)
+               │
+               └─ entitlement (N) ── licenseKey (1)
+```
+
+This supports customers owning multiple licenses of different tiers with separate billing.
+
+### Entitlement Enforcement in Activation
+
+When `POST /api/license/activate` is called:
+
+1. **Auto-create entitlement if missing**: Uses `determineEntitlementTier()` to map purchase data to tier/features
+2. **Enforce status**: Entitlement must be `"active"` - reject with 403 if expired/canceled/inactive
+3. **Enforce expiry**: For non-lifetime entitlements, if `expiresAt` is past, auto-mark expired and reject
+4. **Normalize lifetime**: If `isLifetime=true`, ensure `expiresAt=null`
+
+### Tier Mapping
+
+| Tier       | maxDevices | Price Range (Founders)  |
+| ---------- | ---------- | ----------------------- |
+| maker      | 1          | < $150                  |
+| pro        | 2          | $150 - $300             |
+| education  | 5          | Manual assignment       |
+| enterprise | 10         | > $300 or enterprise ID |
+
+### Founders Lifetime Window
+
+Purchases made before `2026-01-11T23:59:59Z` (or `FOUNDERS_SALE_END_ISO`) get `isLifetime: true`.
+
+### Backfill Script
+
+For existing license-keys without entitlements:
+
+```bash
+docker compose exec backend node scripts/backfill-entitlements.js --dry-run
+docker compose exec backend node scripts/backfill-entitlements.js --apply
+```
+
+Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ---
 
@@ -743,19 +833,15 @@ Resets ALL licenses to unused state. **Not intended for production use.**
 
 - `license-key.js` normalizes MAC address to `aa:bb:cc:dd:ee:ff`
 - `custom.js` stores raw machineId
-- `license.js` (shadowed) hashes machineId with SHA-256
 
 **Impact:** Activation codes generated via customer portal require specific MAC format; desktop app accepts any string
 
-### GAP-004: Shadowed Routes
+### GAP-004: Shadowed Routes (RESOLVED)
 
-**What code proves:**
+**Status:** RESOLVED in Stage 2
 
-- `license-portal/routes/license-portal.js` and `license/routes/license.js` define routes for `/api/license/activate` and `/api/license/deactivate`
-- These are shadowed by `custom/routes/custom.js` (alphabetical loading)
-- The shadowed controllers are never called
-
-**Recommendation:** Remove shadowed route files to reduce confusion
+The legacy `api::license` and `api::license-portal` directories have been removed entirely.
+All license operations now go through `custom/controllers/custom.js`.
 
 ### GAP-005: JWT_SECRET Default Fallback
 

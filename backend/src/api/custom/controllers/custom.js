@@ -1,6 +1,8 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const crypto = require("crypto");
 const { audit, maskSensitive } = require("../../../utils/audit-logger");
+const { determineEntitlementTier } = require("../../../utils/entitlement-mapping");
+const { getRS256PrivateKey } = require("../../../utils/jwt-keys");
 
 // Helper: generate a unique-ish license key. This used to live in the license-key controller
 // but was referenced here without being in scope, causing a ReferenceError and aborting the
@@ -676,6 +678,61 @@ module.exports = {
         );
       }
 
+      // Create entitlement for THIS license-key (1:1 relationship)
+      // Each license-key gets its own entitlement - customers can have multiple
+      let entitlementRecord = null;
+      try {
+        if (licenseKeyRecord?.id) {
+          // Determine tier from purchase data
+          const tierMapping = determineEntitlementTier({
+            priceId: priceId,
+            amount: amount / 100, // Convert from cents
+            createdAt: new Date(),
+            metadata: null,
+          });
+
+          // Create entitlement for this specific license-key
+          entitlementRecord = await strapi.entityService.create(
+            "api::entitlement.entitlement",
+            {
+              data: {
+                customer: customer.id,
+                licenseKey: licenseKeyRecord.id,
+                purchase: purchase.id,
+                tier: tierMapping.tier,
+                status: "active",
+                isLifetime: tierMapping.isLifetime,
+                expiresAt: tierMapping.isLifetime ? null : null, // Lifetime = no expiry
+                maxDevices: tierMapping.maxDevices,
+                source: "legacy_purchase",
+                metadata: {
+                  ...tierMapping.metadata,
+                  sourceType: "purchase",
+                  sourcePurchaseId: purchase.id,
+                  sourceLicenseKeyId: licenseKeyRecord.id,
+                  createdAt: new Date().toISOString(),
+                },
+              },
+            }
+          );
+          console.log(
+            "🎫 Entitlement created:",
+            entitlementRecord.id,
+            "tier:",
+            tierMapping.tier,
+            "lifetime:",
+            tierMapping.isLifetime,
+            "for license-key:",
+            licenseKeyRecord.id
+          );
+        } else {
+          console.warn("⚠️ Cannot create entitlement without license-key");
+        }
+      } catch (entitlementErr) {
+        // Non-fatal: log but don't fail the purchase
+        console.error("⚠️ Failed to create entitlement (non-fatal):", entitlementErr.message);
+      }
+
       console.log("✅ Customer purchase processed successfully:", purchase.id);
       if (licenseKeyRecord?.key) {
         console.log("🔐 License key created:", licenseKeyRecord.key);
@@ -685,6 +742,12 @@ module.exports = {
         success: true,
         purchase: purchase,
         licenseKey: licenseKeyRecord,
+        entitlement: entitlementRecord ? {
+          id: entitlementRecord.id,
+          tier: entitlementRecord.tier,
+          isLifetime: entitlementRecord.isLifetime,
+          status: entitlementRecord.status,
+        } : null,
         affiliate: affiliate,
         message: licenseKeyRecord
           ? "Purchase processed successfully"
@@ -727,6 +790,7 @@ module.exports = {
         "api::license-key.license-key",
         {
           filters: { key: licenceKey },
+          populate: ["entitlement", "customer"],
           limit: 1,
         },
       );
@@ -739,6 +803,146 @@ module.exports = {
       }
 
       const licenseRecord = license[0];
+
+      // Stage 2 Fix: Entitlement is REQUIRED - auto-create if missing
+      let entitlement = licenseRecord.entitlement;
+
+      if (!entitlement) {
+        // Auto-create entitlement deterministically
+        console.log(`🔧 License key #${licenseRecord.id} has no entitlement. Auto-creating...`);
+
+        try {
+          // Try to find associated purchase for better tier mapping
+          let purchase = null;
+          if (licenseRecord.purchase) {
+            purchase = await strapi.entityService.findOne(
+              "api::purchase.purchase",
+              typeof licenseRecord.purchase === "object" ? licenseRecord.purchase.id : licenseRecord.purchase
+            );
+          }
+
+          // Determine tier
+          const tierMapping = determineEntitlementTier({
+            priceId: purchase?.priceId || licenseRecord.priceId,
+            amount: purchase ? parseFloat(purchase.amount) : null,
+            createdAt: purchase?.createdAt || licenseRecord.createdAt,
+            metadata: purchase?.metadata || null,
+          });
+
+          // Fallback: use licenseKey.typ if mapping uncertain
+          if (tierMapping.confidence === "low" && licenseRecord.typ) {
+            const typToTier = { starter: "maker", pro: "pro", enterprise: "enterprise", paid: "maker", trial: "maker" };
+            const mappedTier = typToTier[licenseRecord.typ];
+            if (mappedTier) {
+              tierMapping.tier = mappedTier;
+              tierMapping.maxDevices = { maker: 1, pro: 2, education: 5, enterprise: 10 }[mappedTier] || 1;
+            }
+          }
+
+          // Get customer - required for entitlement
+          let customerId = null;
+          if (licenseRecord.customer) {
+            customerId = typeof licenseRecord.customer === "object" ? licenseRecord.customer.id : licenseRecord.customer;
+          }
+
+          if (!customerId) {
+            console.error(`❌ Cannot auto-create entitlement: license #${licenseRecord.id} has no customer`);
+            audit.licenseActivation(ctx, "denied", "no_customer", { licenseId: licenseRecord.id, machineId });
+            ctx.status = 400;
+            ctx.body = { error: "License has no associated customer. Please contact support." };
+            return;
+          }
+
+          // Create entitlement
+          entitlement = await strapi.entityService.create(
+            "api::entitlement.entitlement",
+            {
+              data: {
+                customer: customerId,
+                licenseKey: licenseRecord.id,
+                purchase: purchase?.id || null,
+                tier: tierMapping.tier,
+                status: "active",
+                isLifetime: tierMapping.isLifetime,
+                expiresAt: tierMapping.isLifetime ? null : null,
+                maxDevices: tierMapping.maxDevices,
+                source: "legacy_purchase",
+                metadata: {
+                  ...tierMapping.metadata,
+                  mappingConfidence: tierMapping.confidence,
+                  reason: "autocreated_on_activation",
+                  createdAt: new Date().toISOString(),
+                },
+              },
+            }
+          );
+
+          console.log(`✅ Auto-created entitlement #${entitlement.id} for license #${licenseRecord.id} (tier: ${tierMapping.tier}, lifetime: ${tierMapping.isLifetime})`);
+
+        } catch (autoCreateErr) {
+          console.error(`❌ Failed to auto-create entitlement for license #${licenseRecord.id}:`, autoCreateErr.message);
+          audit.licenseActivation(ctx, "error", "entitlement_autocreate_failed", { licenseId: licenseRecord.id, error: autoCreateErr.message });
+          ctx.status = 500;
+          ctx.body = { error: "Failed to initialize license. Please contact support." };
+          return;
+        }
+      }
+
+      // Enforce entitlement status
+      if (entitlement.status !== "active") {
+        audit.licenseActivation(ctx, "denied", "entitlement_inactive", {
+          licenseId: licenseRecord.id,
+          entitlementId: entitlement.id,
+          entitlementStatus: entitlement.status,
+          machineId,
+        });
+        ctx.status = 403;
+        ctx.body = {
+          error: "Entitlement is not active",
+          entitlementStatus: entitlement.status,
+          message: entitlement.status === "expired"
+            ? "Your license has expired. Please renew to continue."
+            : entitlement.status === "canceled"
+            ? "Your license has been canceled."
+            : "Your license is currently inactive.",
+        };
+        return;
+      }
+
+      // Enforce lifetime/expiry consistency
+      if (entitlement.isLifetime && entitlement.expiresAt) {
+        // Normalize: lifetime entitlements should not have expiresAt
+        console.log(`🔧 Normalizing lifetime entitlement #${entitlement.id}: clearing expiresAt`);
+        await strapi.entityService.update("api::entitlement.entitlement", entitlement.id, {
+          data: { expiresAt: null },
+        });
+        entitlement.expiresAt = null;
+      }
+
+      // Check expiry for non-lifetime entitlements
+      if (!entitlement.isLifetime && entitlement.expiresAt) {
+        const now = new Date();
+        const expiresAt = new Date(entitlement.expiresAt);
+        if (expiresAt < now) {
+          // Mark as expired
+          await strapi.entityService.update("api::entitlement.entitlement", entitlement.id, {
+            data: { status: "expired" },
+          });
+          audit.licenseActivation(ctx, "denied", "entitlement_expired", {
+            licenseId: licenseRecord.id,
+            entitlementId: entitlement.id,
+            expiresAt: entitlement.expiresAt,
+            machineId,
+          });
+          ctx.status = 403;
+          ctx.body = {
+            error: "License expired",
+            message: "Your license has expired. Please renew to continue.",
+            expiresAt: entitlement.expiresAt,
+          };
+          return;
+        }
+      }
 
       // Check if license is already active
       if (licenseRecord.status === "active") {
@@ -848,10 +1052,10 @@ module.exports = {
         payload.trialStart = Math.floor(now.getTime() / 1000);
       }
 
-      // Get private key from environment
-      const privateKey = process.env.JWT_PRIVATE_KEY;
+      // Get private key from environment (no filesystem fallback)
+      const privateKey = getRS256PrivateKey();
       if (!privateKey) {
-        console.error("JWT_PRIVATE_KEY not found in environment");
+        console.error("JWT_PRIVATE_KEY not set in environment");
         ctx.status = 500;
         ctx.body = { error: "JWT private key not configured" };
         return;

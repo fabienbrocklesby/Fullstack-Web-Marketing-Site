@@ -1,0 +1,85 @@
+{
+  "kind": "collectionType",
+  "collectionName": "entitlements",
+  "info": {
+    "singularName": "entitlement",
+    "pluralName": "entitlements",
+    "displayName": "Entitlement",
+    "description": "Per-license entitlements for subscription-ready access control (1:1 with license-key)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::customer.customer",
+      "inversedBy": "entitlements"
+    },
+    "licenseKey": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::license-key.license-key",
+      "inversedBy": "entitlement"
+    },
+    "purchase": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::purchase.purchase"
+    },
+    "tier": {
+      "type": "enumeration",
+      "enum": [
+        "maker",
+        "pro",
+        "education",
+        "enterprise"
+      ],
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "inactive",
+        "expired",
+        "canceled"
+      ],
+      "default": "active",
+      "required": true
+    },
+    "isLifetime": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "expiresAt": {
+      "type": "datetime"
+    },
+    "maxDevices": {
+      "type": "integer",
+      "default": 1,
+      "min": 1
+    },
+    "source": {
+      "type": "enumeration",
+      "enum": [
+        "legacy_purchase",
+        "manual",
+        "subscription"
+      ],
+      "default": "legacy_purchase"
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "devices": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::device.device",
+      "mappedBy": "entitlement"
+    }
+  }
+}

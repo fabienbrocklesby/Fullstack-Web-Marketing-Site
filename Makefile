@@ -93,6 +93,58 @@ deps-watch:
 	@$(DOCKER_COMPOSE) logs -f backend frontend
 
 # ============================================================
+# Migration scripts
+# ============================================================
+
+# Run entitlement backfill migration (dry-run)
+migrate-entitlements-dry:
+	@echo "🔍 Running entitlement backfill migration (DRY RUN)..."
+	@$(DOCKER_COMPOSE) exec backend sh -c "cd /workspace/backend && node scripts/backfill-entitlements.js --dry-run"
+
+# Run entitlement backfill migration (apply)
+migrate-entitlements:
+	@echo "🚀 Running entitlement backfill migration (APPLY)..."
+	@$(DOCKER_COMPOSE) exec backend sh -c "cd /workspace/backend && node scripts/backfill-entitlements.js --apply"
+
+# Run entitlement backfill migration with verbose output
+migrate-entitlements-verbose:
+	@echo "🔍 Running entitlement backfill migration (DRY RUN, VERBOSE)..."
+	@$(DOCKER_COMPOSE) exec backend sh -c "cd /workspace/backend && node scripts/backfill-entitlements.js --dry-run --verbose"
+
+# Fix bad "founders" tier entitlements (dry-run)
+migrate-entitlements-fix-dry:
+	@echo "🔍 Running founders tier fix (DRY RUN)..."
+	@$(DOCKER_COMPOSE) exec backend sh -c "cd /workspace/backend && node scripts/fix-founders-tier.js --dry-run --verbose"
+
+# Fix bad "founders" tier entitlements (apply)
+migrate-entitlements-fix:
+	@echo "🚀 Running founders tier fix (APPLY)..."
+	@$(DOCKER_COMPOSE) exec backend sh -c "cd /workspace/backend && node scripts/fix-founders-tier.js --apply --verbose"
+
+# ============================================================
+# Sanity tests
+# ============================================================
+
+# Run all Stage 2 sanity tests
+sanity-stage2:
+	@echo "🧪 Running Stage 2 sanity tests..."
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage2.js --test=all"
+
+# Run specific sanity test (relations, activation, endpoint)
+sanity-stage2-relations:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage2.js --test=relations"
+
+sanity-stage2-activation:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage2.js --test=activation"
+
+sanity-stage2-endpoint:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage2.js --test=endpoint"
+
+# Cleanup sanity test data
+sanity-stage2-cleanup:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage2.js --cleanup"
+
+# ============================================================
 # CI/CD check targets
 # ============================================================
 

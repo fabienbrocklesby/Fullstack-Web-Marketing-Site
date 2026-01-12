@@ -1043,6 +1043,16 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
     metadata: Attribute.JSON;
     originEnquiryId: Attribute.String;
     affiliateCodeAtSignup: Attribute.String;
+    entitlements: Attribute.Relation<
+      'api::customer.customer',
+      'oneToMany',
+      'api::entitlement.entitlement'
+    >;
+    devices: Attribute.Relation<
+      'api::customer.customer',
+      'oneToMany',
+      'api::device.device'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1112,6 +1122,56 @@ export interface ApiCustomerInviteCustomerInvite extends Schema.CollectionType {
   };
 }
 
+export interface ApiDeviceDevice extends Schema.CollectionType {
+  collectionName: 'devices';
+  info: {
+    singularName: 'device';
+    pluralName: 'devices';
+    displayName: 'Device';
+    description: 'Customer device registrations for entitlement tracking';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    customer: Attribute.Relation<
+      'api::device.device',
+      'manyToOne',
+      'api::customer.customer'
+    >;
+    entitlement: Attribute.Relation<
+      'api::device.device',
+      'manyToOne',
+      'api::entitlement.entitlement'
+    >;
+    deviceId: Attribute.String & Attribute.Required & Attribute.Unique;
+    publicKey: Attribute.Text;
+    status: Attribute.Enumeration<['active', 'revoked']> &
+      Attribute.Required &
+      Attribute.DefaultTo<'active'>;
+    boundAt: Attribute.DateTime;
+    lastSeenAt: Attribute.DateTime;
+    platform: Attribute.Enumeration<['windows', 'macos', 'linux', 'unknown']> &
+      Attribute.DefaultTo<'unknown'>;
+    appVersion: Attribute.String;
+    metadata: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::device.device',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::device.device',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiEnquiryEnquiry extends Schema.CollectionType {
   collectionName: 'enquiries';
   info: {
@@ -1144,6 +1204,79 @@ export interface ApiEnquiryEnquiry extends Schema.CollectionType {
       Attribute.Private;
     updatedBy: Attribute.Relation<
       'api::enquiry.enquiry',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiEntitlementEntitlement extends Schema.CollectionType {
+  collectionName: 'entitlements';
+  info: {
+    singularName: 'entitlement';
+    pluralName: 'entitlements';
+    displayName: 'Entitlement';
+    description: 'Per-license entitlements for subscription-ready access control (1:1 with license-key)';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    customer: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'manyToOne',
+      'api::customer.customer'
+    >;
+    licenseKey: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToOne',
+      'api::license-key.license-key'
+    >;
+    purchase: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToOne',
+      'api::purchase.purchase'
+    >;
+    tier: Attribute.Enumeration<['maker', 'pro', 'education', 'enterprise']> &
+      Attribute.Required;
+    status: Attribute.Enumeration<
+      ['active', 'inactive', 'expired', 'canceled']
+    > &
+      Attribute.Required &
+      Attribute.DefaultTo<'active'>;
+    isLifetime: Attribute.Boolean &
+      Attribute.Required &
+      Attribute.DefaultTo<false>;
+    expiresAt: Attribute.DateTime;
+    maxDevices: Attribute.Integer &
+      Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      > &
+      Attribute.DefaultTo<1>;
+    source: Attribute.Enumeration<
+      ['legacy_purchase', 'manual', 'subscription']
+    > &
+      Attribute.DefaultTo<'legacy_purchase'>;
+    metadata: Attribute.JSON;
+    devices: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToMany',
+      'api::device.device'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::entitlement.entitlement',
       'oneToOne',
       'admin::user'
     > &
@@ -1190,35 +1323,6 @@ export interface ApiLeadLead extends Schema.CollectionType {
   };
 }
 
-export interface ApiLicenseLicense extends Schema.CollectionType {
-  collectionName: 'licenses';
-  info: {
-    singularName: 'license';
-    pluralName: 'licenses';
-    displayName: 'License (JWT Portal)';
-    description: 'JWT-based license management for offline applications';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::license.license',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::license.license',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
 export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
   collectionName: 'license_keys';
   info: {
@@ -1244,6 +1348,11 @@ export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
       'api::license-key.license-key',
       'oneToOne',
       'api::purchase.purchase'
+    >;
+    entitlement: Attribute.Relation<
+      'api::license-key.license-key',
+      'oneToOne',
+      'api::entitlement.entitlement'
     >;
     isActive: Attribute.Boolean & Attribute.DefaultTo<true>;
     status: Attribute.Enumeration<['unused', 'active']> &
@@ -1499,9 +1608,10 @@ declare module '@strapi/types' {
       'api::contact-message.contact-message': ApiContactMessageContactMessage;
       'api::customer.customer': ApiCustomerCustomer;
       'api::customer-invite.customer-invite': ApiCustomerInviteCustomerInvite;
+      'api::device.device': ApiDeviceDevice;
       'api::enquiry.enquiry': ApiEnquiryEnquiry;
+      'api::entitlement.entitlement': ApiEntitlementEntitlement;
       'api::lead.lead': ApiLeadLead;
-      'api::license.license': ApiLicenseLicense;
       'api::license-key.license-key': ApiLicenseKeyLicenseKey;
       'api::mailing-list-signup.mailing-list-signup': ApiMailingListSignupMailingListSignup;
       'api::page.page': ApiPagePage;

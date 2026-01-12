@@ -332,5 +332,63 @@ module.exports = createCoreController(
         ctx.body = { error: "Failed to change password" };
       }
     },
+
+    // Get customer entitlements
+    async entitlements(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        // Fetch entitlements for this customer with linked license-key
+        const entitlements = await strapi.entityService.findMany(
+          "api::entitlement.entitlement",
+          {
+            filters: {
+              customer: customerId,
+            },
+            populate: ["licenseKey"],
+            sort: { createdAt: "desc" },
+          }
+        );
+
+        // Sanitize output - return only public-facing fields
+        const sanitizedEntitlements = entitlements.map((e) => ({
+          id: e.id,
+          tier: e.tier,
+          status: e.status,
+          isLifetime: e.isLifetime,
+          expiresAt: e.expiresAt,
+          maxDevices: e.maxDevices,
+          source: e.source,
+          createdAt: e.createdAt,
+          // Include the linked license-key info (1:1 relationship)
+          licenseKey: e.licenseKey ? {
+            id: e.licenseKey.id,
+            key: e.licenseKey.key,
+            typ: e.licenseKey.typ,
+            isActive: e.licenseKey.isActive,
+          } : null,
+          // Note: tier is feature tier (maker/pro/education/enterprise)
+          // isLifetime=true means "founders lifetime" billing
+        }));
+
+        ctx.body = {
+          entitlements: sanitizedEntitlements,
+          meta: {
+            total: sanitizedEntitlements.length,
+            hasActiveEntitlement: sanitizedEntitlements.some(
+              (e) => e.status === "active"
+            ),
+          },
+        };
+      } catch (error) {
+        console.error("Get entitlements error:", error);
+        ctx.status = 500;
+        ctx.body = { error: "Failed to fetch entitlements" };
+      }
+    },
   }),
 );

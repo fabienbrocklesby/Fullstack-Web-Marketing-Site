@@ -204,6 +204,28 @@ After running `pnpm demo:complete`, you'll have:
 - License keys for Starter ($29), Pro ($99), and Enterprise ($299) plans
 - Realistic activation data and device information
 - Commission tracking linked to affiliates
+- Entitlements linked to license keys (tier-based access control)
+
+### Entitlement System (Stage 2)
+
+The licensing system uses **Entitlements as the source of truth** for access control:
+
+- **Entitlement** represents a customer's access rights (tier, device limit, lifetime vs subscription)
+- **License Key** is linked to an Entitlement and enforces it during activation
+- **Tiers**: maker (1 device), pro (2), education (5), enterprise (10)
+- **Founders** purchases (before 2026-01-12) get `isLifetime: true`
+
+**Backfill existing license keys:**
+
+```bash
+# Preview migration
+cd backend && node scripts/backfill-entitlements.js --dry-run
+
+# Apply migration
+cd backend && node scripts/backfill-entitlements.js --apply
+```
+
+See `docs/licensing-portal-current-state.md` for detailed technical documentation.
 
 #### 📄 **Demo Pages**
 

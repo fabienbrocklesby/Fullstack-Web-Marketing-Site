@@ -47,5 +47,15 @@ module.exports = {
         middlewares: ["global::customer-auth"],
       },
     },
+    // Get customer entitlements
+    {
+      method: "GET",
+      path: "/customers/entitlements",
+      handler: "customer.entitlements",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
   ],
 };
