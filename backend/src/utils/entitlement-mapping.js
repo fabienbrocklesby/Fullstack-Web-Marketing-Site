@@ -132,7 +132,7 @@ const TIER_CONFIG = {
     description: "Core features for solo makers",
   },
   pro: {
-    maxDevices: 2,
+    maxDevices: 1,
     description: "Advanced features for professionals",
   },
   education: {

@@ -1,9 +1,18 @@
-// Build CORS origin list dynamically and filter out falsy values.
-const corsOrigins = [
-  // Local development
-  "http://localhost:4321",
-  "http://localhost:4322",
-  // Production domains
+// Build CORS origin list dynamically based on environment
+const isDevelopment = process.env.NODE_ENV !== "production";
+
+// Development-only origins (localhost variants)
+const devOrigins = isDevelopment
+  ? [
+      "http://localhost:4321",
+      "http://127.0.0.1:4321",
+      "http://localhost:4322",
+      "http://127.0.0.1:4322",
+    ]
+  : [];
+
+// Production/staging origins
+const prodOrigins = [
   "https://lightlane.app",
   "https://www.lightlane.app",
   // Cloudflare Pages preview (pattern kept - note wildcard matching may require custom logic if needed)
@@ -16,6 +25,8 @@ const corsOrigins = [
   "http://209.38.91.37:4321",
 ].filter(Boolean);
 
+const corsOrigins = [...devOrigins, ...prodOrigins];
+
 module.exports = [
   "strapi::logger",
   "strapi::errors",
@@ -25,16 +36,24 @@ module.exports = [
     config: {
       headers: "*",
       origin: corsOrigins,
+      credentials: true, // Allow cookies/auth headers for authenticated requests
     },
   },
   "strapi::poweredBy",
   "strapi::query",
+  // Stripe raw body capture MUST come before strapi::body
+  {
+    name: "global::stripe-raw-body",
+    config: {},
+  },
   {
     name: "strapi::body",
     config: {
       parserOptions: {
         jsonLimit: "1mb",
       },
+      // Preserve raw body for signature verification (used by webhook)
+      includeUnparsed: true,
     },
   },
   "strapi::session",

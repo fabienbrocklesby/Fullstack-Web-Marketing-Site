@@ -343,19 +343,66 @@ module.exports = createCoreController(
         }
 
         // Fetch entitlements for this customer with linked license-key
+        // Exclude archived entitlements from the list
         const entitlements = await strapi.entityService.findMany(
           "api::entitlement.entitlement",
           {
             filters: {
               customer: customerId,
+              $or: [
+                { isArchived: { $null: true } },
+                { isArchived: false },
+              ],
             },
             populate: ["licenseKey"],
+            // Sort: isLifetime desc, status active first, expiresAt desc, createdAt desc
             sort: { createdAt: "desc" },
           }
         );
 
+        // Apply additional sorting in code for complex sort logic
+        // Priority: isLifetime=true first, then active status, then by expiresAt, then createdAt
+        const sortedEntitlements = [...entitlements].sort((a, b) => {
+          // 1. isLifetime: true comes first
+          if (a.isLifetime && !b.isLifetime) return -1;
+          if (!a.isLifetime && b.isLifetime) return 1;
+
+          // 2. status: active comes first
+          const statusOrder = { active: 0, inactive: 1, expired: 2, canceled: 3 };
+          const aStatusOrder = statusOrder[a.status] ?? 99;
+          const bStatusOrder = statusOrder[b.status] ?? 99;
+          if (aStatusOrder !== bStatusOrder) return aStatusOrder - bStatusOrder;
+
+          // 3. expiresAt: later dates first (null means no expiry, treat as far future)
+          const aExpires = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
+          const bExpires = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
+          if (aExpires !== bExpires) return bExpires - aExpires;
+
+          // 4. createdAt: newer first
+          const aCreated = new Date(a.createdAt).getTime();
+          const bCreated = new Date(b.createdAt).getTime();
+          return bCreated - aCreated;
+        });
+
+        // Temporary dedupe pass: keep first occurrence per unique key
+        // Key: tier|isLifetime|status|expiresAt
+        // This is a safety net - real cleanup should be done via dedupe script
+        const seen = new Set();
+        const dedupedEntitlements = sortedEntitlements.filter((e) => {
+          const key = `${e.tier}|${e.isLifetime}|${e.status}|${e.expiresAt || ""}`;
+          if (seen.has(key)) {
+            console.log(`[Entitlements] Filtering duplicate: id=${e.id} key=${key}`);
+            return false;
+          }
+          seen.add(key);
+          return true;
+        });
+
         // Sanitize output - return only public-facing fields
-        const sanitizedEntitlements = entitlements.map((e) => ({
+        // In development, include additional debug fields
+        const isDev = process.env.NODE_ENV === "development";
+        
+        const sanitizedEntitlements = dedupedEntitlements.map((e) => ({
           id: e.id,
           tier: e.tier,
           status: e.status,
@@ -364,6 +411,9 @@ module.exports = createCoreController(
           maxDevices: e.maxDevices,
           source: e.source,
           createdAt: e.createdAt,
+          // Subscription-specific fields for dashboard display
+          currentPeriodEnd: e.currentPeriodEnd || null,
+          cancelAtPeriodEnd: e.cancelAtPeriodEnd || false,
           // Include the linked license-key info (1:1 relationship)
           licenseKey: e.licenseKey ? {
             id: e.licenseKey.id,
@@ -371,6 +421,12 @@ module.exports = createCoreController(
             typ: e.licenseKey.typ,
             isActive: e.licenseKey.isActive,
           } : null,
+          // Debug fields (only in development)
+          ...(isDev ? {
+            stripeSubscriptionId: e.stripeSubscriptionId || null,
+            stripeCustomerId: e.stripeCustomerId || null,
+            stripePriceId: e.stripePriceId || null,
+          } : {}),
           // Note: tier is feature tier (maker/pro/education/enterprise)
           // isLifetime=true means "founders lifetime" billing
         }));
@@ -388,6 +444,167 @@ module.exports = createCoreController(
         console.error("Get entitlements error:", error);
         ctx.status = 500;
         ctx.body = { error: "Failed to fetch entitlements" };
+      }
+    },
+
+    // Get primary/best entitlement for subscription UI card
+    async primaryEntitlement(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        // Fetch all entitlements for this customer (excluding archived)
+        const entitlements = await strapi.entityService.findMany(
+          "api::entitlement.entitlement",
+          {
+            filters: {
+              customer: customerId,
+              $or: [
+                { isArchived: { $null: true } },
+                { isArchived: false },
+              ],
+            },
+            sort: { createdAt: "desc" },
+          }
+        );
+
+        if (!entitlements || entitlements.length === 0) {
+          ctx.body = {
+            hasEntitlement: false,
+            tier: null,
+            status: null,
+            isLifetime: false,
+            expiresAt: null,
+            currentPeriodEnd: null,
+            maxDevices: null,
+            cancelAtPeriodEnd: false,
+          };
+          return;
+        }
+
+        // Find the "best" entitlement:
+        // 1. Prefer active over inactive/expired/canceled
+        // 2. Among active, prefer lifetime
+        // 3. Among active non-lifetime, prefer one with furthest expiry
+        const activeEntitlements = entitlements.filter((e) => e.status === "active");
+        
+        let primary = null;
+        
+        if (activeEntitlements.length > 0) {
+          // First check for lifetime
+          const lifetime = activeEntitlements.find((e) => e.isLifetime === true);
+          if (lifetime) {
+            primary = lifetime;
+          } else {
+            // Sort by currentPeriodEnd or expiresAt (furthest first)
+            const sorted = activeEntitlements.sort((a, b) => {
+              const dateA = a.currentPeriodEnd || a.expiresAt || "";
+              const dateB = b.currentPeriodEnd || b.expiresAt || "";
+              return new Date(dateB).getTime() - new Date(dateA).getTime();
+            });
+            primary = sorted[0];
+          }
+        } else {
+          // No active entitlements, return the most recent one
+          primary = entitlements[0];
+        }
+
+        ctx.body = {
+          hasEntitlement: true,
+          tier: primary.tier || null,
+          status: primary.status || null,
+          isLifetime: primary.isLifetime || false,
+          expiresAt: primary.expiresAt || null,
+          currentPeriodEnd: primary.currentPeriodEnd || null,
+          maxDevices: primary.maxDevices || null,
+          cancelAtPeriodEnd: primary.cancelAtPeriodEnd || false,
+          source: primary.source || null,
+        };
+      } catch (error) {
+        console.error("Get primary entitlement error:", error);
+        ctx.status = 500;
+        ctx.body = { error: "Failed to fetch entitlement" };
+      }
+    },
+
+    // Create Stripe billing portal session
+    async billingPortal(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+        const { returnUrl } = ctx.request.body || {};
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        const customer = await strapi.entityService.findOne(
+          "api::customer.customer",
+          customerId,
+        );
+
+        if (!customer) {
+          return ctx.notFound("Customer not found");
+        }
+
+        // Check if customer has a Stripe customer ID
+        if (!customer.stripeCustomerId) {
+          // Check if they have any entitlements - if lifetime only, no billing portal needed
+          const entitlements = await strapi.entityService.findMany(
+            "api::entitlement.entitlement",
+            {
+              filters: {
+                customer: customerId,
+                status: "active",
+                $or: [
+                  { isArchived: { $null: true } },
+                  { isArchived: false },
+                ],
+              },
+            }
+          );
+
+          const hasOnlyLifetime = entitlements.length > 0 && 
+            entitlements.every((e) => e.isLifetime === true);
+
+          if (hasOnlyLifetime) {
+            ctx.status = 400;
+            ctx.body = {
+              error: "No billing portal available",
+              message: "Lifetime accounts do not have recurring billing to manage.",
+            };
+            return;
+          }
+
+          ctx.status = 400;
+          ctx.body = {
+            error: "No Stripe customer found",
+            message: "You must have an active subscription to access the billing portal.",
+          };
+          return;
+        }
+
+        // Create Stripe billing portal session
+        const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4321";
+        
+        const session = await stripe.billingPortal.sessions.create({
+          customer: customer.stripeCustomerId,
+          return_url: returnUrl || `${frontendUrl}/customer/dashboard`,
+        });
+
+        ctx.body = {
+          url: session.url,
+        };
+      } catch (error) {
+        console.error("Billing portal error:", error);
+        ctx.status = 500;
+        ctx.body = {
+          error: "Failed to create billing portal session",
+          message: error.message,
+        };
       }
     },
   }),

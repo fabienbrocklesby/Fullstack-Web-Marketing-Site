@@ -144,6 +144,28 @@ sanity-stage2-endpoint:
 sanity-stage2-cleanup:
 	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage2.js --cleanup"
 
+# Run all Stage 3 sanity tests (Stripe webhook & subscriptions)
+sanity-stage3:
+	@echo "🧪 Running Stage 3 sanity tests..."
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage3.js --test=all"
+
+# Run specific Stage 3 sanity test
+sanity-stage3-idempotency:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage3.js --test=idempotency"
+
+sanity-stage3-webhook:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage3.js --test=webhook"
+
+sanity-stage3-founders:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage3.js --test=founders"
+
+sanity-stage3-polling:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage3.js --test=polling"
+
+# Cleanup Stage 3 sanity test data
+sanity-stage3-cleanup:
+	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage3.js --cleanup"
+
 # ============================================================
 # CI/CD check targets
 # ============================================================

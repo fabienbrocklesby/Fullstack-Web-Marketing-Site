@@ -47,11 +47,41 @@ module.exports = {
         middlewares: ["global::customer-auth"],
       },
     },
-    // Get customer entitlements
+    // Get customer entitlements (legacy path)
     {
       method: "GET",
       path: "/customers/entitlements",
       handler: "customer.entitlements",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
+    // Get customer entitlements (canonical path under /me)
+    {
+      method: "GET",
+      path: "/customers/me/entitlements",
+      handler: "customer.entitlements",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
+    // Get primary entitlement for subscription UI card
+    {
+      method: "GET",
+      path: "/customers/me/entitlement",
+      handler: "customer.primaryEntitlement",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
+    // Create Stripe billing portal session (alias for customer convenience)
+    {
+      method: "POST",
+      path: "/customers/billing-portal",
+      handler: "customer.billingPortal",
       config: {
         auth: false,
         middlewares: ["global::customer-auth"],

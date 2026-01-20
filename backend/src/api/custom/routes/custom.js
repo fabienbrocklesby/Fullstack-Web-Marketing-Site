@@ -16,6 +16,35 @@ module.exports = {
         auth: false,
       },
     },
+    // Billing Portal - create session for customer to manage subscription
+    {
+      method: "POST",
+      path: "/stripe/billing-portal",
+      handler: "custom.stripeBillingPortal",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
+    // Purchase status polling - used by success page
+    {
+      method: "GET",
+      path: "/customer/purchase-status",
+      handler: "custom.purchaseStatus",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
+    // Pricing info endpoint - returns current price IDs
+    {
+      method: "GET",
+      path: "/pricing",
+      handler: "custom.getPricing",
+      config: {
+        auth: false,
+      },
+    },
     // Development-only endpoint to manually trigger purchase creation
     // LOCKED: Blocked in production via dev-only middleware
     {
@@ -36,6 +65,18 @@ module.exports = {
         middlewares: ["global::customer-auth"],
       },
     },
+    // Subscription checkout - creates subscription session
+    {
+      method: "POST",
+      path: "/customer-checkout-subscription",
+      handler: "custom.customerCheckoutSubscription",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
+    // DEPRECATED: Frontend fulfillment endpoint - returns 410 Gone
+    // Fulfillment is now handled by webhook (server truth)
     {
       method: "POST",
       path: "/process-customer-purchase",

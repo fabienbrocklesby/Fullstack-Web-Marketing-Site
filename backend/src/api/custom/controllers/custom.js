@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const { audit, maskSensitive } = require("../../../utils/audit-logger");
 const { determineEntitlementTier } = require("../../../utils/entitlement-mapping");
 const { getRS256PrivateKey } = require("../../../utils/jwt-keys");
+const { processStripeEvent } = require("../../../utils/stripe-webhook-handler");
 
 // Helper: generate a unique-ish license key. This used to live in the license-key controller
 // but was referenced here without being in scope, causing a ReferenceError and aborting the
@@ -17,28 +18,60 @@ function generateLicenseKey(productName, customerId) {
   return key;
 }
 
-// Price mappings for development (you'll replace these with real Stripe price IDs)
+// Price configuration from environment or defaults
+// These map frontend priceIds to actual Stripe price IDs
+function getPriceConfig() {
+  return {
+    // One-time payments
+    price_starter: {
+      stripeId: process.env.STRIPE_PRICE_ID_MAKER_ONETIME || "price_starter_test",
+      amount: 9900, // $99.00 in cents (fallback)
+      name: "Hobbyist Plan",
+      tier: "maker",
+      description: "Complete source code with basic documentation and email support",
+    },
+    price_pro: {
+      stripeId: process.env.STRIPE_PRICE_ID_PRO_ONETIME || "price_pro_test",
+      amount: 19900, // $199.00 in cents (fallback)
+      name: "Pro Plan",
+      tier: "pro",
+      description: "Everything in Hobbyist plus premium components and priority support",
+    },
+    // Subscription prices
+    price_starter_sub: {
+      stripeId: process.env.STRIPE_PRICE_ID_MAKER_SUB_MONTHLY || null,
+      name: "Hobbyist Monthly",
+      tier: "maker",
+      description: "Monthly subscription for Hobbyist tier",
+    },
+    price_pro_sub: {
+      stripeId: process.env.STRIPE_PRICE_ID_PRO_SUB_MONTHLY || null,
+      name: "Pro Monthly",
+      tier: "pro",
+      description: "Monthly subscription for Pro tier",
+    },
+  };
+}
+
+// Legacy PRICE_MAPPINGS for backward compatibility
 const PRICE_MAPPINGS = {
   price_starter: {
     id: "price_starter_test",
-    amount: 9900, // $99.00 in cents
+    amount: 9900,
     name: "Starter Plan",
-    description:
-      "Complete source code with basic documentation and email support",
+    description: "Complete source code with basic documentation and email support",
   },
   price_pro: {
     id: "price_pro_test",
-    amount: 19900, // $199.00 in cents
+    amount: 19900,
     name: "Pro Plan",
-    description:
-      "Everything in Starter plus premium components and priority support",
+    description: "Everything in Starter plus premium components and priority support",
   },
   price_enterprise: {
     id: "price_enterprise_test",
-    amount: 49900, // $499.00 in cents
+    amount: 49900,
     name: "Enterprise Plan",
-    description:
-      "Everything in Pro plus custom integrations and 1-on-1 consultation",
+    description: "Everything in Pro plus custom integrations and 1-on-1 consultation",
   },
 };
 
@@ -223,12 +256,14 @@ module.exports = {
           },
         ],
         mode: "payment",
-        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&price_id=${priceId}&amount=${priceInfo.amount}`,
+        // Simplified success URL - only session_id, no amount/price to prevent tampering
+        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: cancelUrl,
         metadata: {
           affiliateCode: affiliateCode || "",
-          originalPriceId: priceId,
-          priceAmount: priceInfo.amount.toString(),
+          priceId: priceId,
+          tier: priceId === "price_starter" ? "maker" : "pro",
+          purchaseMode: "payment",
           customerId: customerId.toString(),
           customerEmail: customer.email,
         },
@@ -256,45 +291,56 @@ module.exports = {
     const sig = ctx.request.headers["stripe-signature"];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    // Require webhook secret - no bypass even in development
+    if (!webhookSecret) {
+      console.error("[Webhook] STRIPE_WEBHOOK_SECRET not configured");
+      ctx.status = 500;
+      ctx.body = { error: "Webhook not configured" };
+      return;
+    }
+
+    // Get raw body for signature verification
+    // This is set by the stripe-raw-body middleware
+    const rawBody = ctx.request.rawBody;
+    if (!rawBody) {
+      console.error("[Webhook] Raw body not available - stripe-raw-body middleware may not be configured correctly");
+      console.error("[Webhook] Middleware order in config/middlewares.js: stripe-raw-body MUST come before strapi::body");
+      ctx.status = 400;
+      ctx.body = { error: "Raw body required for signature verification" };
+      return;
+    }
+
+    if (!sig) {
+      console.error("[Webhook] Missing stripe-signature header");
+      ctx.status = 400;
+      ctx.body = { error: "Missing stripe-signature header" };
+      return;
+    }
+
     let event;
-
-    // In development, if webhook secret is not properly configured,
-    // we'll skip signature verification and trust the payload
-    if (
-      process.env.NODE_ENV === "development" &&
-      (!webhookSecret || webhookSecret === "whsec_your_webhook_secret")
-    ) {
-      console.log(
-        "🟡 Development mode: Skipping webhook signature verification",
-      );
-      event = ctx.request.body;
-    } else {
-      try {
-        event = stripe.webhooks.constructEvent(
-          ctx.request.body,
-          sig,
-          webhookSecret,
-        );
-      } catch (err) {
-        console.error("Webhook signature verification failed:", err.message);
-        return ctx.badRequest("Webhook signature verification failed");
-      }
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    } catch (err) {
+      console.error("[Webhook] Signature verification failed:", err.message);
+      ctx.status = 400;
+      ctx.body = { error: "Webhook signature verification failed" };
+      return;
     }
 
-    console.log("📧 Received webhook event:", event.type);
+    console.log(`[Webhook] ✅ Verified event: ${event.type} (${event.id})`);
 
-    // Handle the event
-    switch (event.type) {
-      case "checkout.session.completed":
-        const session = event.data.object;
-        console.log("💳 Processing checkout session:", session.id);
-        await handleSuccessfulPayment(session);
-        break;
-      default:
-        console.log(`❓ Unhandled event type ${event.type}`);
+    try {
+      const result = await processStripeEvent(event);
+      console.log(`[Webhook] Processed: ${JSON.stringify(result)}`);
+      // Return 200 quickly to acknowledge receipt
+      ctx.status = 200;
+      ctx.body = { received: true, ...result };
+    } catch (err) {
+      console.error(`[Webhook] Error processing event ${event.id}:`, err.message);
+      // Return 500 so Stripe retries
+      ctx.status = 500;
+      ctx.body = { error: "Failed to process webhook event" };
     }
-
-    ctx.body = { received: true };
   },
 
   // Development-only endpoint to manually create purchase records
@@ -494,25 +540,75 @@ module.exports = {
     }
   },
 
+  /**
+   * DEPRECATED: Frontend fulfillment endpoint
+   * Fulfillment is now handled by Stripe webhook (server truth)
+   * Returns 410 Gone to signal clients to use polling instead
+   */
   async processCustomerPurchase(ctx) {
+    console.warn("[DEPRECATED] processCustomerPurchase called - fulfillment now handled by webhook");
+    ctx.status = 410;
+    ctx.body = {
+      error: "Gone",
+      message: "Purchase fulfillment is now handled by webhook. Use GET /api/customer/purchase-status?session_id=... to poll for completion.",
+      deprecated: true,
+    };
+  },
+
+  /**
+   * Subscription Checkout: Create a subscription checkout session
+   * POST /api/customer-checkout-subscription
+   *
+   * Input: { tier: 'maker' | 'pro', successPath?, cancelPath?, affiliateCode? }
+   * Output: { url, sessionId }
+   */
+  async customerCheckoutSubscription(ctx) {
     try {
-      const { sessionId, priceId, amount, affiliateCode } = ctx.request.body;
+      const { tier, affiliateCode, successPath, cancelPath } = ctx.request.body;
       const customerId = ctx.state.customer?.id;
 
       if (!customerId) {
         return ctx.unauthorized("Customer authentication required");
       }
 
-      if (!sessionId || !priceId || !amount) {
-        return ctx.badRequest("Session ID, price ID, and amount are required");
+      // ============================================================
+      // Step 1: Validate all required config BEFORE doing anything
+      // ============================================================
+      const missingConfig = [];
+      if (!process.env.STRIPE_SECRET_KEY) {
+        missingConfig.push("STRIPE_SECRET_KEY");
+      }
+      if (!process.env.STRIPE_PRICE_MAKER_MONTHLY) {
+        missingConfig.push("STRIPE_PRICE_MAKER_MONTHLY");
+      }
+      if (!process.env.STRIPE_PRICE_PRO_MONTHLY) {
+        missingConfig.push("STRIPE_PRICE_PRO_MONTHLY");
+      }
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4321";
+      if (!frontendUrl) {
+        missingConfig.push("FRONTEND_URL");
       }
 
-      console.log("🔄 Processing customer purchase:", {
-        sessionId,
-        priceId,
-        amount,
-        customerId,
-      });
+      if (missingConfig.length > 0) {
+        console.error(`[SubscriptionCheckout] Missing config: ${missingConfig.join(", ")}`);
+        ctx.status = 500;
+        ctx.body = {
+          error: "Server configuration error",
+          message: `Missing required environment variables: ${missingConfig.join(", ")}`,
+          missingKeys: missingConfig,
+        };
+        return;
+      }
+
+      // Validate tier
+      if (!tier || !["maker", "pro"].includes(tier)) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "Invalid tier",
+          message: "tier must be 'maker' or 'pro'",
+        };
+        return;
+      }
 
       // Get customer details
       const customer = await strapi.entityService.findOne(
@@ -523,246 +619,477 @@ module.exports = {
         return ctx.notFound("Customer not found");
       }
 
-      // Find affiliate if code exists
-      let affiliate = null;
-      if (affiliateCode) {
-        const affiliates = await strapi.entityService.findMany(
-          "api::affiliate.affiliate",
-          {
-            filters: { code: affiliateCode, isActive: true },
-          },
-        );
-        affiliate = affiliates.length > 0 ? affiliates[0] : null;
-        console.log("🔗 Found affiliate:", affiliate ? affiliate.code : "None");
-      }
+      // ============================================================
+      // Step 2: Get subscription price ID from tier
+      // ============================================================
+      const { getSubscriptionPriceId, normalizeTierKey } =
+        require("../../../utils/stripe-pricing");
 
-      // Calculate commission using affiliate's actual rate
-      const commissionRate = affiliate?.commissionRate || 0.1;
-      const commissionAmount = affiliate ? (amount / 100) * commissionRate : 0;
-
-      console.log(
-        `💰 Commission calculation: ${affiliate ? affiliate.commissionRate * 100 : 0}% rate = $${commissionAmount.toFixed(2)}`,
-      );
-
-      // Get product info
-      const priceInfo = PRICE_MAPPINGS[priceId] || {
-        name: "Unknown Product",
-        description: "Product purchase",
-      };
-
-      // Check if purchase already exists
-      const existingPurchases = await strapi.entityService.findMany(
-        "api::purchase.purchase",
-        {
-          filters: { stripeSessionId: sessionId },
-        },
-      );
-
-      if (existingPurchases.length > 0) {
-        const existingPurchase = existingPurchases[0];
-        const existingLicenseKey = await strapi.entityService.findMany(
-          "api::license-key.license-key",
-          {
-            filters: { purchase: existingPurchase.id },
-          },
-        );
-
+      // Normalize tier (accepts hobbyists/starter as aliases for maker)
+      const normalizedTier = normalizeTierKey(tier);
+      if (!normalizedTier) {
+        ctx.status = 400;
         ctx.body = {
-          success: true,
-          purchase: existingPurchase,
-          licenseKey: existingLicenseKey[0] || null,
-          affiliate: affiliate,
-          message: "Purchase already processed",
+          error: "Invalid tier",
+          message: "tier must be 'maker' or 'pro' (or aliases: hobbyists, starter)",
         };
         return;
       }
 
-      // Create purchase record
-      const purchase = await strapi.entityService.create(
-        "api::purchase.purchase",
-        {
-          data: {
-            stripeSessionId: sessionId,
-            amount: amount / 100, // Convert from cents
-            customerEmail: customer.email,
-            priceId: priceId,
-            customer: customer.id,
-            affiliate: affiliate ? affiliate.id : null,
-            commissionAmount,
-            status: "completed",
-            metadata: {
-              processedVia: "customer-purchase-endpoint",
-              timestamp: new Date().toISOString(),
-            },
-          },
-        },
-      );
-
-      // Generate license key
-      let licenseKeyRecord = null;
+      // Get the Stripe Price ID directly from env vars
+      let stripePriceId;
       try {
-        const licenseKey = generateLicenseKey(priceInfo.name, customer.id);
-        console.log("🔑 Generated license key candidate:", licenseKey);
-        licenseKeyRecord = await strapi.entityService.create(
-          "api::license-key.license-key",
-          {
-            data: {
-              key: licenseKey,
-              productName: priceInfo.name,
-              priceId: priceId,
-              customer: customer.id,
-              purchase: purchase.id,
-              // status will start as 'unused' per schema default unless we explicitly set active state
-              status: "unused",
-              isActive: true,
-              isUsed: false,
-              maxActivations: 1,
-              currentActivations: 0,
-            },
-          },
-        );
-        console.log(
-          "✅ License key record created with id:",
-          licenseKeyRecord.id,
-        );
-      } catch (licenseErr) {
-        console.error("❌ Failed to create license key record:", licenseErr);
+        stripePriceId = getSubscriptionPriceId(normalizedTier);
+        console.log(`[SubscriptionCheckout] Using price ID: ${stripePriceId} for tier: ${normalizedTier}`);
+      } catch (priceError) {
+        console.error(`[SubscriptionCheckout] Failed to get subscription price for tier ${normalizedTier}:`, priceError.message);
+        ctx.status = 500;
+        ctx.body = {
+          error: "Price not configured",
+          message: priceError.message,
+        };
+        return;
       }
 
-      // Update purchase with license key
-      if (licenseKeyRecord?.id) {
+      // ============================================================
+      // Step 3: Get or create Stripe customer
+      // ============================================================
+      let stripeCustomerId = customer.stripeCustomerId;
+      if (!stripeCustomerId) {
         try {
-          await strapi.entityService.update(
-            "api::purchase.purchase",
-            purchase.id,
-            {
-              data: {
-                licenseKey: licenseKeyRecord.id,
-              },
+          const stripeCustomer = await stripe.customers.create({
+            email: customer.email,
+            name: `${customer.firstName || ""} ${customer.lastName || ""}`.trim() || customer.email,
+            metadata: {
+              strapiCustomerId: customerId.toString(),
             },
-          );
-          console.log(
-            "🔗 Linked license key",
-            licenseKeyRecord.id,
-            "to purchase",
-            purchase.id,
-          );
-        } catch (linkErr) {
-          console.error(
-            "⚠️ Failed linking license key to purchase",
-            purchase.id,
-            linkErr,
-          );
-        }
-      } else {
-        console.warn(
-          "⚠️ Skipping purchase->license link because license key record was not created",
-          purchase.id,
-        );
-      }
-
-      // Update affiliate earnings
-      if (affiliate) {
-        await strapi.entityService.update(
-          "api::affiliate.affiliate",
-          affiliate.id,
-          {
-            data: {
-              totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
-            },
-          },
-        );
-        console.log(
-          "💰 Updated affiliate earnings:",
-          affiliate.totalEarnings + commissionAmount,
-        );
-      }
-
-      // Create entitlement for THIS license-key (1:1 relationship)
-      // Each license-key gets its own entitlement - customers can have multiple
-      let entitlementRecord = null;
-      try {
-        if (licenseKeyRecord?.id) {
-          // Determine tier from purchase data
-          const tierMapping = determineEntitlementTier({
-            priceId: priceId,
-            amount: amount / 100, // Convert from cents
-            createdAt: new Date(),
-            metadata: null,
           });
+          stripeCustomerId = stripeCustomer.id;
 
-          // Create entitlement for this specific license-key
-          entitlementRecord = await strapi.entityService.create(
-            "api::entitlement.entitlement",
-            {
-              data: {
-                customer: customer.id,
-                licenseKey: licenseKeyRecord.id,
-                purchase: purchase.id,
-                tier: tierMapping.tier,
-                status: "active",
-                isLifetime: tierMapping.isLifetime,
-                expiresAt: tierMapping.isLifetime ? null : null, // Lifetime = no expiry
-                maxDevices: tierMapping.maxDevices,
-                source: "legacy_purchase",
-                metadata: {
-                  ...tierMapping.metadata,
-                  sourceType: "purchase",
-                  sourcePurchaseId: purchase.id,
-                  sourceLicenseKeyId: licenseKeyRecord.id,
-                  createdAt: new Date().toISOString(),
-                },
-              },
-            }
+          // Save Stripe customer ID to Strapi
+          await strapi.entityService.update(
+            "api::customer.customer",
+            customerId,
+            { data: { stripeCustomerId } }
           );
-          console.log(
-            "🎫 Entitlement created:",
-            entitlementRecord.id,
-            "tier:",
-            tierMapping.tier,
-            "lifetime:",
-            tierMapping.isLifetime,
-            "for license-key:",
-            licenseKeyRecord.id
-          );
-        } else {
-          console.warn("⚠️ Cannot create entitlement without license-key");
+          console.log(`[SubscriptionCheckout] Created Stripe customer ${stripeCustomerId} for ${customer.email}`);
+        } catch (customerErr) {
+          console.error(`[SubscriptionCheckout] Failed to create Stripe customer:`, {
+            message: customerErr.message,
+            type: customerErr.type,
+            code: customerErr.code,
+          });
+          ctx.status = 500;
+          ctx.body = {
+            error: "Failed to create Stripe customer",
+            message: customerErr.message,
+          };
+          return;
         }
-      } catch (entitlementErr) {
-        // Non-fatal: log but don't fail the purchase
-        console.error("⚠️ Failed to create entitlement (non-fatal):", entitlementErr.message);
       }
 
-      console.log("✅ Customer purchase processed successfully:", purchase.id);
-      if (licenseKeyRecord?.key) {
-        console.log("🔐 License key created:", licenseKeyRecord.key);
+      // ============================================================
+      // Step 4: Build checkout URLs
+      // ============================================================
+      const successUrl = `${frontendUrl}${successPath || "/customer/success"}?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${frontendUrl}${cancelPath || "/customer/dashboard"}`;
+
+      console.log(`[SubscriptionCheckout] Creating session:`, {
+        customer: stripeCustomerId,
+        price: stripePriceId,
+        tier: normalizedTier,
+        successUrl,
+        cancelUrl,
+      });
+
+      // ============================================================
+      // Step 5: Create subscription checkout session with detailed error handling
+      // ============================================================
+      let session;
+      try {
+        session = await stripe.checkout.sessions.create({
+          customer: stripeCustomerId,
+          client_reference_id: customerId.toString(),
+          payment_method_types: ["card"],
+          line_items: [
+            {
+              price: stripePriceId,
+              quantity: 1,
+            },
+          ],
+          mode: "subscription",
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          metadata: {
+            affiliateCode: affiliateCode || "",
+            tier: normalizedTier,
+            priceId: stripePriceId,
+            purchaseMode: "subscription",
+            customerId: customerId.toString(),
+            customerEmail: customer.email,
+          },
+        });
+      } catch (stripeErr) {
+        // Log detailed Stripe error information
+        console.error(`[SubscriptionCheckout] Stripe checkout.sessions.create failed:`, {
+          message: stripeErr.message,
+          type: stripeErr.type,
+          code: stripeErr.code,
+          param: stripeErr.param,
+          statusCode: stripeErr.statusCode,
+          rawMessage: stripeErr.raw?.message,
+          rawParam: stripeErr.raw?.param,
+          rawCode: stripeErr.raw?.code,
+          rawStatusCode: stripeErr.raw?.statusCode,
+        });
+
+        // Build a helpful error message
+        let userMessage = stripeErr.raw?.message || stripeErr.message;
+        
+        // Add hints for common errors
+        if (stripeErr.code === "resource_missing" || userMessage.includes("No such price")) {
+          userMessage += `. Check that ${stripePriceId} exists in your Stripe account and matches the API key mode (test vs live).`;
+        } else if (userMessage.includes("not a recurring price") || userMessage.includes("one-time")) {
+          userMessage += `. The price ${stripePriceId} must be a recurring monthly price, not a one-time price.`;
+        } else if (stripeErr.code === "api_key_invalid" || userMessage.includes("Invalid API Key")) {
+          userMessage = "Invalid Stripe API key. Check STRIPE_SECRET_KEY is correct.";
+        }
+
+        ctx.status = stripeErr.statusCode || 500;
+        ctx.body = {
+          error: "Stripe checkout failed",
+          message: userMessage,
+          stripeCode: stripeErr.code,
+        };
+        return;
       }
+
+      console.log(`[SubscriptionCheckout] Session created: ${session.id} for tier=${normalizedTier}`);
 
       ctx.body = {
-        success: true,
-        purchase: purchase,
-        licenseKey: licenseKeyRecord,
-        entitlement: entitlementRecord ? {
-          id: entitlementRecord.id,
-          tier: entitlementRecord.tier,
-          isLifetime: entitlementRecord.isLifetime,
-          status: entitlementRecord.status,
-        } : null,
-        affiliate: affiliate,
-        message: licenseKeyRecord
-          ? "Purchase processed successfully"
-          : "Purchase processed (license key creation failed)",
+        url: session.url,
+        sessionId: session.id,
       };
     } catch (error) {
-      console.error("❌ Error processing customer purchase:", error);
+      // Catch-all for unexpected errors
+      console.error("[SubscriptionCheckout] Unexpected error:", {
+        message: error.message,
+        stack: error.stack,
+        type: error.type,
+        code: error.code,
+      });
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to process purchase",
+        error: "Failed to create subscription checkout session",
         message: error.message,
-        details:
-          process.env.NODE_ENV === "development" ? error.stack : undefined,
       };
     }
+  },
+
+  /**
+   * Billing Portal: Create a session for customer to manage subscription
+   * POST /api/stripe/billing-portal
+   */
+  async stripeBillingPortal(ctx) {
+    try {
+      const { returnUrl } = ctx.request.body;
+      const customerId = ctx.state.customer?.id;
+
+      if (!customerId) {
+        return ctx.unauthorized("Customer authentication required");
+      }
+
+      const customer = await strapi.entityService.findOne(
+        "api::customer.customer",
+        customerId,
+      );
+
+      if (!customer || !customer.stripeCustomerId) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "No Stripe customer found",
+          message: "You must have an active subscription to access the billing portal",
+        };
+        return;
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customer.stripeCustomerId,
+        return_url: returnUrl || `${process.env.FRONTEND_URL || "http://localhost:4321"}/customer/dashboard`,
+      });
+
+      ctx.body = {
+        url: session.url,
+      };
+    } catch (error) {
+      console.error("Billing portal error:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to create billing portal session",
+        message: error.message,
+      };
+    }
+  },
+
+  /**
+   * Purchase Status: Poll for purchase/subscription completion (webhook fulfillment)
+   * GET /api/customer/purchase-status?session_id=cs_...
+   *
+   * Handles both:
+   * - Legacy one-time purchases (checks Purchase record)
+   * - Subscriptions (checks Entitlement directly via Stripe session)
+   */
+  async purchaseStatus(ctx) {
+    try {
+      const { session_id: sessionId } = ctx.query;
+      const customerId = ctx.state.customer?.id;
+
+      if (!customerId) {
+        return ctx.unauthorized("Customer authentication required");
+      }
+
+      if (!sessionId) {
+        ctx.status = 400;
+        ctx.body = { error: "session_id query parameter required" };
+        return;
+      }
+
+      // Get customer details
+      const customer = await strapi.entityService.findOne(
+        "api::customer.customer",
+        customerId
+      );
+      if (!customer) {
+        return ctx.notFound("Customer not found");
+      }
+
+      // ============================================================
+      // Step 1: Retrieve Stripe Checkout Session to determine mode
+      // ============================================================
+      let stripeSession;
+      try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+          throw new Error("STRIPE_SECRET_KEY not configured");
+        }
+        const stripeClient = require("stripe")(process.env.STRIPE_SECRET_KEY);
+        stripeSession = await stripeClient.checkout.sessions.retrieve(sessionId, {
+          expand: ["subscription", "customer"],
+        });
+      } catch (stripeErr) {
+        console.error(`[PurchaseStatus] Failed to retrieve Stripe session ${sessionId}:`, stripeErr.message);
+        // If we can't get the session, fall back to legacy behavior
+        stripeSession = null;
+      }
+
+      // ============================================================
+      // Step 2: Verify session belongs to this customer
+      // ============================================================
+      if (stripeSession) {
+        const sessionCustomerId = stripeSession.customer?.id || stripeSession.customer;
+        const sessionEmail = stripeSession.customer_email || stripeSession.customer_details?.email;
+
+        // Match by stripeCustomerId or email
+        const isOwner = 
+          (customer.stripeCustomerId && customer.stripeCustomerId === sessionCustomerId) ||
+          (customer.email && sessionEmail && customer.email.toLowerCase() === sessionEmail.toLowerCase());
+
+        if (!isOwner) {
+          console.warn(`[PurchaseStatus] Session ${sessionId} does not belong to customer ${customerId}`);
+          ctx.status = 403;
+          ctx.body = { error: "Access denied" };
+          return;
+        }
+      }
+
+      // ============================================================
+      // Step 3: Handle based on session mode
+      // ============================================================
+      const isSubscription = stripeSession?.mode === "subscription";
+
+      if (isSubscription) {
+        // ----- SUBSCRIPTION MODE (READ-ONLY) -----
+        // Entitlements are ONLY created by webhook (checkout.session.completed)
+        // This endpoint just checks if webhook has processed yet
+        console.log(`[PurchaseStatus] Subscription mode for session ${sessionId}`);
+
+        // Get subscription ID from session
+        const subscriptionId = stripeSession.subscription?.id || stripeSession.subscription;
+        const expectedTier = stripeSession.metadata?.tier || null;
+
+        if (!subscriptionId) {
+          console.warn(`[PurchaseStatus] No subscription ID in session ${sessionId}`);
+          ctx.body = {
+            status: "pending",
+            mode: "subscription",
+            message: "Subscription is being created. Please wait...",
+          };
+          return;
+        }
+
+        // Query for entitlement created by webhook - ONLY match by stripeSubscriptionId
+        // This is the ONLY reliable way to match subscription entitlements
+        const entitlements = await strapi.entityService.findMany(
+          "api::entitlement.entitlement",
+          {
+            filters: {
+              stripeSubscriptionId: subscriptionId,
+              $or: [
+                { isArchived: { $null: true } },
+                { isArchived: false },
+              ],
+            },
+            populate: ["licenseKey"],
+          }
+        );
+
+        const matchingEntitlement = entitlements[0] || null;
+
+        if (matchingEntitlement) {
+          console.log(`[PurchaseStatus] Subscription complete: entitlement ${matchingEntitlement.id}, tier=${matchingEntitlement.tier}, isLifetime=${matchingEntitlement.isLifetime}, subscriptionId=${subscriptionId}`);
+          
+          // Build display labels based on entitlement flags (NOT tier)
+          // IMPORTANT: Pro/Maker does NOT imply lifetime - only isLifetime flag does
+          const accessLabel = matchingEntitlement.isLifetime === true
+            ? "Lifetime (Founders)"
+            : "Subscription Active";
+          
+          // Price labels for display
+          const tierPriceMap = {
+            maker: "$12/month",
+            pro: "$24/month",
+          };
+          const billingLabel = matchingEntitlement.isLifetime
+            ? "One-time (Founders)"
+            : tierPriceMap[matchingEntitlement.tier] || "Monthly Subscription";
+
+          ctx.body = {
+            status: "complete",
+            mode: "subscription",
+            entitlementId: matchingEntitlement.id,
+            licenseKeyId: matchingEntitlement.licenseKey?.id || null,
+            licenseKey: matchingEntitlement.licenseKey?.key || null,
+            tier: matchingEntitlement.tier,
+            isLifetime: matchingEntitlement.isLifetime || false,
+            subscriptionId: subscriptionId,
+            // Full entitlement details for frontend display
+            entitlement: {
+              id: matchingEntitlement.id,
+              tier: matchingEntitlement.tier,
+              status: matchingEntitlement.status,
+              isLifetime: matchingEntitlement.isLifetime || false,
+              currentPeriodEnd: matchingEntitlement.currentPeriodEnd || null,
+              maxDevices: matchingEntitlement.maxDevices || 1,
+            },
+            // Display labels (derived from isLifetime, NOT from tier)
+            display: {
+              accessLabel,
+              billingLabel,
+            },
+          };
+          return;
+        }
+
+        // No entitlement found - webhook hasn't processed yet
+        console.log(`[PurchaseStatus] Subscription pending: no entitlement found for subscriptionId=${subscriptionId}`);
+        ctx.body = {
+          status: "pending",
+          mode: "subscription",
+          message: "Subscription is being activated. Please wait...",
+          subscriptionId: subscriptionId,
+          debug: process.env.NODE_ENV === "development" ? {
+            sessionId,
+            subscriptionId,
+            expectedTier,
+            hint: "Waiting for webhook to create entitlement. Is stripe listen running?",
+          } : undefined,
+        };
+        return;
+      }
+
+      // ----- LEGACY ONE-TIME PURCHASE MODE -----
+      console.log(`[PurchaseStatus] One-time purchase mode for session ${sessionId}`);
+
+      // Find purchase by stripeSessionId
+      const purchases = await strapi.entityService.findMany(
+        "api::purchase.purchase",
+        {
+          filters: { stripeSessionId: sessionId },
+          populate: ["licenseKey", "licenseKey.entitlement"],
+        }
+      );
+
+      if (purchases.length === 0) {
+        // Purchase not yet created by webhook
+        ctx.body = {
+          status: "pending",
+          mode: "payment",
+          message: "Purchase is being processed. Please wait...",
+        };
+        return;
+      }
+
+      const purchase = purchases[0];
+
+      // Verify customer owns this purchase
+      if (purchase.customer && purchase.customer !== customerId) {
+        ctx.status = 403;
+        ctx.body = { error: "Access denied" };
+        return;
+      }
+
+      ctx.body = {
+        status: "complete",
+        mode: "payment",
+        purchaseId: purchase.id,
+        licenseKeyId: purchase.licenseKey?.id || null,
+        licenseKey: purchase.licenseKey?.key || null,
+        entitlementId: purchase.licenseKey?.entitlement?.id || null,
+        tier: purchase.licenseKey?.entitlement?.tier || null,
+        isLifetime: purchase.licenseKey?.entitlement?.isLifetime || false,
+      };
+    } catch (error) {
+      console.error("Purchase status error:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to check purchase status",
+        message: error.message,
+      };
+    }
+  },
+
+  /**
+   * Get Pricing: Returns current price IDs for frontend
+   * GET /api/pricing
+   */
+  async getPricing(ctx) {
+    const config = getPriceConfig();
+
+    ctx.body = {
+      oneTime: {
+        maker: {
+          priceId: "price_starter",
+          stripeId: config.price_starter.stripeId,
+          name: config.price_starter.name,
+        },
+        pro: {
+          priceId: "price_pro",
+          stripeId: config.price_pro.stripeId,
+          name: config.price_pro.name,
+        },
+      },
+      subscription: {
+        maker: {
+          priceId: "price_starter_sub",
+          stripeId: config.price_starter_sub.stripeId,
+          available: !!config.price_starter_sub.stripeId,
+        },
+        pro: {
+          priceId: "price_pro_sub",
+          stripeId: config.price_pro_sub.stripeId,
+          available: !!config.price_pro_sub.stripeId,
+        },
+      },
+    };
   },
 
   /**

@@ -1261,12 +1261,18 @@ export interface ApiEntitlementEntitlement extends Schema.CollectionType {
       ['legacy_purchase', 'manual', 'subscription']
     > &
       Attribute.DefaultTo<'legacy_purchase'>;
+    stripeCustomerId: Attribute.String;
+    stripeSubscriptionId: Attribute.String;
+    stripePriceId: Attribute.String;
+    currentPeriodEnd: Attribute.DateTime;
+    cancelAtPeriodEnd: Attribute.Boolean & Attribute.DefaultTo<false>;
     metadata: Attribute.JSON;
     devices: Attribute.Relation<
       'api::entitlement.entitlement',
       'oneToMany',
       'api::device.device'
     >;
+    isArchived: Attribute.Boolean & Attribute.DefaultTo<false>;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1502,6 +1508,11 @@ export interface ApiPurchasePurchase extends Schema.CollectionType {
   };
   attributes: {
     stripeSessionId: Attribute.String & Attribute.Required & Attribute.Unique;
+    stripePaymentIntentId: Attribute.String;
+    stripeInvoiceId: Attribute.String;
+    stripeSubscriptionId: Attribute.String;
+    mode: Attribute.Enumeration<['payment', 'subscription']> &
+      Attribute.DefaultTo<'payment'>;
     isManual: Attribute.Boolean & Attribute.DefaultTo<false>;
     manualReason: Attribute.Text;
     createdByAdmin: Attribute.Relation<
@@ -1583,6 +1594,39 @@ export interface ApiReleaseRelease extends Schema.CollectionType {
   };
 }
 
+export interface ApiStripeEventStripeEvent extends Schema.CollectionType {
+  collectionName: 'stripe_events';
+  info: {
+    singularName: 'stripe-event';
+    pluralName: 'stripe-events';
+    displayName: 'Stripe Event';
+    description: 'Processed Stripe webhook events for idempotency';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    eventId: Attribute.String & Attribute.Required & Attribute.Unique;
+    eventType: Attribute.String & Attribute.Required;
+    processedAt: Attribute.DateTime & Attribute.Required;
+    payload: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::stripe-event.stripe-event',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::stripe-event.stripe-event',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 declare module '@strapi/types' {
   export module Shared {
     export interface ContentTypes {
@@ -1617,6 +1661,7 @@ declare module '@strapi/types' {
       'api::page.page': ApiPagePage;
       'api::purchase.purchase': ApiPurchasePurchase;
       'api::release.release': ApiReleaseRelease;
+      'api::stripe-event.stripe-event': ApiStripeEventStripeEvent;
     }
   }
 }

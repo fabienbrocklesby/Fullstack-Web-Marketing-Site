@@ -72,6 +72,22 @@
       ],
       "default": "legacy_purchase"
     },
+    "stripeCustomerId": {
+      "type": "string"
+    },
+    "stripeSubscriptionId": {
+      "type": "string"
+    },
+    "stripePriceId": {
+      "type": "string"
+    },
+    "currentPeriodEnd": {
+      "type": "datetime"
+    },
+    "cancelAtPeriodEnd": {
+      "type": "boolean",
+      "default": false
+    },
     "metadata": {
       "type": "json"
     },
@@ -80,6 +96,10 @@
       "relation": "oneToMany",
       "target": "api::device.device",
       "mappedBy": "entitlement"
+    },
+    "isArchived": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

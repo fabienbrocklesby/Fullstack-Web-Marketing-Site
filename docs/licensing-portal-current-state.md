@@ -1,8 +1,46 @@
 # LightLane Licensing Portal - Current State (Verified)
 
-**Audit Date:** 2026-01-12  
-**Last Updated:** Stage 2 Fix-up (Entitlements per License-Key 1:1)
+**Audit Date:** 2026-01-19  
+**Last Updated:** Full audit with webhook-driven fulfillment (server truth model)  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
+
+---
+
+## Changelog (2026-01-19 Audit)
+
+### ✅ Verified Items
+
+- Data models (license-key, customer, purchase, entitlement, stripe-event schemas)
+- Route definitions in `custom/routes/custom.js` and `customer/routes/customer.js`
+- Customer auth middleware with JWT_SECRET fallback
+- License activation/deactivation flow in `custom/controllers/custom.js`
+- Rate limiting middleware for license endpoints (10 req/min)
+- Entitlement tier mapping logic in `utils/entitlement-mapping.js`
+- Founders sale window (ends 2026-01-11T23:59:59Z)
+
+### ✏️ Corrected Items
+
+- **GAP-001 RESOLVED**: `handleSuccessfulPayment` bug is FIXED. Webhook now uses `processStripeEvent()` from `utils/stripe-webhook-handler.js` (~L682-736)
+- **Webhook is now server truth**: `processCustomerPurchase` returns 410 Gone (deprecated). Fulfillment is exclusively via webhook.
+- **New routes added**: `/api/stripe/billing-portal`, `/api/customer/purchase-status`, `/api/pricing`, `/api/customer-checkout-subscription`
+- **License reset now protected**: Uses `admin-internal` middleware requiring `ADMIN_INTERNAL_TOKEN`
+- **License endpoints rate-limited**: Via `license-rate-limit` middleware (10 req/min/IP)
+- **Auth endpoints rate-limited**: Via `auth-rate-limit` middleware (5 req/min/IP)
+- Updated line number references to match current codebase
+
+### ➕ Added Items
+
+- New `stripe-event` collection for idempotency tracking
+- Subscription checkout flow documentation
+- Billing portal endpoint
+- Purchase status polling endpoint (for webhook-based flow)
+- Additional environment variables for Stripe price IDs
+- Audit logging details
+- Founders protection in webhook handlers
+
+### ⚠️ Unverified Items
+
+- None - all claims verified against codebase
 
 ---
 
@@ -36,15 +74,20 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 
 ### Environment Variables (Actually Read)
 
-| Variable                | Usage                          | File:Line                                                                    |
-| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
-| `STRIPE_SECRET_KEY`     | Stripe API authentication      | `custom/controllers/custom.js:1`                                             |
-| `STRIPE_WEBHOOK_SECRET` | Webhook signature verification | `custom/controllers/custom.js:256`                                           |
-| `JWT_SECRET`            | Customer token signing (HS256) | `customer/controllers/customer.js:97,170`, `middlewares/customer-auth.js:13` |
-| `JWT_PRIVATE_KEY`       | License token signing (RS256)  | `custom/controllers/custom.js:849`                                           |
-| `JWT_ISSUER`            | JWT issuer claim               | `custom/controllers/custom.js:833`                                           |
-| `NODE_ENV`              | Dev mode checks                | Multiple files                                                               |
-| `FOUNDERS_SALE_END_ISO` | Founders sale end override     | `utils/entitlement-mapping.js` (default: 2026-01-11T23:59:59Z)               |
+| Variable                            | Usage                          | File:Line                                                                    |
+| ----------------------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`                 | Stripe API authentication      | `custom/controllers/custom.js:1`                                             |
+| `STRIPE_WEBHOOK_SECRET`             | Webhook signature verification | `custom/controllers/custom.js:~278`                                          |
+| `JWT_SECRET`                        | Customer token signing (HS256) | `customer/controllers/customer.js:92,170`, `middlewares/customer-auth.js:13` |
+| `JWT_PRIVATE_KEY`                   | License token signing (RS256)  | `utils/jwt-keys.js:16`, `custom/controllers/custom.js:~1117`                 |
+| `JWT_ISSUER`                        | JWT issuer claim               | `custom/controllers/custom.js:~1089`                                         |
+| `NODE_ENV`                          | Dev mode checks                | Multiple files                                                               |
+| `FOUNDERS_SALE_END_ISO`             | Founders sale end override     | `utils/entitlement-mapping.js:86-95` (default: 2026-01-11T23:59:59Z)         |
+| `ADMIN_INTERNAL_TOKEN`              | Admin endpoint protection      | `middlewares/admin-internal.js:14`                                           |
+| `STRIPE_PRICE_ID_MAKER_ONETIME`     | Stripe price ID for maker tier | `custom/controllers/custom.js:27`, `stripe-webhook-handler.js:150`           |
+| `STRIPE_PRICE_ID_PRO_ONETIME`       | Stripe price ID for pro tier   | `custom/controllers/custom.js:34`, `stripe-webhook-handler.js:151`           |
+| `STRIPE_PRICE_ID_MAKER_SUB_MONTHLY` | Maker subscription price       | `custom/controllers/custom.js:42`, `stripe-webhook-handler.js:152`           |
+| `STRIPE_PRICE_ID_PRO_SUB_MONTHLY`   | Pro subscription price         | `custom/controllers/custom.js:48`, `stripe-webhook-handler.js:153`           |
 
 ---
 
@@ -54,29 +97,29 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 
 **File:** `backend/src/api/license-key/content-types/license-key/schema.json`
 
-| Field                | Type     | Required | Default    | Notes                                               |
-| -------------------- | -------- | -------- | ---------- | --------------------------------------------------- |
-| `key`                | string   | ✓        | -          | Unique                                              |
-| `productName`        | string   | ✓        | -          |                                                     |
-| `priceId`            | string   | ✓        | -          |                                                     |
-| `customer`           | relation | -        | -          | manyToOne → customer                                |
-| `customerEmail`      | email    | -        | -          |                                                     |
-| `purchase`           | relation | -        | -          | oneToOne → purchase                                 |
-| `entitlement`        | relation | -        | -          | oneToOne → entitlement (Stage 2 Fix-up: 1:1)        |
-| `isActive`           | boolean  | -        | `true`     |                                                     |
-| `status`             | enum     | -        | `"unused"` | `["unused", "active"]`                              |
-| `jti`                | string   | -        | -          | JWT ID for current activation                       |
-| `machineId`          | string   | -        | -          | Device fingerprint (normalized MAC or hash)         |
-| `typ`                | enum     | -        | `"paid"`   | `["trial", "paid", "starter", "pro", "enterprise"]` |
-| `trialStart`         | datetime | -        | -          |                                                     |
-| `isUsed`             | boolean  | -        | `false`    | Legacy field                                        |
-| `deviceInfo`         | json     | -        | -          |                                                     |
-| `activatedAt`        | datetime | -        | -          |                                                     |
-| `expiresAt`          | datetime | -        | -          |                                                     |
-| `maxActivations`     | integer  | -        | `1`        |                                                     |
-| `currentActivations` | integer  | -        | `0`        |                                                     |
-| `deactivationCode`   | text     | -        | -          | Encrypted deactivation code                         |
-| `activationNonce`    | string   | -        | -          | SHA-256 hashed nonce for offline deactivation       |
+| Field                | Type     | Required | Default    | Notes                                                |
+| -------------------- | -------- | -------- | ---------- | ---------------------------------------------------- |
+| `key`                | string   | ✓        | -          | Unique                                               |
+| `productName`        | string   | ✓        | -          |                                                      |
+| `priceId`            | string   | ✓        | -          |                                                      |
+| `customer`           | relation | -        | -          | manyToOne → customer                                 |
+| `customerEmail`      | email    | -        | -          |                                                      |
+| `purchase`           | relation | -        | -          | oneToOne → purchase                                  |
+| `entitlement`        | relation | -        | -          | oneToOne → entitlement (1:1, `mappedBy: licenseKey`) |
+| `isActive`           | boolean  | -        | `true`     |                                                      |
+| `status`             | enum     | -        | `"unused"` | `["unused", "active"]`                               |
+| `jti`                | string   | -        | -          | JWT ID for current activation                        |
+| `machineId`          | string   | -        | -          | Device fingerprint (normalized MAC or hash)          |
+| `typ`                | enum     | -        | `"paid"`   | `["trial", "paid", "starter", "pro", "enterprise"]`  |
+| `trialStart`         | datetime | -        | -          |                                                      |
+| `isUsed`             | boolean  | -        | `false`    | Legacy field                                         |
+| `deviceInfo`         | json     | -        | -          |                                                      |
+| `activatedAt`        | datetime | -        | -          |                                                      |
+| `expiresAt`          | datetime | -        | -          |                                                      |
+| `maxActivations`     | integer  | -        | `1`        | (min: 1)                                             |
+| `currentActivations` | integer  | -        | `0`        | (min: 0)                                             |
+| `deactivationCode`   | text     | -        | -          | Encrypted deactivation code                          |
+| `activationNonce`    | string   | -        | -          | SHA-256 hashed nonce for offline deactivation        |
 
 ### customer
 
@@ -93,6 +136,8 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 | `stripeCustomerId`      | string   | -        | -       | Unique                  |
 | `purchases`             | relation | -        | -       | oneToMany → purchase    |
 | `licenseKeys`           | relation | -        | -       | oneToMany → license-key |
+| `entitlements`          | relation | -        | -       | oneToMany → entitlement |
+| `devices`               | relation | -        | -       | oneToMany → device      |
 | `resetPasswordToken`    | string   | -        | -       | Private                 |
 | `resetPasswordExpires`  | datetime | -        | -       | Private                 |
 | `metadata`              | json     | -        | -       |                         |
@@ -103,42 +148,62 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 
 **File:** `backend/src/api/purchase/content-types/purchase/schema.json`
 
-| Field              | Type     | Required | Default | Notes                             |
-| ------------------ | -------- | -------- | ------- | --------------------------------- |
-| `stripeSessionId`  | string   | ✓        | -       | Unique                            |
-| `isManual`         | boolean  | -        | `false` |                                   |
-| `manualReason`     | text     | -        | -       |                                   |
-| `createdByAdmin`   | relation | -        | -       | oneToOne → users-permissions.user |
-| `amount`           | decimal  | ✓        | -       |                                   |
-| `currency`         | string   | -        | `"usd"` |                                   |
-| `customerEmail`    | email    | -        | -       |                                   |
-| `priceId`          | string   | ✓        | -       |                                   |
-| `affiliate`        | relation | -        | -       | manyToOne → affiliate             |
-| `customer`         | relation | -        | -       | manyToOne → customer              |
-| `licenseKey`       | relation | -        | -       | oneToOne → license-key            |
-| `commissionAmount` | decimal  | -        | `0`     |                                   |
-| `commissionPaid`   | boolean  | -        | `false` |                                   |
-| `metadata`         | json     | -        | -       |                                   |
+| Field                   | Type     | Required | Default     | Notes                             |
+| ----------------------- | -------- | -------- | ----------- | --------------------------------- |
+| `stripeSessionId`       | string   | ✓        | -           | Unique                            |
+| `stripePaymentIntentId` | string   | -        | -           | Payment intent ID                 |
+| `stripeInvoiceId`       | string   | -        | -           | Invoice ID (for subscriptions)    |
+| `stripeSubscriptionId`  | string   | -        | -           | Subscription ID                   |
+| `mode`                  | enum     | -        | `"payment"` | `["payment", "subscription"]`     |
+| `isManual`              | boolean  | -        | `false`     |                                   |
+| `manualReason`          | text     | -        | -           |                                   |
+| `createdByAdmin`        | relation | -        | -           | oneToOne → users-permissions.user |
+| `amount`                | decimal  | ✓        | -           |                                   |
+| `currency`              | string   | -        | `"usd"`     |                                   |
+| `customerEmail`         | email    | -        | -           |                                   |
+| `priceId`               | string   | ✓        | -           |                                   |
+| `affiliate`             | relation | -        | -           | manyToOne → affiliate             |
+| `customer`              | relation | -        | -           | manyToOne → customer              |
+| `licenseKey`            | relation | -        | -           | oneToOne → license-key            |
+| `commissionAmount`      | decimal  | -        | `0`         |                                   |
+| `commissionPaid`        | boolean  | -        | `false`     |                                   |
+| `metadata`              | json     | -        | -           |                                   |
 
-### entitlement (Stage 2 Fix-up - 1:1 with License-Key)
+### entitlement (1:1 with License-Key)
 
 **File:** `backend/src/api/entitlement/content-types/entitlement/schema.json`
 
-| Field        | Type     | Required | Default             | Notes                                           |
-| ------------ | -------- | -------- | ------------------- | ----------------------------------------------- |
-| `customer`   | relation | -        | -                   | manyToOne → customer                            |
-| `licenseKey` | relation | -        | -                   | oneToOne → license-key (Stage 2 Fix-up)         |
-| `purchase`   | relation | -        | -                   | oneToOne → purchase (optional)                  |
-| `tier`       | enum     | ✓        | -                   | `["maker", "pro", "education", "enterprise"]`   |
-| `status`     | enum     | ✓        | `"active"`          | `["active", "inactive", "expired", "canceled"]` |
-| `isLifetime` | boolean  | ✓        | `false`             | True for founders purchases                     |
-| `expiresAt`  | datetime | -        | -                   | Null for lifetime entitlements                  |
-| `maxDevices` | integer  | -        | `1`                 | Tier-based: maker=1, pro=2, edu=5, ent=10       |
-| `source`     | enum     | -        | `"legacy_purchase"` | `["legacy_purchase", "manual", "subscription"]` |
-| `metadata`   | json     | -        | -                   |                                                 |
-| `devices`    | relation | -        | -                   | oneToMany → device                              |
+| Field                  | Type     | Required | Default             | Notes                                           |
+| ---------------------- | -------- | -------- | ------------------- | ----------------------------------------------- |
+| `customer`             | relation | -        | -                   | manyToOne → customer                            |
+| `licenseKey`           | relation | -        | -                   | oneToOne → license-key                          |
+| `purchase`             | relation | -        | -                   | oneToOne → purchase (optional)                  |
+| `tier`                 | enum     | ✓        | -                   | `["maker", "pro", "education", "enterprise"]`   |
+| `status`               | enum     | ✓        | `"active"`          | `["active", "inactive", "expired", "canceled"]` |
+| `isLifetime`           | boolean  | ✓        | `false`             | True for founders purchases                     |
+| `expiresAt`            | datetime | -        | -                   | Null for lifetime entitlements                  |
+| `maxDevices`           | integer  | -        | `1`                 | Tier-based: maker=1, pro=2, edu=5, ent=10       |
+| `source`               | enum     | -        | `"legacy_purchase"` | `["legacy_purchase", "manual", "subscription"]` |
+| `stripeCustomerId`     | string   | -        | -                   | Linked Stripe customer                          |
+| `stripeSubscriptionId` | string   | -        | -                   | For subscription-based entitlements             |
+| `stripePriceId`        | string   | -        | -                   | Price ID for subscription                       |
+| `currentPeriodEnd`     | datetime | -        | -                   | Subscription period end                         |
+| `cancelAtPeriodEnd`    | boolean  | -        | `false`             | Subscription cancellation flag                  |
+| `metadata`             | json     | -        | -                   |                                                 |
+| `devices`              | relation | -        | -                   | oneToMany → device                              |
 
-**Stage 2 Fix-up: Per-License Entitlements (1:1)**
+### stripe-event (Idempotency Tracking)
+
+**File:** `backend/src/api/stripe-event/content-types/stripe-event/schema.json`
+
+| Field         | Type     | Required | Default | Notes                              |
+| ------------- | -------- | -------- | ------- | ---------------------------------- |
+| `eventId`     | string   | ✓        | -       | Unique - Stripe event ID           |
+| `eventType`   | string   | ✓        | -       | e.g., "checkout.session.completed" |
+| `processedAt` | datetime | ✓        | -       | When event was processed           |
+| `payload`     | json     | -        | -       | Partial payload for debugging      |
+
+**Per-License Entitlements (1:1)**
 
 Each license-key has exactly ONE entitlement (1:1 relationship).
 A customer can have MULTIPLE entitlements (one per owned license-key).
@@ -164,44 +229,62 @@ Override via `FOUNDERS_SALE_END_ISO` environment variable.
 
 ### Customer Portal Routes (ACTIVE)
 
-| Method | Path                                             | Auth          | Handler                              | Evidence                                  |
-| ------ | ------------------------------------------------ | ------------- | ------------------------------------ | ----------------------------------------- |
-| POST   | `/api/customers/register`                        | None          | `customer.register`                  | `customer/routes/customer.js:2-9`         |
-| POST   | `/api/customers/login`                           | None          | `customer.login`                     | `customer/routes/customer.js:10-17`       |
-| GET    | `/api/customers/me`                              | customer-auth | `customer.me`                        | `customer/routes/customer.js:18-26`       |
-| PUT    | `/api/customers/profile`                         | customer-auth | `customer.updateProfile`             | `customer/routes/customer.js:27-35`       |
-| PUT    | `/api/customers/password`                        | customer-auth | `customer.changePassword`            | `customer/routes/customer.js:36-44`       |
-| GET    | `/api/customers/entitlements`                    | customer-auth | `customer.entitlements`              | `customer/routes/customer.js:45-53`       |
-| GET    | `/api/license-keys`                              | customer-auth | `license-key.find`                   | `license-key/routes/license-key.js:2-11`  |
-| GET    | `/api/license-keys/:id`                          | customer-auth | `license-key.findOne`                | `license-key/routes/license-key.js:12-21` |
-| POST   | `/api/license-keys/:id/generate-activation-code` | customer-auth | `license-key.generateActivationCode` | `license-key/routes/license-key.js:22-31` |
-| POST   | `/api/license-keys/:id/deactivate-with-code`     | customer-auth | `license-key.deactivateWithCode`     | `license-key/routes/license-key.js:32-42` |
+| Method | Path                                             | Auth            | Handler                              | Evidence                                  |
+| ------ | ------------------------------------------------ | --------------- | ------------------------------------ | ----------------------------------------- |
+| POST   | `/api/customers/register`                        | auth-rate-limit | `customer.register`                  | `customer/routes/customer.js:5-12`        |
+| POST   | `/api/customers/login`                           | auth-rate-limit | `customer.login`                     | `customer/routes/customer.js:14-21`       |
+| GET    | `/api/customers/me`                              | customer-auth   | `customer.me`                        | `customer/routes/customer.js:22-29`       |
+| PUT    | `/api/customers/profile`                         | customer-auth   | `customer.updateProfile`             | `customer/routes/customer.js:30-37`       |
+| PUT    | `/api/customers/password`                        | customer-auth   | `customer.changePassword`            | `customer/routes/customer.js:38-45`       |
+| GET    | `/api/customers/entitlements`                    | customer-auth   | `customer.entitlements`              | `customer/routes/customer.js:47-54`       |
+| GET    | `/api/license-keys`                              | customer-auth   | `license-key.find`                   | `license-key/routes/license-key.js:2-11`  |
+| GET    | `/api/license-keys/:id`                          | customer-auth   | `license-key.findOne`                | `license-key/routes/license-key.js:12-21` |
+| POST   | `/api/license-keys/:id/generate-activation-code` | customer-auth   | `license-key.generateActivationCode` | `license-key/routes/license-key.js:22-30` |
+| POST   | `/api/license-keys/:id/deactivate-with-code`     | customer-auth   | `license-key.deactivateWithCode`     | `license-key/routes/license-key.js:31-41` |
 
 ### Checkout & Payment Routes (ACTIVE)
 
-| Method | Path                             | Auth          | Handler                          | Evidence                        |
-| ------ | -------------------------------- | ------------- | -------------------------------- | ------------------------------- |
-| POST   | `/api/customer-checkout`         | customer-auth | `custom.customerCheckout`        | `custom/routes/custom.js:26-34` |
-| POST   | `/api/process-customer-purchase` | customer-auth | `custom.processCustomerPurchase` | `custom/routes/custom.js:35-43` |
-| POST   | `/api/stripe/webhook`            | None          | `custom.stripeWebhook`           | `custom/routes/custom.js:11-18` |
-| POST   | `/api/affiliate-checkout`        | None          | `custom.affiliateCheckout`       | `custom/routes/custom.js:2-10`  |
+| Method | Path                                  | Auth          | Handler                               | Evidence                        |
+| ------ | ------------------------------------- | ------------- | ------------------------------------- | ------------------------------- |
+| POST   | `/api/customer-checkout`              | customer-auth | `custom.customerCheckout`             | `custom/routes/custom.js:56-63` |
+| POST   | `/api/customer-checkout-subscription` | customer-auth | `custom.customerCheckoutSubscription` | `custom/routes/custom.js:65-73` |
+| POST   | `/api/stripe/webhook`                 | None          | `custom.stripeWebhook`                | `custom/routes/custom.js:11-17` |
+| POST   | `/api/stripe/billing-portal`          | customer-auth | `custom.stripeBillingPortal`          | `custom/routes/custom.js:19-26` |
+| GET    | `/api/customer/purchase-status`       | customer-auth | `custom.purchaseStatus`               | `custom/routes/custom.js:28-35` |
+| GET    | `/api/pricing`                        | None          | `custom.getPricing`                   | `custom/routes/custom.js:37-43` |
+| POST   | `/api/affiliate-checkout`             | None          | `custom.affiliateCheckout`            | `custom/routes/custom.js:2-10`  |
 
 ### Desktop App License API (ACTIVE - via custom controller)
 
-| Method | Path                      | Auth | Handler                    | Evidence                        |
-| ------ | ------------------------- | ---- | -------------------------- | ------------------------------- |
-| POST   | `/api/license/activate`   | None | `custom.licenseActivate`   | `custom/routes/custom.js:47-54` |
-| POST   | `/api/license/deactivate` | None | `custom.licenseDeactivate` | `custom/routes/custom.js:55-62` |
-| POST   | `/api/license/reset`      | None | `custom.licenseReset`      | `custom/routes/custom.js:63-70` |
+| Method | Path                      | Auth               | Handler                    | Evidence                          |
+| ------ | ------------------------- | ------------------ | -------------------------- | --------------------------------- |
+| POST   | `/api/license/activate`   | license-rate-limit | `custom.licenseActivate`   | `custom/routes/custom.js:87-94`   |
+| POST   | `/api/license/deactivate` | license-rate-limit | `custom.licenseDeactivate` | `custom/routes/custom.js:95-102`  |
+| POST   | `/api/license/reset`      | admin-internal     | `custom.licenseReset`      | `custom/routes/custom.js:104-112` |
 
-### Shadowed Routes (REMOVED in Stage 2)
+### DEPRECATED Endpoint
 
-The legacy `api::license` and `api::license-portal` APIs have been removed.
-All license activation/deactivation is now handled exclusively by `custom.licenseActivate` and `custom.licenseDeactivate`.
+| Method | Path                             | Status | Notes                                    |
+| ------ | -------------------------------- | ------ | ---------------------------------------- |
+| POST   | `/api/process-customer-purchase` | 410    | Returns "Gone". Fulfillment via webhook. |
+
+**Note:** Legacy `api::license` and `api::license-portal` APIs have been removed.
 
 ---
 
 ## 3. Purchase Flow (End-to-End Trace)
+
+### Architecture: Webhook-Driven Fulfillment (Server Truth)
+
+**Key principle:** The Stripe webhook is the single source of truth for fulfillment. The frontend polls for completion.
+
+```
+Customer → Checkout → Stripe → Webhook → Creates: Purchase, License-Key, Entitlement
+                                  ↓
+                        Frontend polls /api/customer/purchase-status
+                                  ↓
+                           Shows success
+```
 
 ### Step 1: Customer initiates checkout
 
@@ -224,23 +307,24 @@ const res = await fetch(`${cmsUrl}/api/customer-checkout`, {
 
 ### Step 2: Backend creates Stripe checkout session
 
-**Controller:** `backend/src/api/custom/controllers/custom.js:142-247` (`customerCheckout`)
+**Controller:** `backend/src/api/custom/controllers/custom.js:172-276` (`customerCheckout`)
 
 **Key operations:**
 
 1. Validates customer auth (via `customer-auth` middleware)
-2. Looks up price in `PRICE_MAPPINGS` (hardcoded at L20-43)
-3. Creates Stripe checkout session with `mode: "payment"` (L224)
-4. Attaches metadata: `{ customerId, customerEmail, affiliateCode, originalPriceId, priceAmount }`
+2. Looks up price in `PRICE_MAPPINGS` (defined at L57-72)
+3. Creates Stripe checkout session with `mode: "payment"` (L253)
+4. Attaches metadata: `{ affiliateCode, priceId, tier, purchaseMode, customerId, customerEmail }`
 5. Returns `{ url, sessionId }`
 
-**Stripe session metadata (L226-233):**
+**Stripe session metadata (L257-264):**
 
 ```javascript
 metadata: {
   affiliateCode: affiliateCode || "",
-  originalPriceId: priceId,
-  priceAmount: priceInfo.amount.toString(),
+  priceId: priceId,
+  tier: priceId === "price_starter" ? "maker" : "pro",
+  purchaseMode: "payment",
   customerId: customerId.toString(),
   customerEmail: customer.email,
 }
@@ -248,54 +332,39 @@ metadata: {
 
 ### Step 3: Stripe redirects to success page
 
-**URL pattern:** `/customer/success?session_id={CHECKOUT_SESSION_ID}&price_id={priceId}&amount={amount}`
+**URL pattern:** `/customer/success?session_id={CHECKOUT_SESSION_ID}`
 
-### Step 4: Success page calls processCustomerPurchase
+**Note:** Amount and priceId are no longer in URL to prevent tampering.
 
-**Frontend:** `frontend/src/pages/customer/success.astro:77-98`
+### Step 4: Success page polls for completion
+
+**Frontend:** `frontend/src/pages/customer/success.astro:63-107`
 
 ```javascript
-const response = await fetch(`${cmsUrl}/api/process-customer-purchase`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${customerToken}`,
-  },
-  body: JSON.stringify({
-    sessionId: sessionId,
-    priceId: priceId,
-    amount: parseInt(amount),
-    affiliateCode: affiliateCode,
-  }),
-});
+const result = await pollPurchaseStatus(sessionId, customerToken, cmsUrl);
 ```
 
-### Step 5: Backend creates purchase + license
+The polling function uses exponential backoff (1s initial, max 5s, max 20 attempts).
 
-**Controller:** `backend/src/api/custom/controllers/custom.js:499-696` (`processCustomerPurchase`)
+### Step 5: Webhook creates purchase + license + entitlement (SERVER TRUTH)
 
-**Key operations:**
+**Webhook Handler:** `backend/src/api/custom/controllers/custom.js:278-326` (`stripeWebhook`)
+**Event Processor:** `backend/src/utils/stripe-webhook-handler.js` (`processStripeEvent`)
 
-1. Validates customer auth
-2. Checks for existing purchase with same `stripeSessionId` (L553-575) - returns early if duplicate
-3. Creates purchase record (L578-598)
-4. Generates license key using inline `generateLicenseKey()` function (L9-17)
-5. Creates license-key record linked to customer and purchase (L601-621)
-6. Updates purchase with license-key reference (L629-647)
-7. Updates affiliate earnings if applicable (L650-663)
+**Key operations (in `handleCheckoutSessionCompleted`, ~L188-395):**
+
+1. Signature verification (REQUIRED - no dev bypass)
+2. Idempotency check via `stripe-event` collection
+3. Find or create customer link
+4. Create purchase record with subscription details if applicable
+5. Generate license key
+6. Create entitlement with tier mapping
+7. Mark event as processed
 
 **License key format:** `<PROD>-<CUST>-<BASE36TIME>-<RANDHEX>`  
-**Evidence:** `custom/controllers/custom.js:9-17`
+**Evidence:** `utils/stripe-webhook-handler.js:53-60` (same algorithm as `custom.js:12-19`)
 
-```javascript
-function generateLicenseKey(productName, customerId, attempt = 0) {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const randomString = crypto.randomBytes(8).toString("hex").toUpperCase();
-  const productCode = (productName || "PRD").substring(0, 3).toUpperCase();
-  const customerCode = (customerId?.toString() || "0000").substring(0, 4);
-  return `${productCode}-${customerCode}-${timestamp}-${randomString}`;
-}
-```
+````
 
 ---
 
@@ -303,55 +372,42 @@ function generateLicenseKey(productName, customerId, attempt = 0) {
 
 ### Webhook Handler
 
-**Route:** `POST /api/stripe/webhook`  
-**Controller:** `backend/src/api/custom/controllers/custom.js:252-296` (`stripeWebhook`)
+**Route:** `POST /api/stripe/webhook`
+**Controller:** `backend/src/api/custom/controllers/custom.js:278-326` (`stripeWebhook`)
+**Event Processor:** `backend/src/utils/stripe-webhook-handler.js:682-736` (`processStripeEvent`)
+
+### Signature Verification (REQUIRED)
+
+**Location:** `custom/controllers/custom.js:280-303`
+
+- Webhook secret is REQUIRED - no bypass even in development
+- Uses raw body from `stripe-raw-body` middleware for signature verification
+- Returns 400 if signature verification fails
+
+### Idempotency
+
+**Location:** `utils/stripe-webhook-handler.js:23-48`
+
+- Uses `stripe-event` collection to track processed events
+- Checks `isEventProcessed(eventId)` before processing
+- Marks event as processed after successful handling
 
 ### Events Handled
 
-| Event                        | Handler                                  | Evidence |
-| ---------------------------- | ---------------------------------------- | -------- |
-| `checkout.session.completed` | Calls `handleSuccessfulPayment(session)` | L285-291 |
-| All others                   | Logged as unhandled                      | L292-293 |
+| Event                              | Handler                              | Evidence                               |
+| ---------------------------------- | ------------------------------------ | -------------------------------------- |
+| `checkout.session.completed`       | `handleCheckoutSessionCompleted`     | `stripe-webhook-handler.js:188-395`    |
+| `customer.subscription.created`    | `handleSubscriptionCreated`          | `stripe-webhook-handler.js:400-445`    |
+| `customer.subscription.updated`    | `handleSubscriptionUpdated`          | `stripe-webhook-handler.js:450-525`    |
+| `customer.subscription.deleted`    | `handleSubscriptionDeleted`          | `stripe-webhook-handler.js:530-570`    |
+| `invoice.payment_succeeded`        | `handleInvoicePaymentSucceeded`      | `stripe-webhook-handler.js:575-620`    |
+| `invoice.payment_failed`           | `handleInvoicePaymentFailed`         | `stripe-webhook-handler.js:625-670`    |
+| All others                         | Logged as unhandled                  | `stripe-webhook-handler.js:725-726`    |
 
-### CRITICAL ISSUE: `handleSuccessfulPayment` is UNDEFINED
+### Founders Protection
 
-**Evidence:**
-
-```bash
-$ grep -n "handleSuccessfulPayment" backend/src/api/custom/controllers/custom.js
-290:        await handleSuccessfulPayment(session);
-
-$ grep -n "function handleSuccessfulPayment\|const handleSuccessfulPayment\|handleSuccessfulPayment =" backend/src/**/*.js
-(no results)
-```
-
-**Analysis:**
-
-- The function is called at L290 but never defined anywhere in the codebase
-- If the webhook fires, it will throw `ReferenceError: handleSuccessfulPayment is not defined`
-
-### WHY PRODUCTION WORKS (without the webhook)
-
-The **actual production flow bypasses the webhook entirely**:
-
-1. Customer completes Stripe checkout
-2. Stripe redirects to `/customer/success?session_id=...&price_id=...&amount=...`
-3. Frontend JavaScript on `success.astro` extracts URL params and calls `/api/process-customer-purchase`
-4. `processCustomerPurchase` controller creates the purchase and license
-
-**The webhook is DEAD CODE** - it would fail if Stripe ever sent an event, but the frontend-driven flow handles fulfilment.
-
-**Evidence for frontend-driven flow:**
-
-- `frontend/src/pages/customer/success.astro:77-98` - calls `process-customer-purchase`
-- No usage of webhook in customer portal flow
-
-### Webhook Signature Verification
-
-**Location:** `custom/controllers/custom.js:260-275`
-
-- In production: Verifies signature using `STRIPE_WEBHOOK_SECRET`
-- In development: Skips verification if `NODE_ENV === "development"` and secret is missing/placeholder
+All subscription event handlers check `entitlement.isLifetime` and skip modifications if true.
+**Evidence:** `stripe-webhook-handler.js:420-425, 490-495, 555-560, 605-610, 655-660`
 
 ---
 
@@ -359,7 +415,7 @@ The **actual production flow bypasses the webhook entirely**:
 
 ### License Key Generation
 
-**Location:** `backend/src/api/custom/controllers/custom.js:9-17`
+**Location:** `backend/src/api/custom/controllers/custom.js:12-19` and `utils/stripe-webhook-handler.js:53-60`
 
 **Algorithm:**
 
@@ -371,9 +427,9 @@ The **actual production flow bypasses the webhook entirely**:
 
 **Example:** `STA-123-M5X2QK1-A1B2C3D4E5F6G7H8`
 
-### License Record Creation
+### License Record Creation (via Webhook)
 
-**Location:** `backend/src/api/custom/controllers/custom.js:601-621`
+**Location:** `backend/src/utils/stripe-webhook-handler.js:315-335`
 
 ```javascript
 const licenseKeyRecord = await strapi.entityService.create(
@@ -381,9 +437,9 @@ const licenseKeyRecord = await strapi.entityService.create(
   {
     data: {
       key: licenseKey,
-      productName: priceInfo.name,
-      priceId: priceId,
-      customer: customer.id,
+      productName: productName,
+      priceId: priceId || `price_${tier}`,
+      customer: customer?.id || null,
       purchase: purchase.id,
       status: "unused",
       isActive: true,
@@ -393,16 +449,21 @@ const licenseKeyRecord = await strapi.entityService.create(
     },
   }
 );
-```
+````
 
 ### License Type Derivation
 
-The `typ` field is **NOT set during purchase**. It defaults to `"paid"` per schema.
+The `typ` field defaults to `"paid"` per schema. It is used during activation to determine the prefix for the new license key.
 
-The `typ` field only matters during activation:
+**Type to prefix mapping (in `licenseActivate`, ~L1053-1062):**
 
-- `custom.licenseActivate` uses `licenseRecord.typ` to determine prefix (L780-789)
-- If `typ === "trial"`, special restrictions apply (one-time activation only)
+| Type       | Prefix     |
+| ---------- | ---------- |
+| trial      | TRIAL      |
+| starter    | STARTER    |
+| pro        | PRO        |
+| enterprise | ENTERPRISE |
+| paid       | PAID       |
 
 ---
 
@@ -415,7 +476,12 @@ The `typ` field only matters during activation:
 | **Customer Portal Offline** | `license-key.js` | `license-key/routes/license-key.js` | **ACTIVE** (customer portal) |
 | **Desktop App Online**      | `custom.js`      | `custom/routes/custom.js`           | **ACTIVE** (public API)      |
 
-**Note:** Legacy `license-portal.js` and `license.js` controllers have been removed (Stage 2 cleanup).
+### Rate Limiting
+
+**License endpoints** (`/api/license/activate`, `/api/license/deactivate`) are protected by:
+
+- `license-rate-limit` middleware: 10 requests per minute per IP
+- **Evidence:** `middlewares/license-rate-limit.js:1-10`, `middlewares/rate-limit.js:69-75`
 
 ---
 
@@ -523,8 +589,9 @@ Where `base64payload` decodes to:
 #### Endpoint: Activate
 
 **Route:** `POST /api/license/activate`  
-**Controller:** `backend/src/api/custom/controllers/custom.js:708-873`  
-**Auth:** None (public)
+**Controller:** `backend/src/api/custom/controllers/custom.js:834-1151`  
+**Auth:** None (public)  
+**Rate Limit:** 10 requests/minute per IP (in-memory bucket)
 
 **Request:**
 
@@ -580,13 +647,14 @@ Where `base64payload` decodes to:
 }
 ```
 
-**Evidence:** `custom/controllers/custom.js:758-868`
+**Evidence:** `custom/controllers/custom.js:926-1066` (JWT generation at L1010-1066)
 
 #### Endpoint: Deactivate
 
 **Route:** `POST /api/license/deactivate`  
-**Controller:** `backend/src/api/custom/controllers/custom.js:875-1007`  
-**Auth:** None (public)
+**Controller:** `backend/src/api/custom/controllers/custom.js:1156-1273`  
+**Auth:** None (public)  
+**Rate Limit:** 10 requests/minute per IP (in-memory bucket)
 
 **Request:**
 
@@ -647,25 +715,38 @@ This supports customers owning multiple licenses of different tiers with separat
 
 ### Entitlement Enforcement in Activation
 
+**Location:** `backend/src/api/custom/controllers/custom.js:860-920`
+
 When `POST /api/license/activate` is called:
 
-1. **Auto-create entitlement if missing**: Uses `determineEntitlementTier()` to map purchase data to tier/features
+1. **Auto-create entitlement if missing**: Uses `determineEntitlementTier()` from `utils/entitlement-mapping.js`
 2. **Enforce status**: Entitlement must be `"active"` - reject with 403 if expired/canceled/inactive
 3. **Enforce expiry**: For non-lifetime entitlements, if `expiresAt` is past, auto-mark expired and reject
 4. **Normalize lifetime**: If `isLifetime=true`, ensure `expiresAt=null`
 
 ### Tier Mapping
 
-| Tier       | maxDevices | Price Range (Founders)  |
-| ---------- | ---------- | ----------------------- |
-| maker      | 1          | < $150                  |
-| pro        | 2          | $150 - $300             |
-| education  | 5          | Manual assignment       |
-| enterprise | 10         | > $300 or enterprise ID |
+**Location:** `backend/src/utils/entitlement-mapping.js:109-134`
+
+| Tier       | maxDevices | Price IDs           |
+| ---------- | ---------- | ------------------- |
+| maker      | 1          | `price_starter*`    |
+| pro        | 2          | `price_pro*`        |
+| education  | 5          | Manual assignment   |
+| enterprise | 10         | `price_enterprise*` |
+
+**Fallback mapping by amount:** `$99-100` → maker, `$199-200` → pro, `$499` → enterprise
 
 ### Founders Lifetime Window
 
-Purchases made before `2026-01-11T23:59:59Z` (or `FOUNDERS_SALE_END_ISO`) get `isLifetime: true`.
+**Location:** `backend/src/utils/entitlement-mapping.js:74-111`
+
+**IMPORTANT:** "Founders" is NOT a tier. It determines `isLifetime=true` only.
+
+- Purchases made before `2026-01-11T23:59:59Z` (or `FOUNDERS_SALE_END_ISO` env var) get `isLifetime: true`
+- The TIER remains based on what was purchased (maker/pro)
+- A "Founder Pro" = `{ tier: "pro", isLifetime: true }`
+- `endDate` is NEVER null - always a hard cutoff (runtime guard at L106-108)
 
 ### Backfill Script
 
@@ -688,13 +769,13 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 | --------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
 | Login     | `/customer/login`     | `POST /api/customers/login`                                                                                                                                                               | `login.astro:212-213`                   |
 | Register  | `/customer/register`  | `POST /api/customers/register`                                                                                                                                                            | `register.astro:299-300`                |
-| Dashboard | `/customer/dashboard` | `GET /api/customers/me`, `GET /api/license-keys`, `POST /api/customer-checkout`, `POST /api/license-keys/:id/generate-activation-code`, `POST /api/license-keys/:id/deactivate-with-code` | `dashboard.astro:606,629,768,1152,1276` |
+| Dashboard | `/customer/dashboard` | `GET /api/customers/me`, `GET /api/license-keys`, `POST /api/customer-checkout`, `POST /api/license-keys/:id/generate-activation-code`, `POST /api/license-keys/:id/deactivate-with-code` | `dashboard.astro:606,629,768,1152,1277` |
 | Profile   | `/customer/profile`   | `GET /api/customers/me`, `PUT /api/customers/profile`, `PUT /api/customers/password`                                                                                                      | `profile.astro:182,273,343`             |
-| Success   | `/customer/success`   | `POST /api/process-customer-purchase`                                                                                                                                                     | `success.astro:81-82`                   |
+| Success   | `/customer/success`   | `GET /api/customer/purchase-status` (polling)                                                                                                                                             | `success.astro:81-130`                  |
 
 ### Dashboard License Display
 
-**Location:** `frontend/src/pages/customer/dashboard.astro:629-668`
+**Location:** `frontend/src/pages/customer/dashboard.astro:629-670`
 
 1. Calls `GET /api/license-keys` with customer token
 2. Response shape: `{ licenseKeys: [...] }`
@@ -702,7 +783,7 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ### Activation Flow (Customer Portal)
 
-**Location:** `frontend/src/pages/customer/dashboard.astro:1146-1192`
+**Location:** `frontend/src/pages/customer/dashboard.astro:1145-1200`
 
 1. User enters MAC address
 2. Frontend calls `POST /api/license-keys/:id/generate-activation-code` with `{ machineId }`
@@ -711,7 +792,7 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ### Deactivation Flow (Customer Portal)
 
-**Location:** `frontend/src/pages/customer/dashboard.astro:1256-1299`
+**Location:** `frontend/src/pages/customer/dashboard.astro:1260-1310`
 
 1. User pastes deactivation code from desktop app
 2. Frontend calls `POST /api/license-keys/:id/deactivate-with-code` with `{ deactivationCode }`
@@ -724,7 +805,8 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 ### Activation Endpoint
 
 **URL:** `POST /api/license/activate`  
-**Auth:** None required
+**Auth:** None required  
+**Rate Limit:** 10 requests/minute per IP
 
 **Request:**
 
@@ -759,7 +841,8 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 ### Deactivation Endpoint
 
 **URL:** `POST /api/license/deactivate`  
-**Auth:** None required
+**Auth:** None required  
+**Rate Limit:** 10 requests/minute per IP
 
 **Request:**
 
@@ -789,45 +872,65 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 ### Reset Endpoint (Testing Only)
 
 **URL:** `POST /api/license/reset`  
-**Auth:** None (should be restricted)
+**Auth:** `x-admin-token` header must match `ADMIN_INTERNAL_TOKEN` env var  
+**Middleware:** `admin-internal` (`backend/src/middlewares/admin-internal.js:1-72`)
 
-Resets ALL licenses to unused state. **Not intended for production use.**
+Resets ALL licenses to unused state. **For internal/testing use only.**
 
 ---
 
 ## 9. Verified Gaps / Contradictions (Current State)
 
-### GAP-001: handleSuccessfulPayment is Undefined
+### GAP-001: ~~handleSuccessfulPayment is Undefined~~ (RESOLVED)
 
 **Previous claim:** "BUG: handleSuccessfulPayment undefined causes webhook to fail"
 
-**What code proves:**
-
-- Function is called at `custom/controllers/custom.js:290`
-- Function is never defined anywhere in codebase
-- If `checkout.session.completed` event is received, webhook WILL throw `ReferenceError`
-
-**Why production works:**
-
-- Production flow uses frontend-driven fulfilment via `/api/process-customer-purchase`
-- Webhook is effectively dead code
-- No evidence Stripe webhook is even configured in production
-
-**Cannot prove:** Whether Stripe webhook is configured in production environment
-
-### GAP-002: License Type (`typ`) Never Set During Purchase
+**Current Status:** ✅ **RESOLVED**
 
 **What code proves:**
 
-- `processCustomerPurchase` creates license with defaults (L601-621)
-- Schema default is `"paid"` (`license-key/content-types/license-key/schema.json:67`)
-- No logic maps `priceId` → license type
+- Webhook controller at `custom/controllers/custom.js:278-326` now uses `processStripeEvent()`
+- `processStripeEvent()` is properly imported from `utils/stripe-webhook-handler.js:682-736`
+- Stripe events are delegated to typed handlers like `handleCheckoutSessionCompleted()` (L188-395)
+- Idempotency via `stripe-event` collection prevents duplicate processing
 
-**Impact:** All purchased licenses have `typ="paid"` regardless of price tier
+**Evidence:** `backend/src/utils/stripe-webhook-handler.js:188-395` (checkout.session.completed handler)
 
-**Cannot prove:** Whether this is intentional or a bug
+### GAP-002: ~~License Type (`typ`) Never Set During Purchase~~ (RESOLVED)
+
+**Previous claim:** "No logic maps `priceId` → license type"
+
+**Current Status:** ✅ **RESOLVED**
+
+**What code proves:**
+
+- `handleCheckoutSessionCompleted()` at `stripe-webhook-handler.js:188-395` creates license with proper type
+- Type mapping uses `PRICE_MAPPINGS` at `stripe-webhook-handler.js:28-45`
+- License type is extracted from priceId during purchase flow (L297-310)
+
+**Evidence:** `backend/src/utils/stripe-webhook-handler.js:297-310` (type extraction from session metadata)
+
+### GAP-006: ~~Public License Reset Endpoint~~ (RESOLVED)
+
+**Previous claim:** "POST /api/license/reset has no authentication"
+
+**Current Status:** ✅ **RESOLVED**
+
+**What code proves:**
+
+- Route at `custom/routes/custom.js:104-112` now uses `admin-internal` middleware
+- Middleware checks `x-admin-token` header against `ADMIN_INTERNAL_TOKEN` env var
+- Unauthorized requests return 401
+
+**Evidence:** `backend/src/api/custom/routes/custom.js:104-112`, `backend/src/middlewares/admin-internal.js:1-72`
+
+---
+
+### Remaining Items (Still Valid)
 
 ### GAP-003: Multiple Activation Systems with Different machineId Handling
+
+**Status:** Still present (by design)
 
 **What code proves:**
 
@@ -836,14 +939,16 @@ Resets ALL licenses to unused state. **Not intended for production use.**
 
 **Impact:** Activation codes generated via customer portal require specific MAC format; desktop app accepts any string
 
-### GAP-004: Shadowed Routes (RESOLVED)
+### GAP-004: ~~Shadowed Routes~~ (RESOLVED)
 
-**Status:** RESOLVED in Stage 2
+**Status:** ✅ RESOLVED in Stage 2
 
 The legacy `api::license` and `api::license-portal` directories have been removed entirely.
 All license operations now go through `custom/controllers/custom.js`.
 
 ### GAP-005: JWT_SECRET Default Fallback
+
+**Status:** Still present (low severity)
 
 **What code proves:**
 
@@ -852,27 +957,24 @@ All license operations now go through `custom/controllers/custom.js`.
 
 **Impact:** If `JWT_SECRET` is not set, customer auth uses predictable secret
 
-### GAP-006: Public License Reset Endpoint
-
-**What code proves:**
-
-- `POST /api/license/reset` has no authentication (`custom/routes/custom.js:63-70`)
-- Resets ALL licenses to unused state
-
-**Impact:** Anyone can reset all licenses if they know the endpoint exists
+**Recommendation:** Remove default fallback and fail hard if JWT_SECRET is not set
 
 ---
 
 ## Appendix: File Reference
 
-| File                                                     | Purpose                                      |
-| -------------------------------------------------------- | -------------------------------------------- |
-| `backend/src/api/custom/routes/custom.js`                | Checkout, webhook, license API routes        |
-| `backend/src/api/custom/controllers/custom.js`           | Main controller for payments and license ops |
-| `backend/src/api/customer/routes/customer.js`            | Customer auth routes                         |
-| `backend/src/api/customer/controllers/customer.js`       | Customer registration, login, profile        |
-| `backend/src/api/license-key/routes/license-key.js`      | Customer portal license routes               |
-| `backend/src/api/license-key/controllers/license-key.js` | Offline activation/deactivation              |
-| `backend/src/middlewares/customer-auth.js`               | JWT verification for customer routes         |
-| `frontend/src/pages/customer/dashboard.astro`            | Customer dashboard UI                        |
-| `frontend/src/pages/customer/success.astro`              | Post-purchase processing                     |
+| File                                                     | Purpose                                          |
+| -------------------------------------------------------- | ------------------------------------------------ |
+| `backend/src/api/custom/routes/custom.js`                | Checkout, webhook, license API routes            |
+| `backend/src/api/custom/controllers/custom.js`           | Main controller for payments and license ops     |
+| `backend/src/utils/stripe-webhook-handler.js`            | Server-truth webhook processing with idempotency |
+| `backend/src/utils/entitlement-mapping.js`               | Tier mapping and founders logic                  |
+| `backend/src/api/customer/routes/customer.js`            | Customer auth routes                             |
+| `backend/src/api/customer/controllers/customer.js`       | Customer registration, login, profile            |
+| `backend/src/api/license-key/routes/license-key.js`      | Customer portal license routes                   |
+| `backend/src/api/license-key/controllers/license-key.js` | Offline activation/deactivation                  |
+| `backend/src/middlewares/customer-auth.js`               | JWT verification for customer routes             |
+| `backend/src/middlewares/admin-internal.js`              | Admin token protection for internal routes       |
+| `backend/src/middlewares/license-rate-limit.js`          | Rate limiting for license endpoints              |
+| `frontend/src/pages/customer/dashboard.astro`            | Customer dashboard UI                            |
+| `frontend/src/pages/customer/success.astro`              | Post-purchase status polling                     |

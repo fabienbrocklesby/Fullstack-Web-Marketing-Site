@@ -129,11 +129,11 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
                   id="hero-plan"
                   class="select select-bordered w-full max-w-xs"
                 >
-                  <option value="price_starter">Starter - $99</option>
-                  <option value="price_pro" selected>Pro - $199</option>
+                  <option value="maker">Maker - $12/mo</option>
+                  <option value="pro" selected>Pro - $24/mo</option>
                 </select>
                 <button id="hero-buy" class="btn btn-primary"
-                  >Buy with Stripe</button
+                  >Subscribe with Stripe</button
                 >
               </div>
               <div class="mt-4 text-sm text-base-content/70">
@@ -153,6 +153,61 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
           </div>
         </div>
       </section>
+
+      <!-- My Licenses Card -->
+      <div class="card bg-base-100 shadow-xl mb-8" id="subscription-card">
+        <div class="card-body">
+          <h2 class="card-title">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+              ></path>
+            </svg>
+            My Licenses
+          </h2>
+
+          <!-- Loading State -->
+          <div id="subscription-loading" class="flex items-center gap-3 py-4">
+            <span class="loading loading-spinner loading-md"></span>
+            <span class="opacity-70">Loading licenses...</span>
+          </div>
+
+          <!-- Content (hidden until loaded) -->
+          <div id="subscription-content" class="hidden">
+            <!-- Will be populated by JavaScript -->
+          </div>
+
+          <!-- Error State (hidden by default) -->
+          <div id="subscription-error" class="hidden">
+            <div role="alert" class="alert alert-error">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <span id="subscription-error-text">Failed to load licenses</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Customer Info Card -->
         <div class="card bg-base-100 shadow-xl">
@@ -277,14 +332,14 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
 
   <dialog id="purchase_modal" class="modal">
     <div class="modal-box">
-      <h3 class="font-bold text-lg mb-2">Purchase License</h3>
+      <h3 class="font-bold text-lg mb-2">Subscribe to License</h3>
       <form id="purchase-form" class="space-y-3">
         <label class="label">Plan</label>
         <select id="plan-select" class="select select-bordered w-full">
-          <option value="price_starter">Starter ($99)</option>
-          <option value="price_pro" selected>Pro ($199)</option>
+          <option value="maker">Maker ($12/mo)</option>
+          <option value="pro" selected>Pro ($24/mo)</option>
         </select>
-        <button class="btn btn-primary w-full">Checkout</button>
+        <button class="btn btn-primary w-full">Subscribe</button>
         <p id="purchase-error" class="text-error text-sm hidden"></p>
       </form>
       <div class="text-xs text-base-content/70 mt-3">
@@ -595,6 +650,272 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       window.location.href = "/customer/login";
     });
 
+    // Load licenses/entitlements info (plural)
+    async function loadSubscriptionInfo() {
+      const loadingEl = document.getElementById("subscription-loading");
+      const contentEl = document.getElementById("subscription-content");
+      const errorEl = document.getElementById("subscription-error");
+      const errorTextEl = document.getElementById("subscription-error-text");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(
+          `${cmsUrl}/api/customers/me/entitlements`,
+          {
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("customerToken");
+            localStorage.removeItem("customer");
+            window.location.href = "/customer/login";
+            return;
+          }
+          // Include HTTP status in error for easier debugging
+          const errorBody = await response.text().catch(() => "");
+          throw new Error(
+            `HTTP ${response.status}: ${errorBody || response.statusText}`,
+          );
+        }
+
+        const data = await response.json();
+
+        // Hide loading, show content
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (contentEl) contentEl.classList.remove("hidden");
+
+        renderEntitlementsList(data, contentEl);
+      } catch (error) {
+        console.error("Error loading licenses:", error);
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (errorEl) errorEl.classList.remove("hidden");
+        if (errorTextEl)
+          errorTextEl.textContent =
+            error instanceof Error ? error.message : "Failed to load licenses";
+      }
+    }
+
+    // Render multiple entitlements as a list
+    function renderEntitlementsList(data: any, container: HTMLElement | null) {
+      if (!container) return;
+
+      const entitlements = data.entitlements || [];
+
+      // No entitlements
+      if (entitlements.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p class="text-lg">No licenses yet</p>
+              <p class="text-sm opacity-70">Purchase a license to get started</p>
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('open-purchase')?.click()">
+              Buy a License
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      // Render each entitlement as a row/card
+      const entitlementCards = entitlements
+        .map((ent: any, index: number) => {
+          const {
+            tier,
+            status,
+            isLifetime,
+            expiresAt,
+            currentPeriodEnd,
+            cancelAtPeriodEnd,
+            maxDevices,
+            licenseKey,
+          } = ent;
+
+          // Format tier display
+          const tierDisplay = tier
+            ? tier.charAt(0).toUpperCase() + tier.slice(1)
+            : "License";
+
+          // Determine badge style based on status
+          let statusBadge = "";
+          let statusMessage = "";
+          let showBillingButton = false;
+
+          if (isLifetime) {
+            statusBadge = `<span class="badge badge-accent">Lifetime</span>`;
+            statusMessage = "No renewal needed";
+            showBillingButton = false;
+          } else if (status === "active") {
+            statusBadge = `<span class="badge badge-success">Active</span>`;
+            // Use currentPeriodEnd for subscriptions, fall back to expiresAt
+            const renewDateSource = currentPeriodEnd || expiresAt;
+            const renewDate = renewDateSource
+              ? new Date(renewDateSource).toLocaleDateString()
+              : null;
+            if (cancelAtPeriodEnd && renewDate) {
+              statusMessage = `Cancels ${renewDate}`;
+            } else if (renewDate) {
+              statusMessage = `Renews ${renewDate}`;
+            } else {
+              statusMessage = "Active subscription";
+            }
+            showBillingButton = true;
+          } else if (status === "past_due") {
+            statusBadge = `<span class="badge badge-error">Past Due</span>`;
+            statusMessage = "Payment required";
+            showBillingButton = true;
+          } else if (status === "canceled" || status === "expired") {
+            statusBadge = `<span class="badge badge-error">${status === "canceled" ? "Canceled" : "Expired"}</span>`;
+            statusMessage = "Subscription ended";
+            showBillingButton = true;
+          } else if (status === "inactive") {
+            statusBadge = `<span class="badge badge-neutral">Inactive</span>`;
+            statusMessage = "Currently inactive";
+            showBillingButton = true;
+          } else {
+            statusBadge = `<span class="badge badge-neutral">${status || "Unknown"}</span>`;
+            statusMessage = "";
+            showBillingButton = true;
+          }
+
+          // For Maker/Pro: show "One device per license" instead of count
+          // For other tiers (education, enterprise): show actual device count
+          const lowerTier = tier?.toLowerCase();
+          const devicesInfo =
+            lowerTier === "maker" || lowerTier === "pro"
+              ? `<span class="text-xs opacity-60">One device per license</span>`
+              : maxDevices
+                ? `<span class="text-xs opacity-60">${maxDevices} device${maxDevices > 1 ? "s" : ""}</span>`
+                : "";
+          const licenseKeyInfo = licenseKey?.key
+            ? `<span class="font-mono text-xs opacity-50">${licenseKey.key.substring(0, 8)}...</span>`
+            : "";
+
+          return `
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-base-200 rounded-lg ${index > 0 ? "mt-3" : ""}">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-semibold">${tierDisplay}</span>
+                ${statusBadge}
+                ${devicesInfo}
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-sm opacity-70">${statusMessage}</span>
+                ${licenseKeyInfo}
+              </div>
+            </div>
+            ${
+              showBillingButton && index === 0
+                ? `
+              <button class="btn btn-outline btn-sm" id="manage-billing-btn" onclick="openBillingPortal()">
+                Manage Billing
+              </button>
+            `
+                : ""
+            }
+          </div>
+        `;
+        })
+        .join("");
+
+      // Add billing error placeholder and summary
+      const hasAnySubscription = entitlements.some(
+        (e: any) => !e.isLifetime && e.status === "active",
+      );
+
+      container.innerHTML = `
+        <div class="space-y-2">
+          ${entitlementCards}
+          <p id="billing-error" class="text-error text-sm hidden mt-2"></p>
+          ${
+            hasAnySubscription
+              ? ""
+              : `
+            <div class="mt-4 pt-4 border-t border-base-300">
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('open-purchase')?.click()">
+                Add Another License
+              </button>
+            </div>
+          `
+          }
+        </div>
+      `;
+    }
+
+    // Global function to open billing portal
+    (window as any).openBillingPortal = async function () {
+      const btn = document.getElementById(
+        "manage-billing-btn",
+      ) as HTMLButtonElement;
+      const errorEl = document.getElementById("billing-error");
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="loading loading-spinner loading-sm"></span> Opening...`;
+      }
+      if (errorEl) errorEl.classList.add("hidden");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(`${cmsUrl}/api/customers/billing-portal`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${customerToken}`,
+          },
+          body: JSON.stringify({
+            returnUrl: window.location.href,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || data.error || "Failed to open billing portal",
+          );
+        }
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error("No billing portal URL returned");
+        }
+      } catch (error) {
+        console.error("Billing portal error:", error);
+        if (errorEl) {
+          errorEl.textContent =
+            error instanceof Error
+              ? error.message
+              : "Failed to open billing portal";
+          errorEl.classList.remove("hidden");
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Manage Billing
+          `;
+        }
+      }
+    };
+
+    // Load subscription info on page load
+    loadSubscriptionInfo();
+
     // Load dashboard data
     async function loadDashboardData() {
       try {
@@ -748,38 +1069,39 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
     purchaseForm?.addEventListener("submit", async (e) => {
       e.preventDefault();
       purchaseError?.classList.add("hidden");
-      const priceId = planSelect?.value;
+      const tier = planSelect?.value;
       const cmsUrl =
         document.documentElement.getAttribute("data-cms-url") ||
         "http://localhost:1337";
-      if (!priceId) {
+      if (!tier) {
         if (purchaseError) {
           purchaseError.textContent = "Please select a plan";
           purchaseError.classList.remove("hidden");
         }
         return;
       }
-      if (priceId === "price_enterprise") {
-        window.location.href =
-          "/contact?subject=Enterprise%20Enquiry#contact-form";
-        return;
-      }
       try {
-        const res = await fetch(`${cmsUrl}/api/customer-checkout`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${customerToken}`,
+        const res = await fetch(
+          `${cmsUrl}/api/customer-checkout-subscription`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${customerToken}`,
+            },
+            body: JSON.stringify({
+              tier,
+              successPath: "/customer/success",
+              cancelPath: "/customer/dashboard",
+            }),
           },
-          body: JSON.stringify({
-            priceId,
-            successUrl: window.location.origin + "/customer/success",
-            cancelUrl: window.location.href,
-          }),
-        });
+        );
         const out = await res.json();
         if (!res.ok) {
-          throw new Error(out?.error || out?.message || res.statusText);
+          // Display the most informative error message available
+          const errorMessage =
+            out?.message || out?.error || res.statusText || "Checkout failed";
+          throw new Error(errorMessage);
         }
         if (out.url) {
           window.location.href = out.url;
