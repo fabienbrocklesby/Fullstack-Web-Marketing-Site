@@ -707,7 +707,11 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       if (!dateStr) return null;
       try {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return date.toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
       } catch {
         return null;
       }
@@ -715,11 +719,11 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
 
     // Helper: get pricing display for tier
     function getTierPricing(tier: string | null, isLifetime: boolean): string {
-      if (isLifetime) return '';
+      if (isLifetime) return "";
       const lowerTier = tier?.toLowerCase();
-      if (lowerTier === 'maker') return '$12/month';
-      if (lowerTier === 'pro') return '$24/month';
-      return '';
+      if (lowerTier === "maker") return "$12/month";
+      if (lowerTier === "pro") return "$24/month";
+      return "";
     }
 
     // Render multiple entitlements as a list
@@ -826,14 +830,14 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
           // Show billing button for each non-lifetime subscription
           const billingButton = showBillingButton
             ? `<button class="btn btn-outline btn-sm manage-billing-btn" data-entitlement-id="${entitlementId}" onclick="openBillingPortal(this)">Manage Billing</button>`
-            : '';
+            : "";
 
           return `
           <div class="entitlement-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-base-200 rounded-lg ${index > 0 ? "mt-3" : ""}" data-entitlement-id="${entitlementId}">
             <div class="flex-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-semibold text-lg">${tierDisplay}</span>
-                ${pricingDisplay ? `<span class="text-sm opacity-70">${pricingDisplay}</span>` : ''}
+                ${pricingDisplay ? `<span class="text-sm opacity-70">${pricingDisplay}</span>` : ""}
                 ${statusBadge}
               </div>
               <div class="flex items-center gap-2 mt-1 flex-wrap">
@@ -869,18 +873,24 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
               </button>
             </div>
           `
-              : ''
+              : ""
           }
         </div>
       `;
     }
 
     // Global function to open billing portal (now accepts button element for per-card error display)
-    (window as any).openBillingPortal = async function (btnElement?: HTMLButtonElement) {
-      const btn = btnElement || document.querySelector('.manage-billing-btn') as HTMLButtonElement;
+    (window as any).openBillingPortal = async function (
+      btnElement?: HTMLButtonElement,
+    ) {
+      const btn =
+        btnElement ||
+        (document.querySelector(".manage-billing-btn") as HTMLButtonElement);
       // Find the error element within the same card, or fall back to global
-      const card = btn?.closest('.entitlement-card');
-      const errorEl = card?.querySelector('.billing-error') || document.getElementById("billing-error");
+      const card = btn?.closest(".entitlement-card");
+      const errorEl =
+        card?.querySelector(".billing-error") ||
+        document.getElementById("billing-error");
 
       if (btn) {
         btn.disabled = true;

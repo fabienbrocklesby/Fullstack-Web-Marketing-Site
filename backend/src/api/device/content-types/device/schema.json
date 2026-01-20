@@ -29,14 +29,22 @@
       "required": true,
       "unique": true
     },
+    "deviceName": {
+      "type": "string"
+    },
     "publicKey": {
       "type": "text"
+    },
+    "publicKeyHash": {
+      "type": "string"
     },
     "status": {
       "type": "enumeration",
       "enum": [
         "active",
-        "revoked"
+        "blocked",
+        "revoked",
+        "deactivated"
       ],
       "default": "active",
       "required": true
@@ -45,6 +53,9 @@
       "type": "datetime"
     },
     "lastSeenAt": {
+      "type": "datetime"
+    },
+    "deactivatedAt": {
       "type": "datetime"
     },
     "platform": {

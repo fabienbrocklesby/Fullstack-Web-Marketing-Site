@@ -43,5 +43,8 @@ logs/
 # Uploads
 backend/public/uploads/
 
+# API test secrets (VS Code REST Client)
+docs/api/http/.env
+
 #pnpm
 .pnpm-store/** 

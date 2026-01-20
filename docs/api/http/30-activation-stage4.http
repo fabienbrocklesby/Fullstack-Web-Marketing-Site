@@ -1,0 +1,148 @@
+# ==============================================================================
+# 30-activation-stage4.http - Stage 4 Device Activation Flow
+# ==============================================================================
+# Complete test of the Stage 4 device-based activation API.
+#
+# Prerequisites:
+#   - CUSTOMER_TOKEN must be set in .env (from 00-login.http)
+#   - ENTITLEMENT_ID must be set in .env (from 10-entitlements.http)
+#
+# Test flow:
+#   1. Register device A → 200
+#   2. Activate entitlement on device A → 200
+#   3. Register device B → 200
+#   4. Activate entitlement on device B → 409 (maxDevices=1 for Maker/Pro)
+#   5. Refresh on device A → 200
+#   6. Deactivate device A → 200
+#   7. Activate on device B → 200 (transfer works after deactivation)
+# ==============================================================================
+
+# File variables (loaded from .env)
+@apiBase = {{$dotenv API_BASE}}
+@customerToken = {{$dotenv CUSTOMER_TOKEN}}
+@entitlementId = {{$dotenv ENTITLEMENT_ID}}
+@deviceIdA = {{$dotenv DEVICE_ID_A}}
+@deviceIdB = {{$dotenv DEVICE_ID_B}}
+@publicKeyA = {{$dotenv PUBLIC_KEY_A}}
+@publicKeyB = {{$dotenv PUBLIC_KEY_B}}
+
+### ===========================================================================
+### Step 1: Register Device A
+### ===========================================================================
+### Expected: 200 OK
+
+POST {{apiBase}}/api/device/register HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "deviceId": "{{deviceIdA}}",
+  "publicKey": "{{publicKeyA}}"
+}
+
+### ===========================================================================
+### Step 2: Activate Entitlement on Device A
+### ===========================================================================
+### Expected: 200 OK
+
+POST {{apiBase}}/api/licence/activate HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceIdA}}"
+}
+
+### ===========================================================================
+### Step 3: Register Device B
+### ===========================================================================
+### Expected: 200 OK
+
+POST {{apiBase}}/api/device/register HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "deviceId": "{{deviceIdB}}",
+  "publicKey": "{{publicKeyB}}"
+}
+
+### ===========================================================================
+### Step 4: Activate Entitlement on Device B (Should FAIL)
+### ===========================================================================
+### Expected: 409 Conflict - "Maximum devices limit reached"
+### (Maker/Pro tiers have maxDevices=1, so this should fail)
+
+POST {{apiBase}}/api/licence/activate HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceIdB}}"
+}
+
+### ===========================================================================
+### Step 5: Refresh on Device A
+### ===========================================================================
+### Expected: 200 OK - heartbeat to confirm device A is still active
+
+POST {{apiBase}}/api/licence/refresh HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceIdA}}"
+}
+
+### ===========================================================================
+### Step 6: Deactivate Device A
+### ===========================================================================
+### Expected: 200 OK - frees up the device slot
+
+POST {{apiBase}}/api/licence/deactivate HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceIdA}}"
+}
+
+### ===========================================================================
+### Step 7: Activate Entitlement on Device B (Should SUCCEED now)
+### ===========================================================================
+### Expected: 200 OK - device slot is now free
+
+POST {{apiBase}}/api/licence/activate HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceIdB}}"
+}
+
+### ===========================================================================
+### Cleanup: Deactivate Device B (optional)
+### ===========================================================================
+### Run this to reset state for next test run
+
+POST {{apiBase}}/api/licence/deactivate HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceIdB}}"
+}

@@ -178,12 +178,12 @@ const audit = {
   /**
    * Log rate limit trigger
    */
-  rateLimited(ctx, { endpoint }) {
+  rateLimited(ctx, endpoint, details = {}) {
     return auditLog("rate_limited", {
       ctx,
       outcome: "blocked",
       reason: "rate_limit_exceeded",
-      metadata: { endpoint },
+      metadata: { endpoint, ...details },
     });
   },
 
@@ -196,6 +196,71 @@ const audit = {
       outcome: "failure",
       reason: "invalid_admin_token",
       metadata: { endpoint },
+    });
+  },
+
+  // -------------------------------------------------------------------------
+  // Stage 4: Device-based activation audit events
+  // -------------------------------------------------------------------------
+
+  /**
+   * Log device registration attempt
+   */
+  deviceRegister(ctx, { outcome, reason, customerId, deviceId, deviceIdHash }) {
+    return auditLog("device_register", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: { deviceId: deviceIdHash || maskSensitive(deviceId, 8) },
+    });
+  },
+
+  /**
+   * Log device-based activation attempt
+   */
+  deviceActivate(ctx, { outcome, reason, customerId, entitlementId, deviceId, deviceIdHash }) {
+    return auditLog("device_activate", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceIdHash || maskSensitive(deviceId, 8),
+      },
+    });
+  },
+
+  /**
+   * Log device refresh attempt
+   */
+  deviceRefresh(ctx, { outcome, reason, customerId, entitlementId, deviceId, deviceIdHash }) {
+    return auditLog("device_refresh", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceIdHash || maskSensitive(deviceId, 8),
+      },
+    });
+  },
+
+  /**
+   * Log device deactivation attempt
+   */
+  deviceDeactivate(ctx, { outcome, reason, customerId, entitlementId, deviceId, deviceIdHash }) {
+    return auditLog("device_deactivate", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceIdHash || maskSensitive(deviceId, 8),
+      },
     });
   },
 

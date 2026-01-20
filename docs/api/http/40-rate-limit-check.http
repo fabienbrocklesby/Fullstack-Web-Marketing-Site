@@ -1,0 +1,37 @@
+# ==============================================================================
+# 40-rate-limit-check.http - Rate Limit Testing
+# ==============================================================================
+# Use this to verify rate limiting is working.
+#
+# Rate limit: 10 requests per minute per IP (license-rate-limit middleware)
+#
+# Test: Click "Send Request" rapidly (>10 times in 60 seconds).
+#       After ~10 requests, you should see 429 Too Many Requests.
+#
+# Prerequisites:
+#   - CUSTOMER_TOKEN must be set in .env
+#   - ENTITLEMENT_ID must be set in .env
+#   - Device A should be registered and activated
+# ==============================================================================
+
+# File variables (loaded from .env)
+@apiBase = {{$dotenv API_BASE}}
+@customerToken = {{$dotenv CUSTOMER_TOKEN}}
+@entitlementId = {{$dotenv ENTITLEMENT_ID}}
+@deviceIdA = {{$dotenv DEVICE_ID_A}}
+
+### ===========================================================================
+### Rate Limit Test - Spam This Endpoint
+### ===========================================================================
+### Click "Send Request" repeatedly until you see 429 Too Many Requests.
+### Expected: 200 OK initially, then 429 after ~10 requests in 60 seconds.
+
+POST {{apiBase}}/api/licence/refresh HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceIdA}}"
+}

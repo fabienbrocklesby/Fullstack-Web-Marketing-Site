@@ -204,5 +204,51 @@ module.exports = {
         middlewares: ["global::admin-internal"],
       },
     },
+
+    // =========================================================================
+    // Stage 4: Unified Device-Based Activation API
+    // These endpoints use customer auth + deviceId (not MAC-based legacy)
+    // =========================================================================
+
+    // Register a device for a customer
+    {
+      method: "POST",
+      path: "/device/register",
+      handler: "custom.deviceRegister",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Activate entitlement on a device
+    {
+      method: "POST",
+      path: "/licence/activate",
+      handler: "custom.licenceActivate",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Refresh entitlement binding (heartbeat)
+    {
+      method: "POST",
+      path: "/licence/refresh",
+      handler: "custom.licenceRefresh",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Deactivate entitlement from a device
+    {
+      method: "POST",
+      path: "/licence/deactivate",
+      handler: "custom.licenceDeactivate",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
   ],
 };

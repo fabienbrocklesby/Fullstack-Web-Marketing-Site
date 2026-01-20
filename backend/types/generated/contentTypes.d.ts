@@ -1145,12 +1145,17 @@ export interface ApiDeviceDevice extends Schema.CollectionType {
       'api::entitlement.entitlement'
     >;
     deviceId: Attribute.String & Attribute.Required & Attribute.Unique;
+    deviceName: Attribute.String;
     publicKey: Attribute.Text;
-    status: Attribute.Enumeration<['active', 'revoked']> &
+    publicKeyHash: Attribute.String;
+    status: Attribute.Enumeration<
+      ['active', 'blocked', 'revoked', 'deactivated']
+    > &
       Attribute.Required &
       Attribute.DefaultTo<'active'>;
     boundAt: Attribute.DateTime;
     lastSeenAt: Attribute.DateTime;
+    deactivatedAt: Attribute.DateTime;
     platform: Attribute.Enumeration<['windows', 'macos', 'linux', 'unknown']> &
       Attribute.DefaultTo<'unknown'>;
     appVersion: Attribute.String;

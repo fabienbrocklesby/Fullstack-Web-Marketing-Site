@@ -1,0 +1,38 @@
+# ==============================================================================
+# 10-entitlements.http - Customer Profile & Entitlements
+# ==============================================================================
+# Use this to view your customer profile and find your entitlement ID.
+#
+# Prerequisites:
+#   - CUSTOMER_TOKEN must be set in .env (from 00-login.http)
+#
+# After running "List Entitlements":
+#   1. Find an entitlement with "status": "active"
+#   2. Copy its "id" value
+#   3. Paste it into ENTITLEMENT_ID in docs/api/http/.env
+# ==============================================================================
+
+# File variables (loaded from .env)
+@apiBase = {{$dotenv API_BASE}}
+@customerToken = {{$dotenv CUSTOMER_TOKEN}}
+
+### ===========================================================================
+### Get Customer Profile
+### ===========================================================================
+### Expected: 200 OK with customer details
+
+GET {{apiBase}}/api/customers/me HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Accept: application/json
+
+### ===========================================================================
+### List Entitlements
+### ===========================================================================
+### Expected: 200 OK with array of entitlements
+###
+### ⚠️ IMPORTANT: Copy the "id" of an active entitlement and paste it
+###    into ENTITLEMENT_ID in your .env file!
+
+GET {{apiBase}}/api/customers/me/entitlements HTTP/1.1
+Authorization: Bearer {{customerToken}}
+Accept: application/json

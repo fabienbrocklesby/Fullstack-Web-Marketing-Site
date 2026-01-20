@@ -1,12 +1,40 @@
 # LightLane Licensing Portal - Current State (Verified)
 
-**Audit Date:** 2026-01-19  
-**Last Updated:** Stage 3 complete - webhook-only subscription management with out-of-order protection  
+**Audit Date:** 2026-01-20  
+**Last Updated:** Stage 4 implemented (verification checklist below)  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
 
 ---
 
-## Changelog (2026-01-19 Audit)
+## Changelog (2026-01-20 Stage 4)
+
+### ➕ Added Items (Stage 4: Device-Based Activation)
+
+- **New Device schema fields**: `deviceName`, `publicKeyHash`, `deactivatedAt`
+- **Expanded Device status enum**: `active`, `blocked`, `revoked`, `deactivated`
+- **New endpoints** (all use customer-auth + license-rate-limit):
+  - `POST /api/device/register` - Register a device for the authenticated customer
+  - `POST /api/licence/activate` - Activate entitlement on a device (enforces maxDevices)
+  - `POST /api/licence/refresh` - Heartbeat/refresh binding (updates lastSeenAt)
+  - `POST /api/licence/deactivate` - Unbind device from entitlement
+- **New audit events**: `device_register`, `device_activate`, `device_refresh`, `device_deactivate`
+- **Device identity**: Uses `deviceId` + `publicKey` (no MAC address)
+- **Binding model**: Device record itself serves as binding (has `entitlement` relation, `boundAt`, `lastSeenAt`)
+- **maxDevices enforcement**: Prevents activating more devices than allowed per entitlement
+
+### � Bug Fixes (Stage 4 Verification - 2026-01-20)
+
+- **FIXED**: `custom/controllers/custom.js:1165` had `pro: 2` in fallback maxDevices mapping. Changed to `pro: 1` to match canonical TIER_CONFIG.
+
+### �🔮 Stage 5 TODOs (Not Yet Implemented)
+
+- Lease token generation and verification
+- Nonce/signature replay protection
+- Offline deactivation code verification
+
+---
+
+## Changelog (2026-01-19 Stage 3)
 
 ### ✅ Verified Items
 
@@ -185,7 +213,7 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 | `status`               | enum     | ✓        | `"active"`          | `["active", "inactive", "expired", "canceled"]` |
 | `isLifetime`           | boolean  | ✓        | `false`             | True for founders purchases                     |
 | `expiresAt`            | datetime | -        | -                   | Null for lifetime entitlements                  |
-| `maxDevices`           | integer  | -        | `1`                 | Tier-based: maker=1, pro=2, edu=5, ent=10       |
+| `maxDevices`           | integer  | -        | `1`                 | Tier-based: maker=1, pro=1, edu=5, ent=10       |
 | `source`               | enum     | -        | `"legacy_purchase"` | `["legacy_purchase", "manual", "subscription"]` |
 | `stripeCustomerId`     | string   | -        | -                   | Linked Stripe customer                          |
 | `stripeSubscriptionId` | string   | -        | -                   | For subscription-based entitlements             |
@@ -217,9 +245,13 @@ This supports customers owning licenses of different tiers with separate billing
 | Tier       | maxDevices | Description              |
 | ---------- | ---------- | ------------------------ |
 | maker      | 1          | Single device (default)  |
-| pro        | 2          | Professional use         |
+| pro        | 1          | Professional use         |
 | education  | 5          | Educational institutions |
 | enterprise | 10         | Enterprise deployments   |
+
+**Note:** maxDevices defaults to 1 for Maker/Pro tiers. Higher tiers (Education/Enterprise) get more devices by default. Entitlements can override this value explicitly if needed.
+
+**Evidence:** `backend/src/utils/entitlement-mapping.js:128-145` (TIER_CONFIG)
 
 **Founders Sale Window:**
 
@@ -264,6 +296,19 @@ Override via `FOUNDERS_SALE_END_ISO` environment variable.
 | POST   | `/api/license/activate`   | license-rate-limit | `custom.licenseActivate`   | `custom/routes/custom.js:87-94`   |
 | POST   | `/api/license/deactivate` | license-rate-limit | `custom.licenseDeactivate` | `custom/routes/custom.js:95-102`  |
 | POST   | `/api/license/reset`      | admin-internal     | `custom.licenseReset`      | `custom/routes/custom.js:104-112` |
+
+### Stage 4: Device-Based Activation API (NEW)
+
+These endpoints use customer auth + deviceId (not MAC-based legacy activation):
+
+| Method | Path                      | Auth                               | Handler                    | Description                        |
+| ------ | ------------------------- | ---------------------------------- | -------------------------- | ---------------------------------- |
+| POST   | `/api/device/register`    | customer-auth + license-rate-limit | `custom.deviceRegister`    | Register device for customer       |
+| POST   | `/api/licence/activate`   | customer-auth + license-rate-limit | `custom.licenceActivate`   | Activate entitlement on device     |
+| POST   | `/api/licence/refresh`    | customer-auth + license-rate-limit | `custom.licenceRefresh`    | Refresh binding (heartbeat)        |
+| POST   | `/api/licence/deactivate` | customer-auth + license-rate-limit | `custom.licenceDeactivate` | Deactivate entitlement from device |
+
+**Note:** The new `/api/licence/*` endpoints (with `c`) are separate from legacy `/api/license/*` (with `s`).
 
 ### DEPRECATED Endpoint
 
@@ -770,14 +815,16 @@ When `POST /api/license/activate` is called:
 
 ### Tier Mapping
 
-**Location:** `backend/src/utils/entitlement-mapping.js:109-134`
+**Location:** `backend/src/utils/entitlement-mapping.js:128-145`
 
 | Tier       | maxDevices | Price IDs           |
 | ---------- | ---------- | ------------------- |
 | maker      | 1          | `price_starter*`    |
-| pro        | 2          | `price_pro*`        |
+| pro        | 1          | `price_pro*`        |
 | education  | 5          | Manual assignment   |
 | enterprise | 10         | `price_enterprise*` |
+
+**Note:** maxDevices defaults to 1 for Maker/Pro tiers (single device per license).
 
 **Fallback mapping by amount:** `$99-100` → maker, `$199-200` → pro, `$499` → enterprise
 
@@ -1021,4 +1068,351 @@ All license operations now go through `custom/controllers/custom.js`.
 | `backend/src/middlewares/admin-internal.js`              | Admin token protection for internal routes       |
 | `backend/src/middlewares/license-rate-limit.js`          | Rate limiting for license endpoints              |
 | `frontend/src/pages/customer/dashboard.astro`            | Customer dashboard UI                            |
-| `frontend/src/pages/customer/success.astro`              | Post-purchase status polling                     |
+
+---
+
+## Stage 4: Device-Based Activation API
+
+### Overview
+
+Stage 4 introduces a clean, unified activation API that uses `deviceId` + `publicKey` for device identity (no MAC addresses). This system:
+
+- Requires customer authentication (JWT token)
+- Binds entitlements to devices with `maxDevices` enforcement
+- Supports refresh (heartbeat) and deactivation
+- Logs all actions via structured audit events
+- Rate limits all endpoints (10 req/min/IP)
+
+### ✅ Verified in Code (2026-01-20)
+
+| Component                   | File:Line                                            | Status      |
+| --------------------------- | ---------------------------------------------------- | ----------- |
+| Device schema fields        | `api/device/content-types/device/schema.json`        | ✅ Complete |
+| Routes (4 endpoints)        | `api/custom/routes/custom.js:213-253`                | ✅ Complete |
+| Controllers (4 handlers)    | `api/custom/controllers/custom.js:2554-3263`         | ✅ Complete |
+| Audit events (4 functions)  | `utils/audit-logger.js:209-265`                      | ✅ Complete |
+| Rate limiting middleware    | `middlewares/license-rate-limit.js`                  | ✅ Applied  |
+| Customer auth middleware    | `middlewares/customer-auth.js`                       | ✅ Applied  |
+| maxDevices canonical config | `utils/entitlement-mapping.js:128-145` (TIER_CONFIG) | ✅ Verified |
+| Device identity (no MAC)    | deviceId + publicKeyHash (no MAC addresses)          | ✅ Verified |
+| maxDevices enforcement      | Checks activeDevices.length < maxDevices             | ✅ Verified |
+| Ownership validation        | Entitlement belongs to auth'd customer               | ✅ Verified |
+
+**Fixes Applied During Verification:**
+
+- `api/custom/controllers/custom.js:1165`: Fixed fallback maxDevices mapping (`pro: 2` → `pro: 1`)
+
+**maxDevices by Tier (Canonical Source: `utils/entitlement-mapping.js:128-145`):**
+| Tier | maxDevices |
+| ---------- | ---------- |
+| maker | 1 |
+| pro | 1 |
+| education | 5 |
+| enterprise | 10 |
+
+### 🔮 Planned for Stage 5 (NOT YET IMPLEMENTED)
+
+- **Lease token generation and verification** - Refresh will return signed lease tokens
+- **Nonce/signature replay protection** - Refresh will verify device signature
+- **Offline deactivation code verification** - Deactivate will verify cryptographic proof
+
+### Device Schema
+
+**File:** `backend/src/api/device/content-types/device/schema.json`
+
+| Field         | Type     | Required | Description                                   |
+| ------------- | -------- | -------- | --------------------------------------------- |
+| deviceId      | string   | ✓        | Unique device identifier (uuid-like)          |
+| deviceName    | string   |          | Human-readable device name                    |
+| publicKey     | text     |          | Device's public key for future verification   |
+| publicKeyHash | string   |          | SHA-256 hash of public key (first 16 chars)   |
+| status        | enum     | ✓        | `active`, `blocked`, `revoked`, `deactivated` |
+| customer      | relation |          | manyToOne → customer                          |
+| entitlement   | relation |          | manyToOne → entitlement (binding)             |
+| boundAt       | datetime |          | When device was bound to entitlement          |
+| lastSeenAt    | datetime |          | Last heartbeat/refresh time                   |
+| deactivatedAt | datetime |          | When device was deactivated                   |
+| platform      | enum     |          | `windows`, `macos`, `linux`, `unknown`        |
+| appVersion    | string   |          | App version on device                         |
+| metadata      | json     |          | Additional metadata                           |
+
+### Binding Model
+
+The Device record itself serves as the binding between entitlement and device:
+
+- `device.entitlement` points to the bound entitlement
+- `device.status = "active"` indicates an active binding
+- `device.boundAt` records when binding was created
+- `device.lastSeenAt` records last refresh/heartbeat
+
+### API Endpoints
+
+#### POST /api/device/register
+
+Register a device for the authenticated customer.
+
+**Request:**
+
+```json
+{
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBg...",
+  "deviceName": "Work MacBook",
+  "platform": "macos"
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "active",
+  "message": "Device registered"
+}
+```
+
+**Errors:**
+
+- 400: Invalid deviceId or publicKey
+- 409: Device is registered to another account
+
+#### POST /api/licence/activate
+
+Activate an entitlement on a registered device.
+
+**Request:**
+
+```json
+{
+  "entitlementId": 123,
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "ok": true,
+  "message": "Device activated",
+  "entitlement": {
+    "id": 123,
+    "tier": "pro",
+    "status": "active",
+    "isLifetime": false,
+    "expiresAt": null,
+    "currentPeriodEnd": "2026-02-19T00:00:00.000Z",
+    "maxDevices": 1
+  },
+  "device": {
+    "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+    "boundAt": "2026-01-20T10:00:00.000Z"
+  }
+}
+```
+
+**Errors:**
+
+- 400: Missing entitlementId or deviceId
+- 403: Not owner / entitlement not active / device blocked
+- 404: Entitlement or device not found
+- 409: Maximum devices limit reached
+
+#### POST /api/licence/refresh
+
+Refresh/heartbeat to confirm device is still active.
+
+**Request:**
+
+```json
+{
+  "entitlementId": 123,
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "nonce": "abc123",
+  "signature": "..."
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "ok": true,
+  "status": "active",
+  "isLifetime": false,
+  "expiresAt": null,
+  "currentPeriodEnd": "2026-02-19T00:00:00.000Z"
+}
+```
+
+**Note:** Stage 4 ignores nonce/signature. Stage 5 will add lease token verification.
+
+**Errors:**
+
+- 400: Missing fields
+- 403: Device not bound / not active / entitlement expired
+- 404: Device or entitlement not found
+
+#### POST /api/licence/deactivate
+
+Deactivate a device from an entitlement.
+
+**Request:**
+
+```json
+{
+  "entitlementId": 123,
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "deactivationCode": "optional-code"
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "ok": true,
+  "message": "Device deactivated"
+}
+```
+
+**Note:** Stage 4 accepts deactivationCode but doesn't verify it. Stage 5 will add offline proof verification.
+
+**Errors:**
+
+- 400: Missing fields / device not bound to this entitlement
+- 403: Device not owned
+- 404: Device not found
+
+### Audit Events
+
+All endpoints emit structured audit logs:
+
+| Event             | Outcome | Reason Codes                                                                        |
+| ----------------- | ------- | ----------------------------------------------------------------------------------- |
+| device_register   | success | device_created, device_updated                                                      |
+| device_register   | failure | invalid_device_id, invalid_public_key, device_owned_by_another                      |
+| device_activate   | success | activated, already_bound                                                            |
+| device_activate   | failure | missing\_\*, not_found, not_owner, not_active, max_devices_exceeded, device_blocked |
+| device_refresh    | success | refreshed                                                                           |
+| device_refresh    | failure | missing_fields, not_found, not_bound, not_active, not_valid                         |
+| device_deactivate | success | deactivated                                                                         |
+| device_deactivate | failure | missing_fields, not_found, not_owned, not_bound                                     |
+
+### Stage 4 Verification Checklist
+
+This checklist verifies that the Stage 4 device-based activation API is working correctly.
+
+**Prerequisites:**
+
+1. Backend running at `http://localhost:1337`
+2. A customer account with at least one active entitlement (Maker or Pro tier, maxDevices=1)
+3. Customer JWT token stored in `$TOKEN`
+
+#### Step 0: Login and Get Token
+
+```bash
+# Login to get customer token
+TOKEN=$(curl -s -X POST http://localhost:1337/api/customers/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"yourpassword"}' | jq -r '.token')
+
+# Verify token and get entitlements
+curl -s http://localhost:1337/api/customers/entitlements \
+  -H "Authorization: Bearer $TOKEN" | jq '.entitlements[] | {id, tier, maxDevices, status}'
+# Note the entitlement ID for subsequent tests
+```
+
+#### Verification Steps
+
+| #   | Action                                    | Command                                                                                         | Expected HTTP | Expected Response                                                             |
+| --- | ----------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------- |
+| 1   | Register device A                         | `curl -X POST .../api/device/register -d '{"deviceId":"device-a-123","publicKey":"pk-aaa..."}'` | **200**       | `{"deviceId":"device-a-123","status":"active","message":"Device registered"}` |
+| 2   | Activate entitlement on device A          | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-a-123"}'`      | **200**       | `{"ok":true,"message":"Device activated",...}`                                |
+| 3   | Register device B                         | `curl -X POST .../api/device/register -d '{"deviceId":"device-b-456","publicKey":"pk-bbb..."}'` | **200**       | `{"deviceId":"device-b-456","status":"active","message":"Device registered"}` |
+| 4   | Activate same entitlement on device B     | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-b-456"}'`      | **409**       | `{"error":"Maximum devices limit reached"}`                                   |
+| 5   | Refresh on device A                       | `curl -X POST .../api/licence/refresh -d '{"entitlementId":1,"deviceId":"device-a-123"}'`       | **200**       | `{"ok":true,"status":"active",...}`                                           |
+| 6   | Deactivate device A                       | `curl -X POST .../api/licence/deactivate -d '{"entitlementId":1,"deviceId":"device-a-123"}'`    | **200**       | `{"ok":true,"message":"Device deactivated"}`                                  |
+| 7   | Activate on device B (should now succeed) | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-b-456"}'`      | **200**       | `{"ok":true,"message":"Device activated",...}`                                |
+
+#### Full Test Script
+
+```bash
+# Setup
+BASE_URL="http://localhost:1337"
+ENTITLEMENT_ID=1  # Replace with actual entitlement ID from step 0
+
+echo "=== Step 1: Register device A ==="
+curl -s -X POST "$BASE_URL/api/device/register" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"device-a-123","publicKey":"pk-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}' | jq .
+# Expected: 200, {"deviceId":"device-a-123","status":"active","message":"Device registered"}
+
+echo "=== Step 2: Activate entitlement on device A ==="
+curl -s -X POST "$BASE_URL/api/licence/activate" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-a-123\"}" | jq .
+# Expected: 200, {"ok":true,"message":"Device activated",...}
+
+echo "=== Step 3: Register device B ==="
+curl -s -X POST "$BASE_URL/api/device/register" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"device-b-456","publicKey":"pk-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}' | jq .
+# Expected: 200, {"deviceId":"device-b-456","status":"active","message":"Device registered"}
+
+echo "=== Step 4: Try activate same entitlement on device B (should fail) ==="
+curl -s -w "\nHTTP Status: %{http_code}\n" -X POST "$BASE_URL/api/licence/activate" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-b-456\"}" | jq .
+# Expected: 409, {"error":"Maximum devices limit reached"}
+
+echo "=== Step 5: Refresh on device A ==="
+curl -s -X POST "$BASE_URL/api/licence/refresh" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-a-123\"}" | jq .
+# Expected: 200, {"ok":true,"status":"active",...}
+
+echo "=== Step 6: Deactivate device A ==="
+curl -s -X POST "$BASE_URL/api/licence/deactivate" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-a-123\"}" | jq .
+# Expected: 200, {"ok":true,"message":"Device deactivated"}
+
+echo "=== Step 7: Activate on device B (should now succeed) ==="
+curl -s -X POST "$BASE_URL/api/licence/activate" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-b-456\"}" | jq .
+# Expected: 200, {"ok":true,"message":"Device activated",...}
+
+echo "=== All tests completed ==="
+```
+
+---
+
+## Future Stage References
+
+### Stage 5: Lease Tokens & Offline Verification
+
+Stage 5 will add:
+
+- **Lease token generation**: Refresh returns a signed JWT lease token with expiry
+- **Nonce/signature replay protection**: Device must sign requests with its private key
+- **Offline deactivation code verification**: Deactivate verifies cryptographic proof for offline scenarios
+- **Manual refresh**: Customer portal can trigger refresh for offline devices
+
+### Stage 7: Desktop App Integration
+
+Stage 7 will integrate the desktop app with the Stage 4/5 API:
+
+- Desktop app calls `/api/device/register` on first launch
+- Desktop app calls `/api/licence/activate` when user enters license
+- Desktop app calls `/api/licence/refresh` periodically (heartbeat)
+- Desktop app calls `/api/licence/deactivate` on uninstall/transfer

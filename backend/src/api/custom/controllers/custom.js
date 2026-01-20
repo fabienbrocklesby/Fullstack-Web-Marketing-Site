@@ -1162,7 +1162,7 @@ module.exports = {
             const mappedTier = typToTier[licenseRecord.typ];
             if (mappedTier) {
               tierMapping.tier = mappedTier;
-              tierMapping.maxDevices = { maker: 1, pro: 2, education: 5, enterprise: 10 }[mappedTier] || 1;
+              tierMapping.maxDevices = { maker: 1, pro: 1, education: 5, enterprise: 10 }[mappedTier] || 1;
             }
           }
 
@@ -2538,6 +2538,725 @@ module.exports = {
     } catch (e) {
       ctx.status = 500;
       ctx.body = { error: e.message };
+    }
+  },
+
+  // ===========================================================================
+  // Stage 4: Unified Device-Based Activation API
+  // These endpoints use customer auth + deviceId (not MAC-based legacy)
+  // ===========================================================================
+
+  /**
+   * POST /api/device/register
+   * Register a device for the authenticated customer
+   * Body: { deviceId: string, publicKey: string, deviceName?: string, platform?: string }
+   */
+  async deviceRegister(ctx) {
+    const crypto = require("crypto");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        ctx.status = 401;
+        ctx.body = { error: "Authentication required" };
+        return;
+      }
+
+      const { deviceId, publicKey, deviceName, platform } = ctx.request.body;
+
+      // Validate required fields
+      if (!deviceId || typeof deviceId !== "string" || deviceId.length < 8) {
+        audit.deviceRegister(ctx, {
+          outcome: "failure",
+          reason: "invalid_device_id",
+          customerId: customer.id,
+          deviceId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "deviceId is required and must be at least 8 characters" };
+        return;
+      }
+
+      if (!publicKey || typeof publicKey !== "string" || publicKey.length < 32) {
+        audit.deviceRegister(ctx, {
+          outcome: "failure",
+          reason: "invalid_public_key",
+          customerId: customer.id,
+          deviceId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "publicKey is required and must be at least 32 characters" };
+        return;
+      }
+
+      // Hash the public key for storage (truncated for audit logs)
+      const publicKeyHash = crypto
+        .createHash("sha256")
+        .update(publicKey)
+        .digest("hex")
+        .slice(0, 16);
+
+      // Check if device already exists
+      const existingDevices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer"],
+        }
+      );
+
+      if (existingDevices.length > 0) {
+        const existingDevice = existingDevices[0];
+
+        // Device exists - check if it belongs to the same customer
+        const existingCustomerId = existingDevice.customer?.id || existingDevice.customer;
+
+        if (existingCustomerId && existingCustomerId !== customer.id) {
+          // Device is linked to a different customer - reject
+          audit.deviceRegister(ctx, {
+            outcome: "failure",
+            reason: "device_owned_by_another",
+            customerId: customer.id,
+            deviceIdHash: publicKeyHash,
+          });
+          ctx.status = 409;
+          ctx.body = { error: "Device is registered to another account" };
+          return;
+        }
+
+        // Device belongs to this customer - update it
+        const updatedDevice = await strapi.entityService.update(
+          "api::device.device",
+          existingDevice.id,
+          {
+            data: {
+              publicKey,
+              publicKeyHash,
+              deviceName: deviceName || existingDevice.deviceName,
+              platform: platform || existingDevice.platform || "unknown",
+              lastSeenAt: new Date(),
+              status: existingDevice.status === "blocked" ? "blocked" : "active",
+            },
+          }
+        );
+
+        audit.deviceRegister(ctx, {
+          outcome: "success",
+          reason: "device_updated",
+          customerId: customer.id,
+          deviceIdHash: publicKeyHash,
+        });
+
+        ctx.body = {
+          deviceId: updatedDevice.deviceId,
+          status: updatedDevice.status,
+          message: "Device updated",
+        };
+        return;
+      }
+
+      // Create new device
+      const newDevice = await strapi.entityService.create(
+        "api::device.device",
+        {
+          data: {
+            deviceId,
+            publicKey,
+            publicKeyHash,
+            deviceName: deviceName || null,
+            platform: platform || "unknown",
+            customer: customer.id,
+            status: "active",
+            lastSeenAt: new Date(),
+          },
+        }
+      );
+
+      audit.deviceRegister(ctx, {
+        outcome: "success",
+        reason: "device_created",
+        customerId: customer.id,
+        deviceIdHash: publicKeyHash,
+      });
+
+      ctx.body = {
+        deviceId: newDevice.deviceId,
+        status: newDevice.status,
+        message: "Device registered",
+      };
+    } catch (err) {
+      strapi.log.error(`[deviceRegister] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error" };
+    }
+  },
+
+  /**
+   * POST /api/licence/activate
+   * Activate an entitlement on a device
+   * Body: { entitlementId: number, deviceId: string }
+   */
+  async licenceActivate(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        ctx.status = 401;
+        ctx.body = { error: "Authentication required" };
+        return;
+      }
+
+      const { entitlementId, deviceId } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "missing_entitlement_id",
+          customerId: customer.id,
+          deviceId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "entitlementId is required" };
+        return;
+      }
+
+      if (!deviceId || typeof deviceId !== "string") {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "missing_device_id",
+          customerId: customer.id,
+          entitlementId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "deviceId is required" };
+        return;
+      }
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer", "devices"] }
+      );
+
+      if (!entitlement) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Entitlement not found" };
+        return;
+      }
+
+      // Verify ownership
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "You do not own this entitlement" };
+        return;
+      }
+
+      // Check entitlement is usable
+      const allowedStatuses = ["active"];
+      if (!entitlement.isLifetime && !allowedStatuses.includes(entitlement.status)) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = {
+          error: "Entitlement is not active",
+          status: entitlement.status,
+        };
+        return;
+      }
+
+      // Load device and verify ownership
+      const devices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer", "entitlement"],
+        }
+      );
+
+      if (devices.length === 0) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Device not registered. Please register device first." };
+        return;
+      }
+
+      const device = devices[0];
+
+      // Verify device ownership
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is not registered to your account" };
+        return;
+      }
+
+      // Check device is not blocked
+      if (device.status === "blocked") {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "device_blocked",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is blocked" };
+        return;
+      }
+
+      // Check if device is already bound to this entitlement (idempotent)
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (deviceEntitlementId === entitlement.id && device.status === "active") {
+        // Already bound - update lastSeenAt and return success
+        await strapi.entityService.update(
+          "api::device.device",
+          device.id,
+          { data: { lastSeenAt: new Date() } }
+        );
+
+        audit.deviceActivate(ctx, {
+          outcome: "success",
+          reason: "already_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+
+        ctx.body = {
+          ok: true,
+          message: "Device already activated",
+          entitlement: {
+            id: entitlement.id,
+            tier: entitlement.tier,
+            status: entitlement.status,
+            isLifetime: entitlement.isLifetime,
+            expiresAt: entitlement.expiresAt,
+            currentPeriodEnd: entitlement.currentPeriodEnd,
+            maxDevices: entitlement.maxDevices,
+          },
+          device: {
+            deviceId: device.deviceId,
+            boundAt: device.boundAt,
+          },
+        };
+        return;
+      }
+
+      // Enforce maxDevices limit
+      // Count active device bindings for this entitlement
+      const activeDevices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: {
+            entitlement: entitlement.id,
+            status: "active",
+          },
+        }
+      );
+
+      // Filter out the current device if it's already in the list
+      const otherActiveDevices = activeDevices.filter(d => d.id !== device.id);
+
+      if (otherActiveDevices.length >= entitlement.maxDevices) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "max_devices_exceeded",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 409;
+        ctx.body = {
+          error: "Maximum devices limit reached",
+          maxDevices: entitlement.maxDevices,
+          activeDevices: otherActiveDevices.length,
+          message: `Please deactivate another device first. Max devices: ${entitlement.maxDevices}`,
+        };
+        return;
+      }
+
+      // Create binding - update device with entitlement link
+      const now = new Date();
+      await strapi.entityService.update(
+        "api::device.device",
+        device.id,
+        {
+          data: {
+            entitlement: entitlement.id,
+            status: "active",
+            boundAt: now,
+            lastSeenAt: now,
+            deactivatedAt: null,
+          },
+        }
+      );
+
+      audit.deviceActivate(ctx, {
+        outcome: "success",
+        reason: "activated",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      ctx.body = {
+        ok: true,
+        message: "Device activated",
+        entitlement: {
+          id: entitlement.id,
+          tier: entitlement.tier,
+          status: entitlement.status,
+          isLifetime: entitlement.isLifetime,
+          expiresAt: entitlement.expiresAt,
+          currentPeriodEnd: entitlement.currentPeriodEnd,
+          maxDevices: entitlement.maxDevices,
+        },
+        device: {
+          deviceId: device.deviceId,
+          boundAt: now,
+        },
+      };
+    } catch (err) {
+      strapi.log.error(`[licenceActivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error" };
+    }
+  },
+
+  /**
+   * POST /api/licence/refresh
+   * Refresh an entitlement binding (heartbeat)
+   * Body: { entitlementId: number, deviceId: string, nonce?: string, signature?: string }
+   *
+   * Stage 4: Just updates lastSeenAt. Stage 5 will add lease token verification.
+   */
+  async licenceRefresh(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        ctx.status = 401;
+        ctx.body = { error: "Authentication required" };
+        return;
+      }
+
+      const { entitlementId, deviceId, nonce, signature } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId || !deviceId) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "missing_fields",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "entitlementId and deviceId are required" };
+        return;
+      }
+
+      // Load device with entitlement
+      const devices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer", "entitlement"],
+        }
+      );
+
+      if (devices.length === 0) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Device not found" };
+        return;
+      }
+
+      const device = devices[0];
+
+      // Verify device ownership
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is not registered to your account" };
+        return;
+      }
+
+      // Verify device is bound to the specified entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== parseInt(entitlementId, 10)) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is not activated for this entitlement" };
+        return;
+      }
+
+      // Verify device is active
+      if (device.status !== "active") {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is not active", status: device.status };
+        return;
+      }
+
+      // Load entitlement to check status
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Entitlement not found" };
+        return;
+      }
+
+      // Check entitlement is still valid
+      const isValid = entitlement.isLifetime || entitlement.status === "active";
+      if (!isValid) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_valid",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = {
+          ok: false,
+          error: "Entitlement is no longer active",
+          status: entitlement.status,
+        };
+        return;
+      }
+
+      // TODO Stage 5: Validate nonce/signature for replay protection
+      // For now, just log if provided
+      if (nonce) {
+        strapi.log.debug(`[licenceRefresh] Nonce provided (Stage 5 will verify): ${nonce.slice(0, 8)}...`);
+      }
+
+      // Update lastSeenAt on device
+      const now = new Date();
+      await strapi.entityService.update(
+        "api::device.device",
+        device.id,
+        { data: { lastSeenAt: now } }
+      );
+
+      audit.deviceRefresh(ctx, {
+        outcome: "success",
+        reason: "refreshed",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      ctx.body = {
+        ok: true,
+        status: entitlement.status,
+        isLifetime: entitlement.isLifetime,
+        expiresAt: entitlement.expiresAt,
+        currentPeriodEnd: entitlement.currentPeriodEnd,
+        // TODO Stage 5: Return signed lease token here
+      };
+    } catch (err) {
+      strapi.log.error(`[licenceRefresh] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error" };
+    }
+  },
+
+  /**
+   * POST /api/licence/deactivate
+   * Deactivate an entitlement from a device
+   * Body: { entitlementId: number, deviceId: string, deactivationCode?: string }
+   */
+  async licenceDeactivate(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        ctx.status = 401;
+        ctx.body = { error: "Authentication required" };
+        return;
+      }
+
+      const { entitlementId, deviceId, deactivationCode } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId || !deviceId) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "missing_fields",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "entitlementId and deviceId are required" };
+        return;
+      }
+
+      // Load device with entitlement
+      const devices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer", "entitlement"],
+        }
+      );
+
+      if (devices.length === 0) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Device not found" };
+        return;
+      }
+
+      const device = devices[0];
+
+      // Verify device ownership
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is not registered to your account" };
+        return;
+      }
+
+      // Verify device is bound to the specified entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== parseInt(entitlementId, 10)) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "Device is not activated for this entitlement" };
+        return;
+      }
+
+      // TODO Stage 5: Verify deactivationCode for offline proof
+      // For now, just log if provided
+      if (deactivationCode) {
+        strapi.log.debug(`[licenceDeactivate] Deactivation code provided (Stage 5 will verify): ${deactivationCode.slice(0, 8)}...`);
+      }
+
+      // Deactivate - remove entitlement link, set status to deactivated
+      const now = new Date();
+      await strapi.entityService.update(
+        "api::device.device",
+        device.id,
+        {
+          data: {
+            entitlement: null,
+            status: "deactivated",
+            deactivatedAt: now,
+          },
+        }
+      );
+
+      audit.deviceDeactivate(ctx, {
+        outcome: "success",
+        reason: "deactivated",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      ctx.body = {
+        ok: true,
+        message: "Device deactivated",
+      };
+    } catch (err) {
+      strapi.log.error(`[licenceDeactivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error" };
     }
   },
 };
