@@ -9,8 +9,9 @@
  * Key principles:
  * 1. Signature verification ALWAYS (no dev bypass)
  * 2. Idempotency via stripe-event collection
- * 3. Founders protection: isLifetime=true entitlements NEVER downgraded by Stripe events
- * 4. 1:1 model: each purchase gets one license-key gets one entitlement
+ * 3. Out-of-order protection via lastStripeEventCreated in metadata
+ * 4. Founders protection: isLifetime=true entitlements NEVER downgraded by Stripe events
+ * 5. 1:1 model: each purchase gets one license-key gets one entitlement
  */
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -39,16 +40,46 @@ async function isEventProcessed(eventId) {
  * @param {string} eventId - Stripe event ID
  * @param {string} eventType - Stripe event type
  * @param {object} payload - Event payload (stored for debugging)
+ * @param {number} eventCreated - Stripe event.created timestamp
  */
-async function markEventProcessed(eventId, eventType, payload = null) {
+async function markEventProcessed(eventId, eventType, payload = null, eventCreated = null) {
   await strapi.entityService.create("api::stripe-event.stripe-event", {
     data: {
       eventId,
       eventType,
       processedAt: new Date(),
-      payload: payload ? { id: payload.id, object: payload.object } : null,
+      payload: payload ? { 
+        id: payload.id, 
+        object: payload.object,
+        eventCreated: eventCreated || null,
+      } : null,
     },
   });
+}
+
+// -----------------------------------------------------------------------------
+// Out-of-Order Protection
+// -----------------------------------------------------------------------------
+
+/**
+ * Get lastStripeEventCreated from entitlement metadata
+ * @param {object} entitlement
+ * @returns {number|null}
+ */
+function getLastStripeEventCreated(entitlement) {
+  return entitlement?.metadata?.lastStripeEventCreated || null;
+}
+
+/**
+ * Check if this event is newer than the last processed event for this entitlement
+ * @param {number} eventCreated - Stripe event.created timestamp
+ * @param {object} entitlement
+ * @returns {boolean} true if this event should be applied
+ */
+function shouldApplyEvent(eventCreated, entitlement) {
+  const lastCreated = getLastStripeEventCreated(entitlement);
+  if (!lastCreated) return true;
+  return eventCreated > lastCreated;
 }
 
 // -----------------------------------------------------------------------------
@@ -134,6 +165,109 @@ async function findAffiliate(affiliateCode) {
     { filters: { code: affiliateCode, isActive: true } }
   );
   return affiliates[0] || null;
+}
+
+// -----------------------------------------------------------------------------
+// Unified Subscription Update Logic
+// -----------------------------------------------------------------------------
+
+/**
+ * Map Stripe subscription status to our entitlement status
+ * @param {string} stripeStatus
+ * @returns {string}
+ */
+function mapStripeStatusToEntitlementStatus(stripeStatus) {
+  switch (stripeStatus) {
+    case "active":
+    case "trialing":
+      return "active";
+    case "past_due":
+    case "unpaid":
+      return "inactive";
+    case "canceled":
+    case "incomplete_expired":
+      return "canceled";
+    default:
+      return "inactive";
+  }
+}
+
+/**
+ * Apply Stripe subscription state to an entitlement
+ * This is the single source of truth for subscription → entitlement mapping
+ * 
+ * @param {object} subscription - Stripe subscription object
+ * @param {object} entitlement - Strapi entitlement record
+ * @param {number} eventCreated - Stripe event.created timestamp for out-of-order protection
+ * @returns {Promise<{applied: boolean, entitlement: object, reason?: string}>}
+ */
+async function applyStripeSubscriptionToEntitlement(subscription, entitlement, eventCreated) {
+  // FOUNDERS PROTECTION: Never modify lifetime entitlements
+  if (entitlement.isLifetime) {
+    strapi.log.info(
+      `[Webhook] Entitlement ${entitlement.id} is LIFETIME - preserving status (event=${eventCreated})`
+    );
+    return { applied: false, entitlement, reason: "lifetime_protected" };
+  }
+
+  // Out-of-order protection: skip if this event is older than what we've already processed
+  if (!shouldApplyEvent(eventCreated, entitlement)) {
+    strapi.log.info(
+      `[Webhook] Skipping out-of-order event for entitlement ${entitlement.id}: ` +
+      `event.created=${eventCreated} <= lastStripeEventCreated=${getLastStripeEventCreated(entitlement)}`
+    );
+    return { applied: false, entitlement, reason: "out_of_order" };
+  }
+
+  // Extract subscription data
+  const status = mapStripeStatusToEntitlementStatus(subscription.status);
+  const currentPeriodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : null;
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
+  const priceId = subscription.items?.data?.[0]?.price?.id;
+
+  // Update entitlement with subscription state
+  const updatedEntitlement = await strapi.entityService.update(
+    "api::entitlement.entitlement",
+    entitlement.id,
+    {
+      data: {
+        status,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+        expiresAt: cancelAtPeriodEnd ? currentPeriodEnd : null,
+        stripePriceId: priceId || entitlement.stripePriceId,
+        stripeCustomerId: subscription.customer || entitlement.stripeCustomerId,
+        // Store lastStripeEventCreated in metadata for out-of-order protection
+        metadata: {
+          ...(entitlement.metadata || {}),
+          lastStripeEventCreated: eventCreated,
+          lastStripeEventAt: new Date().toISOString(),
+        },
+      },
+    }
+  );
+
+  strapi.log.info(
+    `[Webhook] Applied subscription ${subscription.id} to entitlement ${entitlement.id}: ` +
+    `status=${status}, cancelAtPeriodEnd=${cancelAtPeriodEnd}, event.created=${eventCreated}`
+  );
+
+  return { applied: true, entitlement: updatedEntitlement };
+}
+
+/**
+ * Find entitlement by subscription ID
+ * @param {string} subscriptionId
+ * @returns {Promise<object|null>}
+ */
+async function findEntitlementBySubscriptionId(subscriptionId) {
+  const entitlements = await strapi.entityService.findMany(
+    "api::entitlement.entitlement",
+    { filters: { stripeSubscriptionId: subscriptionId } }
+  );
+  return entitlements[0] || null;
 }
 
 // -----------------------------------------------------------------------------
@@ -417,194 +551,137 @@ async function handleCheckoutSessionCompleted(session) {
 
 /**
  * Handle customer.subscription.created
- * Updates entitlement with subscription details
+ * Updates entitlement with subscription details using unified logic
  */
-async function handleSubscriptionCreated(subscription) {
-  strapi.log.info(`[Webhook] subscription.created: ${subscription.id}`);
-
-  // Find entitlement by stripeSubscriptionId
-  const entitlements = await strapi.entityService.findMany(
-    "api::entitlement.entitlement",
-    { filters: { stripeSubscriptionId: subscription.id } }
-  );
-
-  if (entitlements.length === 0) {
-    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscription.id}`);
-    return;
-  }
-
-  const entitlement = entitlements[0];
-
-  // FOUNDERS PROTECTION: Never modify lifetime entitlements
-  if (entitlement.isLifetime) {
-    strapi.log.info(
-      `[Webhook] Entitlement ${entitlement.id} is lifetime, skipping subscription update`
-    );
-    return;
-  }
-
-  const priceId = subscription.items?.data?.[0]?.price?.id;
-  const currentPeriodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000)
-    : null;
-
-  await strapi.entityService.update(
-    "api::entitlement.entitlement",
-    entitlement.id,
-    {
-      data: {
-        status: subscription.status === "active" ? "active" : "inactive",
-        stripePriceId: priceId || entitlement.stripePriceId,
-        currentPeriodEnd,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
-        stripeCustomerId: subscription.customer || entitlement.stripeCustomerId,
-      },
-    }
-  );
-
+async function handleSubscriptionCreated(subscription, eventCreated) {
   strapi.log.info(
-    `[Webhook] Updated entitlement ${entitlement.id} with subscription details`
+    `[Webhook] subscription.created: ${subscription.id}, event.created=${eventCreated}`
   );
+
+  const entitlement = await findEntitlementBySubscriptionId(subscription.id);
+
+  if (!entitlement) {
+    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscription.id}`);
+    return { applied: false, reason: "no_entitlement" };
+  }
+
+  const result = await applyStripeSubscriptionToEntitlement(subscription, entitlement, eventCreated);
+  return result;
 }
 
 /**
  * Handle customer.subscription.updated
- * Updates entitlement status, period end, cancel flag
+ * Updates entitlement status, period end, cancel flag using unified logic
  */
-async function handleSubscriptionUpdated(subscription) {
-  strapi.log.info(`[Webhook] subscription.updated: ${subscription.id}, status=${subscription.status}`);
-
-  // Find entitlement by stripeSubscriptionId
-  const entitlements = await strapi.entityService.findMany(
-    "api::entitlement.entitlement",
-    { filters: { stripeSubscriptionId: subscription.id } }
-  );
-
-  if (entitlements.length === 0) {
-    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscription.id}`);
-    return;
-  }
-
-  const entitlement = entitlements[0];
-
-  // FOUNDERS PROTECTION: Never modify lifetime entitlements
-  if (entitlement.isLifetime) {
-    strapi.log.info(
-      `[Webhook] Entitlement ${entitlement.id} is lifetime, preserving status`
-    );
-    return;
-  }
-
-  const currentPeriodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000)
-    : null;
-
-  // Map Stripe status to our status
-  let status = entitlement.status;
-  switch (subscription.status) {
-    case "active":
-    case "trialing":
-      status = "active";
-      break;
-    case "past_due":
-    case "unpaid":
-      status = "inactive";
-      break;
-    case "canceled":
-    case "incomplete_expired":
-      status = "canceled";
-      break;
-  }
-
-  await strapi.entityService.update(
-    "api::entitlement.entitlement",
-    entitlement.id,
-    {
-      data: {
-        status,
-        currentPeriodEnd,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
-        expiresAt: subscription.cancel_at_period_end ? currentPeriodEnd : null,
-      },
-    }
-  );
-
+async function handleSubscriptionUpdated(subscription, eventCreated) {
   strapi.log.info(
-    `[Webhook] Updated entitlement ${entitlement.id}: status=${status}, ` +
-      `cancelAtPeriodEnd=${subscription.cancel_at_period_end}`
+    `[Webhook] subscription.updated: ${subscription.id}, status=${subscription.status}, event.created=${eventCreated}`
   );
+
+  const entitlement = await findEntitlementBySubscriptionId(subscription.id);
+
+  if (!entitlement) {
+    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscription.id}`);
+    return { applied: false, reason: "no_entitlement" };
+  }
+
+  const result = await applyStripeSubscriptionToEntitlement(subscription, entitlement, eventCreated);
+  return result;
 }
 
 /**
  * Handle customer.subscription.deleted
- * Sets entitlement to canceled (unless lifetime)
+ * Sets entitlement to canceled (unless lifetime) using unified logic
  */
-async function handleSubscriptionDeleted(subscription) {
-  strapi.log.info(`[Webhook] subscription.deleted: ${subscription.id}`);
-
-  const entitlements = await strapi.entityService.findMany(
-    "api::entitlement.entitlement",
-    { filters: { stripeSubscriptionId: subscription.id } }
+async function handleSubscriptionDeleted(subscription, eventCreated) {
+  strapi.log.info(
+    `[Webhook] subscription.deleted: ${subscription.id}, event.created=${eventCreated}`
   );
 
-  if (entitlements.length === 0) {
-    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscription.id}`);
-    return;
-  }
+  const entitlement = await findEntitlementBySubscriptionId(subscription.id);
 
-  const entitlement = entitlements[0];
+  if (!entitlement) {
+    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscription.id}`);
+    return { applied: false, reason: "no_entitlement" };
+  }
 
   // FOUNDERS PROTECTION: Never cancel lifetime entitlements
   if (entitlement.isLifetime) {
     strapi.log.info(
       `[Webhook] Entitlement ${entitlement.id} is LIFETIME - NOT canceling despite subscription deletion`
     );
-    return;
+    return { applied: false, reason: "lifetime_protected" };
   }
 
-  await strapi.entityService.update(
+  // Out-of-order protection
+  if (!shouldApplyEvent(eventCreated, entitlement)) {
+    strapi.log.info(
+      `[Webhook] Skipping out-of-order delete event for entitlement ${entitlement.id}: ` +
+      `event.created=${eventCreated} <= lastStripeEventCreated=${getLastStripeEventCreated(entitlement)}`
+    );
+    return { applied: false, reason: "out_of_order" };
+  }
+
+  const updatedEntitlement = await strapi.entityService.update(
     "api::entitlement.entitlement",
     entitlement.id,
     {
       data: {
         status: "canceled",
         cancelAtPeriodEnd: true,
+        metadata: {
+          ...(entitlement.metadata || {}),
+          lastStripeEventCreated: eventCreated,
+          lastStripeEventAt: new Date().toISOString(),
+          canceledByEvent: "subscription.deleted",
+        },
       },
     }
   );
 
-  strapi.log.info(`[Webhook] Canceled entitlement ${entitlement.id}`);
+  strapi.log.info(
+    `[Webhook] Canceled entitlement ${entitlement.id} (subscription ${subscription.id})`
+  );
+
+  return { applied: true, entitlement: updatedEntitlement };
 }
 
 /**
  * Handle invoice.payment_succeeded
- * Can update entitlement period or log renewal
+ * Reactivates entitlement if payment was successful
  */
-async function handleInvoicePaymentSucceeded(invoice) {
-  strapi.log.info(`[Webhook] invoice.payment_succeeded: ${invoice.id}`);
+async function handleInvoicePaymentSucceeded(invoice, eventCreated) {
+  strapi.log.info(
+    `[Webhook] invoice.payment_succeeded: ${invoice.id}, event.created=${eventCreated}`
+  );
 
   const subscriptionId = invoice.subscription;
   if (!subscriptionId) {
     strapi.log.debug("[Webhook] Invoice has no subscription, likely one-time payment");
-    return;
+    return { applied: false, reason: "no_subscription" };
   }
 
-  const entitlements = await strapi.entityService.findMany(
-    "api::entitlement.entitlement",
-    { filters: { stripeSubscriptionId: subscriptionId } }
-  );
+  const entitlement = await findEntitlementBySubscriptionId(subscriptionId);
 
-  if (entitlements.length === 0) {
+  if (!entitlement) {
     strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscriptionId}`);
-    return;
+    return { applied: false, reason: "no_entitlement" };
   }
-
-  const entitlement = entitlements[0];
 
   // FOUNDERS PROTECTION
   if (entitlement.isLifetime) {
-    strapi.log.info(`[Webhook] Entitlement ${entitlement.id} is lifetime, skipping invoice update`);
-    return;
+    strapi.log.info(
+      `[Webhook] Entitlement ${entitlement.id} is lifetime, skipping invoice update`
+    );
+    return { applied: false, reason: "lifetime_protected" };
+  }
+
+  // Out-of-order protection
+  if (!shouldApplyEvent(eventCreated, entitlement)) {
+    strapi.log.info(
+      `[Webhook] Skipping out-of-order payment event for entitlement ${entitlement.id}`
+    );
+    return { applied: false, reason: "out_of_order" };
   }
 
   // Ensure entitlement is active after successful payment
@@ -612,9 +689,22 @@ async function handleInvoicePaymentSucceeded(invoice) {
     await strapi.entityService.update(
       "api::entitlement.entitlement",
       entitlement.id,
-      { data: { status: "active" } }
+      {
+        data: {
+          status: "active",
+          metadata: {
+            ...(entitlement.metadata || {}),
+            lastStripeEventCreated: eventCreated,
+            lastStripeEventAt: new Date().toISOString(),
+            reactivatedByEvent: "invoice.payment_succeeded",
+          },
+        },
+      }
     );
-    strapi.log.info(`[Webhook] Reactivated entitlement ${entitlement.id} after payment`);
+    strapi.log.info(
+      `[Webhook] Reactivated entitlement ${entitlement.id} after payment`
+    );
+    return { applied: true, action: "reactivated" };
   }
 
   // Update purchase with invoice ID if we can find it
@@ -630,48 +720,69 @@ async function handleInvoicePaymentSucceeded(invoice) {
       { data: { stripeInvoiceId: invoice.id } }
     );
   }
+
+  return { applied: true, action: "invoice_linked" };
 }
 
 /**
  * Handle invoice.payment_failed
- * Can mark entitlement as inactive (unless lifetime)
+ * Marks entitlement as inactive (unless lifetime)
  */
-async function handleInvoicePaymentFailed(invoice) {
-  strapi.log.info(`[Webhook] invoice.payment_failed: ${invoice.id}`);
-
-  const subscriptionId = invoice.subscription;
-  if (!subscriptionId) return;
-
-  const entitlements = await strapi.entityService.findMany(
-    "api::entitlement.entitlement",
-    { filters: { stripeSubscriptionId: subscriptionId } }
+async function handleInvoicePaymentFailed(invoice, eventCreated) {
+  strapi.log.info(
+    `[Webhook] invoice.payment_failed: ${invoice.id}, event.created=${eventCreated}`
   );
 
-  if (entitlements.length === 0) {
-    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscriptionId}`);
-    return;
+  const subscriptionId = invoice.subscription;
+  if (!subscriptionId) {
+    return { applied: false, reason: "no_subscription" };
   }
 
-  const entitlement = entitlements[0];
+  const entitlement = await findEntitlementBySubscriptionId(subscriptionId);
+
+  if (!entitlement) {
+    strapi.log.warn(`[Webhook] No entitlement found for subscription ${subscriptionId}`);
+    return { applied: false, reason: "no_entitlement" };
+  }
 
   // FOUNDERS PROTECTION
   if (entitlement.isLifetime) {
     strapi.log.info(
       `[Webhook] Entitlement ${entitlement.id} is lifetime, ignoring payment failure`
     );
-    return;
+    return { applied: false, reason: "lifetime_protected" };
+  }
+
+  // Out-of-order protection
+  if (!shouldApplyEvent(eventCreated, entitlement)) {
+    strapi.log.info(
+      `[Webhook] Skipping out-of-order payment failure for entitlement ${entitlement.id}`
+    );
+    return { applied: false, reason: "out_of_order" };
   }
 
   // Mark as inactive due to payment failure
   await strapi.entityService.update(
     "api::entitlement.entitlement",
     entitlement.id,
-    { data: { status: "inactive" } }
+    {
+      data: {
+        status: "inactive",
+        metadata: {
+          ...(entitlement.metadata || {}),
+          lastStripeEventCreated: eventCreated,
+          lastStripeEventAt: new Date().toISOString(),
+          deactivatedByEvent: "invoice.payment_failed",
+        },
+      },
+    }
   );
 
   strapi.log.warn(
     `[Webhook] Marked entitlement ${entitlement.id} as inactive due to payment failure`
   );
+
+  return { applied: true, action: "deactivated" };
 }
 
 // -----------------------------------------------------------------------------
@@ -686,6 +797,11 @@ async function handleInvoicePaymentFailed(invoice) {
 async function processStripeEvent(event) {
   const eventId = event.id;
   const eventType = event.type;
+  const eventCreated = event.created; // Unix timestamp for out-of-order protection
+
+  strapi.log.info(
+    `[Webhook] Processing event: type=${eventType}, id=${eventId}, created=${eventCreated}`
+  );
 
   // Check idempotency
   if (await isEventProcessed(eventId)) {
@@ -693,7 +809,7 @@ async function processStripeEvent(event) {
     return { status: "already_processed", eventId };
   }
 
-  let result = { status: "processed", eventId, eventType };
+  let result = { status: "processed", eventId, eventType, eventCreated };
 
   try {
     switch (eventType) {
@@ -702,23 +818,23 @@ async function processStripeEvent(event) {
         break;
 
       case "customer.subscription.created":
-        await handleSubscriptionCreated(event.data.object);
+        result.data = await handleSubscriptionCreated(event.data.object, eventCreated);
         break;
 
       case "customer.subscription.updated":
-        await handleSubscriptionUpdated(event.data.object);
+        result.data = await handleSubscriptionUpdated(event.data.object, eventCreated);
         break;
 
       case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(event.data.object);
+        result.data = await handleSubscriptionDeleted(event.data.object, eventCreated);
         break;
 
       case "invoice.payment_succeeded":
-        await handleInvoicePaymentSucceeded(event.data.object);
+        result.data = await handleInvoicePaymentSucceeded(event.data.object, eventCreated);
         break;
 
       case "invoice.payment_failed":
-        await handleInvoicePaymentFailed(event.data.object);
+        result.data = await handleInvoicePaymentFailed(event.data.object, eventCreated);
         break;
 
       default:
@@ -726,8 +842,8 @@ async function processStripeEvent(event) {
         result.status = "unhandled";
     }
 
-    // Mark event as processed
-    await markEventProcessed(eventId, eventType, event.data?.object);
+    // Mark event as processed with eventCreated for tracking
+    await markEventProcessed(eventId, eventType, event.data?.object, eventCreated);
   } catch (err) {
     strapi.log.error(`[Webhook] Error processing ${eventType}: ${err.message}`);
     strapi.log.error(err.stack);

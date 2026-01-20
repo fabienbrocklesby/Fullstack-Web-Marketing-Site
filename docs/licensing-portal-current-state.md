@@ -1,7 +1,7 @@
 # LightLane Licensing Portal - Current State (Verified)
 
 **Audit Date:** 2026-01-19  
-**Last Updated:** Full audit with webhook-driven fulfillment (server truth model)  
+**Last Updated:** Stage 3 complete - webhook-only subscription management with out-of-order protection  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
 
 ---
@@ -20,7 +20,7 @@
 
 ### ✏️ Corrected Items
 
-- **GAP-001 RESOLVED**: `handleSuccessfulPayment` bug is FIXED. Webhook now uses `processStripeEvent()` from `utils/stripe-webhook-handler.js` (~L682-736)
+- **GAP-001 RESOLVED**: `handleSuccessfulPayment` bug is FIXED. Webhook now uses `processStripeEvent()` from `utils/stripe-webhook-handler.js`
 - **Webhook is now server truth**: `processCustomerPurchase` returns 410 Gone (deprecated). Fulfillment is exclusively via webhook.
 - **New routes added**: `/api/stripe/billing-portal`, `/api/customer/purchase-status`, `/api/pricing`, `/api/customer-checkout-subscription`
 - **License reset now protected**: Uses `admin-internal` middleware requiring `ADMIN_INTERNAL_TOKEN`
@@ -28,9 +28,12 @@
 - **Auth endpoints rate-limited**: Via `auth-rate-limit` middleware (5 req/min/IP)
 - Updated line number references to match current codebase
 
-### ➕ Added Items
+### ➕ Added Items (Stage 3)
 
-- New `stripe-event` collection for idempotency tracking
+- **Out-of-order protection**: Uses `lastStripeEventCreated` in entitlement metadata to prevent older events from overwriting newer state
+- **Unified subscription update function**: `applyStripeSubscriptionToEntitlement()` provides single source of truth for subscription→entitlement mapping
+- **Enhanced idempotency**: `markEventProcessed()` now stores `eventCreated` timestamp
+- **Removed manual resync**: No customer-facing resync endpoint - webhooks are sole update mechanism
 - Subscription checkout flow documentation
 - Billing portal endpoint
 - Purchase status polling endpoint (for webhook-based flow)
@@ -374,7 +377,7 @@ The polling function uses exponential backoff (1s initial, max 5s, max 20 attemp
 
 **Route:** `POST /api/stripe/webhook`
 **Controller:** `backend/src/api/custom/controllers/custom.js:278-326` (`stripeWebhook`)
-**Event Processor:** `backend/src/utils/stripe-webhook-handler.js:682-736` (`processStripeEvent`)
+**Event Processor:** `backend/src/utils/stripe-webhook-handler.js` (`processStripeEvent`)
 
 ### Signature Verification (REQUIRED)
 
@@ -384,30 +387,71 @@ The polling function uses exponential backoff (1s initial, max 5s, max 20 attemp
 - Uses raw body from `stripe-raw-body` middleware for signature verification
 - Returns 400 if signature verification fails
 
-### Idempotency
+### Idempotency & Out-of-Order Protection
 
-**Location:** `utils/stripe-webhook-handler.js:23-48`
+**Location:** `utils/stripe-webhook-handler.js:23-80`
 
-- Uses `stripe-event` collection to track processed events
-- Checks `isEventProcessed(eventId)` before processing
-- Marks event as processed after successful handling
+Webhooks are the single source of truth for subscription state. The system provides:
+
+1. **Event-level idempotency:** Uses `stripe-event` collection to track processed events
+   - `isEventProcessed(eventId)` check before processing
+   - `markEventProcessed(eventId, eventType, payload, eventCreated)` after successful handling
+
+2. **Out-of-order protection:** Uses `lastStripeEventCreated` in entitlement metadata
+   - `shouldApplyEvent(eventCreated, entitlement)` compares timestamps
+   - `getLastStripeEventCreated(entitlement)` retrieves from metadata
+   - Older events are logged and skipped, not applied
+
+**Metadata stored in entitlement.metadata:**
+```json
+{
+  "lastStripeEventCreated": 1705689600,
+  "lastStripeEventAt": "2025-01-19T12:00:00.000Z",
+  "reactivatedByEvent": "invoice.payment_succeeded"
+}
+```
+
+### Unified Subscription Update Logic
+
+**Location:** `utils/stripe-webhook-handler.js` (~L170-250)
+
+All subscription handlers use `applyStripeSubscriptionToEntitlement()` which:
+1. Checks founders protection (lifetime entitlements are never modified)
+2. Checks out-of-order protection (older events are skipped)
+3. Maps Stripe status → entitlement status via `mapStripeStatusToEntitlementStatus()`
+4. Updates: status, currentPeriodEnd, cancelAtPeriodEnd, expiresAt, metadata
+
+**Status mapping:**
+| Stripe Status       | Entitlement Status |
+|--------------------|--------------------|
+| active, trialing   | active             |
+| past_due, unpaid   | inactive           |
+| canceled, incomplete_expired | canceled |
 
 ### Events Handled
 
-| Event                              | Handler                              | Evidence                               |
-| ---------------------------------- | ------------------------------------ | -------------------------------------- |
-| `checkout.session.completed`       | `handleCheckoutSessionCompleted`     | `stripe-webhook-handler.js:188-395`    |
-| `customer.subscription.created`    | `handleSubscriptionCreated`          | `stripe-webhook-handler.js:400-445`    |
-| `customer.subscription.updated`    | `handleSubscriptionUpdated`          | `stripe-webhook-handler.js:450-525`    |
-| `customer.subscription.deleted`    | `handleSubscriptionDeleted`          | `stripe-webhook-handler.js:530-570`    |
-| `invoice.payment_succeeded`        | `handleInvoicePaymentSucceeded`      | `stripe-webhook-handler.js:575-620`    |
-| `invoice.payment_failed`           | `handleInvoicePaymentFailed`         | `stripe-webhook-handler.js:625-670`    |
-| All others                         | Logged as unhandled                  | `stripe-webhook-handler.js:725-726`    |
+| Event                              | Handler                         | Action                                 |
+| ---------------------------------- | ------------------------------- | -------------------------------------- |
+| `checkout.session.completed`       | `handleCheckoutSessionCompleted`| Creates Purchase, License-Key, Entitlement |
+| `customer.subscription.created`    | `handleSubscriptionCreated`     | Updates entitlement via unified function |
+| `customer.subscription.updated`    | `handleSubscriptionUpdated`     | Updates entitlement via unified function |
+| `customer.subscription.deleted`    | `handleSubscriptionDeleted`     | Sets status=canceled (with out-of-order check) |
+| `invoice.payment_succeeded`        | `handleInvoicePaymentSucceeded` | Reactivates entitlement if inactive    |
+| `invoice.payment_failed`           | `handleInvoicePaymentFailed`    | Sets status=inactive                   |
+| All others                         | Logged as unhandled             |                                        |
 
 ### Founders Protection
 
-All subscription event handlers check `entitlement.isLifetime` and skip modifications if true.
-**Evidence:** `stripe-webhook-handler.js:420-425, 490-495, 555-560, 605-610, 655-660`
+All subscription event handlers check `entitlement.isLifetime` FIRST and skip modifications if true.
+This ensures founders with lifetime licenses are never affected by subscription lifecycle events.
+
+### No Manual Resync
+
+There is no customer-facing resync endpoint. Webhooks are the sole mechanism for updating subscription state.
+This ensures:
+- Single source of truth (Stripe → webhook → entitlement)
+- Consistent audit trail via stripe-event collection
+- No race conditions from parallel manual/webhook updates
 
 ---
 

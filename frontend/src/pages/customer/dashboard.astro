@@ -702,6 +702,26 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       }
     }
 
+    // Helper: format date nicely (e.g., "20 Jan 2026")
+    function formatDate(dateStr: string | null | undefined): string | null {
+      if (!dateStr) return null;
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch {
+        return null;
+      }
+    }
+
+    // Helper: get pricing display for tier
+    function getTierPricing(tier: string | null, isLifetime: boolean): string {
+      if (isLifetime) return '';
+      const lowerTier = tier?.toLowerCase();
+      if (lowerTier === 'maker') return '$12/month';
+      if (lowerTier === 'pro') return '$24/month';
+      return '';
+    }
+
     // Render multiple entitlements as a list
     function renderEntitlementsList(data: any, container: HTMLElement | null) {
       if (!container) return;
@@ -728,6 +748,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       const entitlementCards = entitlements
         .map((ent: any, index: number) => {
           const {
+            id: entitlementId,
             tier,
             status,
             isLifetime,
@@ -743,26 +764,29 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
             ? tier.charAt(0).toUpperCase() + tier.slice(1)
             : "License";
 
+          // Get pricing for subscription tiers
+          const pricingDisplay = getTierPricing(tier, isLifetime);
+
           // Determine badge style based on status
           let statusBadge = "";
           let statusMessage = "";
           let showBillingButton = false;
 
-          if (isLifetime) {
-            statusBadge = `<span class="badge badge-accent">Lifetime</span>`;
+          // ONLY show Lifetime (Founders) for isLifetime === true
+          if (isLifetime === true) {
+            statusBadge = `<span class="badge badge-accent">Lifetime (Founders)</span>`;
             statusMessage = "No renewal needed";
             showBillingButton = false;
           } else if (status === "active") {
             statusBadge = `<span class="badge badge-success">Active</span>`;
             // Use currentPeriodEnd for subscriptions, fall back to expiresAt
             const renewDateSource = currentPeriodEnd || expiresAt;
-            const renewDate = renewDateSource
-              ? new Date(renewDateSource).toLocaleDateString()
-              : null;
+            const renewDate = formatDate(renewDateSource);
             if (cancelAtPeriodEnd && renewDate) {
-              statusMessage = `Cancels ${renewDate}`;
+              statusMessage = `Cancels on ${renewDate}`;
+              statusBadge = `<span class="badge badge-warning">Canceling</span>`;
             } else if (renewDate) {
-              statusMessage = `Renews ${renewDate}`;
+              statusMessage = `Renews on ${renewDate}`;
             } else {
               statusMessage = "Active subscription";
             }
@@ -773,7 +797,8 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
             showBillingButton = true;
           } else if (status === "canceled" || status === "expired") {
             statusBadge = `<span class="badge badge-error">${status === "canceled" ? "Canceled" : "Expired"}</span>`;
-            statusMessage = "Subscription ended";
+            const endDate = formatDate(currentPeriodEnd || expiresAt);
+            statusMessage = endDate ? `Ended ${endDate}` : "Subscription ended";
             showBillingButton = true;
           } else if (status === "inactive") {
             statusBadge = `<span class="badge badge-neutral">Inactive</span>`;
@@ -798,34 +823,35 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
             ? `<span class="font-mono text-xs opacity-50">${licenseKey.key.substring(0, 8)}...</span>`
             : "";
 
+          // Show billing button for each non-lifetime subscription
+          const billingButton = showBillingButton
+            ? `<button class="btn btn-outline btn-sm manage-billing-btn" data-entitlement-id="${entitlementId}" onclick="openBillingPortal(this)">Manage Billing</button>`
+            : '';
+
           return `
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-base-200 rounded-lg ${index > 0 ? "mt-3" : ""}">
+          <div class="entitlement-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-base-200 rounded-lg ${index > 0 ? "mt-3" : ""}" data-entitlement-id="${entitlementId}">
             <div class="flex-1">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-semibold">${tierDisplay}</span>
+                <span class="font-semibold text-lg">${tierDisplay}</span>
+                ${pricingDisplay ? `<span class="text-sm opacity-70">${pricingDisplay}</span>` : ''}
                 ${statusBadge}
-                ${devicesInfo}
               </div>
-              <div class="flex items-center gap-2 mt-1">
+              <div class="flex items-center gap-2 mt-1 flex-wrap">
                 <span class="text-sm opacity-70">${statusMessage}</span>
+                ${devicesInfo}
                 ${licenseKeyInfo}
               </div>
             </div>
-            ${
-              showBillingButton && index === 0
-                ? `
-              <button class="btn btn-outline btn-sm" id="manage-billing-btn" onclick="openBillingPortal()">
-                Manage Billing
-              </button>
-            `
-                : ""
-            }
+            <div class="flex items-center gap-2">
+              ${billingButton}
+            </div>
+            <p class="billing-error text-error text-sm hidden w-full mt-2"></p>
           </div>
         `;
         })
         .join("");
 
-      // Add billing error placeholder and summary
+      // Add summary section
       const hasAnySubscription = entitlements.some(
         (e: any) => !e.isLifetime && e.status === "active",
       );
@@ -835,26 +861,26 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
           ${entitlementCards}
           <p id="billing-error" class="text-error text-sm hidden mt-2"></p>
           ${
-            hasAnySubscription
-              ? ""
-              : `
+            !hasAnySubscription
+              ? `
             <div class="mt-4 pt-4 border-t border-base-300">
               <button class="btn btn-primary btn-sm" onclick="document.getElementById('open-purchase')?.click()">
                 Add Another License
               </button>
             </div>
           `
+              : ''
           }
         </div>
       `;
     }
 
-    // Global function to open billing portal
-    (window as any).openBillingPortal = async function () {
-      const btn = document.getElementById(
-        "manage-billing-btn",
-      ) as HTMLButtonElement;
-      const errorEl = document.getElementById("billing-error");
+    // Global function to open billing portal (now accepts button element for per-card error display)
+    (window as any).openBillingPortal = async function (btnElement?: HTMLButtonElement) {
+      const btn = btnElement || document.querySelector('.manage-billing-btn') as HTMLButtonElement;
+      // Find the error element within the same card, or fall back to global
+      const card = btn?.closest('.entitlement-card');
+      const errorEl = card?.querySelector('.billing-error') || document.getElementById("billing-error");
 
       if (btn) {
         btn.disabled = true;
@@ -902,13 +928,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         }
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Manage Billing
-          `;
+          btn.innerHTML = `Manage Billing`;
         }
       }
     };
