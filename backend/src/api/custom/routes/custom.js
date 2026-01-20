@@ -250,5 +250,40 @@ module.exports = {
         middlewares: ["global::customer-auth", "global::license-rate-limit"],
       },
     },
+
+    // =========================================================================
+    // Stage 5: Offline Refresh (Challenge/Response) + Lease Token Verification
+    // =========================================================================
+
+    // Generate offline challenge token (portal user)
+    {
+      method: "POST",
+      path: "/licence/offline-challenge",
+      handler: "custom.offlineChallenge",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Redeem offline challenge for lease token (portal user)
+    {
+      method: "POST",
+      path: "/licence/offline-refresh",
+      handler: "custom.offlineRefresh",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Debug: verify a lease token
+    {
+      method: "POST",
+      path: "/licence/verify-lease",
+      handler: "custom.verifyLease",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
   ],
 };

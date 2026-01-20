@@ -2549,7 +2549,8 @@ module.exports = {
   /**
    * POST /api/device/register
    * Register a device for the authenticated customer
-   * Body: { deviceId: string, publicKey: string, deviceName?: string, platform?: string }
+   * Body: { deviceId: string, publicKey?: string, deviceName?: string, platform?: string }
+   * Note: publicKey is optional for portal-initiated registrations
    */
   async deviceRegister(ctx) {
     const crypto = require("crypto");
@@ -2565,7 +2566,7 @@ module.exports = {
       const { deviceId, publicKey, deviceName, platform } = ctx.request.body;
 
       // Validate required fields
-      if (!deviceId || typeof deviceId !== "string" || deviceId.length < 8) {
+      if (!deviceId || typeof deviceId !== "string" || deviceId.length < 3) {
         audit.deviceRegister(ctx, {
           outcome: "failure",
           reason: "invalid_device_id",
@@ -2573,28 +2574,32 @@ module.exports = {
           deviceId,
         });
         ctx.status = 400;
-        ctx.body = { error: "deviceId is required and must be at least 8 characters" };
+        ctx.body = { error: "deviceId is required and must be at least 3 characters" };
         return;
       }
 
-      if (!publicKey || typeof publicKey !== "string" || publicKey.length < 32) {
-        audit.deviceRegister(ctx, {
-          outcome: "failure",
-          reason: "invalid_public_key",
-          customerId: customer.id,
-          deviceId,
-        });
-        ctx.status = 400;
-        ctx.body = { error: "publicKey is required and must be at least 32 characters" };
-        return;
+      // publicKey is now optional - portal registrations may not have one
+      // but if provided, validate it
+      let publicKeyHash = null;
+      if (publicKey && typeof publicKey === "string") {
+        if (publicKey.length < 32) {
+          audit.deviceRegister(ctx, {
+            outcome: "failure",
+            reason: "invalid_public_key",
+            customerId: customer.id,
+            deviceId,
+          });
+          ctx.status = 400;
+          ctx.body = { error: "If provided, publicKey must be at least 32 characters" };
+          return;
+        }
+        // Hash the public key for storage (truncated for audit logs)
+        publicKeyHash = crypto
+          .createHash("sha256")
+          .update(publicKey)
+          .digest("hex")
+          .slice(0, 16);
       }
-
-      // Hash the public key for storage (truncated for audit logs)
-      const publicKeyHash = crypto
-        .createHash("sha256")
-        .update(publicKey)
-        .digest("hex")
-        .slice(0, 16);
 
       // Check if device already exists
       const existingDevices = await strapi.entityService.findMany(
@@ -2961,12 +2966,13 @@ module.exports = {
 
   /**
    * POST /api/licence/refresh
-   * Refresh an entitlement binding (heartbeat)
+   * Refresh an entitlement binding (heartbeat) and issue lease token
    * Body: { entitlementId: number, deviceId: string, nonce?: string, signature?: string }
    *
-   * Stage 4: Just updates lastSeenAt. Stage 5 will add lease token verification.
+   * Stage 5: Returns lease token for subscriptions. Lifetime entitlements get leaseRequired:false.
    */
   async licenceRefresh(ctx) {
+    const { mintLeaseToken } = require("../../../utils/lease-token");
     try {
       const customer = ctx.state.customer;
       if (!customer) {
@@ -3098,10 +3104,10 @@ module.exports = {
         return;
       }
 
-      // TODO Stage 5: Validate nonce/signature for replay protection
-      // For now, just log if provided
+      // Stage 5: Nonce/signature validation logged but not enforced yet
+      // Future: verify device signature over nonce to prevent replay
       if (nonce) {
-        strapi.log.debug(`[licenceRefresh] Nonce provided (Stage 5 will verify): ${nonce.slice(0, 8)}...`);
+        strapi.log.debug(`[licenceRefresh] Nonce provided: ${nonce.slice(0, 8)}...`);
       }
 
       // Update lastSeenAt on device
@@ -3111,6 +3117,42 @@ module.exports = {
         device.id,
         { data: { lastSeenAt: now } }
       );
+
+      // Stage 5: Mint lease token for subscriptions
+      let leaseData = {
+        leaseRequired: false,
+        leaseToken: null,
+        leaseExpiresAt: null,
+      };
+
+      if (!entitlement.isLifetime) {
+        // Subscription-based entitlement: mint a lease token
+        const lease = mintLeaseToken({
+          entitlementId: entitlement.id,
+          customerId: customer.id,
+          deviceId,
+          tier: entitlement.tier,
+          isLifetime: false,
+        });
+
+        if (lease) {
+          leaseData = {
+            leaseRequired: true,
+            leaseToken: lease.token,
+            leaseExpiresAt: lease.expiresAt,
+          };
+
+          // Log lease issuance
+          audit.leaseIssued(ctx, {
+            outcome: "success",
+            reason: "online_refresh",
+            customerId: customer.id,
+            entitlementId: entitlement.id,
+            deviceId,
+            jti: lease.jti,
+          });
+        }
+      }
 
       audit.deviceRefresh(ctx, {
         outcome: "success",
@@ -3126,7 +3168,9 @@ module.exports = {
         isLifetime: entitlement.isLifetime,
         expiresAt: entitlement.expiresAt,
         currentPeriodEnd: entitlement.currentPeriodEnd,
-        // TODO Stage 5: Return signed lease token here
+        serverTime: now.toISOString(),
+        // Stage 5: Lease token fields
+        ...leaseData,
       };
     } catch (err) {
       strapi.log.error(`[licenceRefresh] Error: ${err.message}`);
@@ -3254,6 +3298,456 @@ module.exports = {
       };
     } catch (err) {
       strapi.log.error(`[licenceDeactivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error" };
+    }
+  },
+
+  // =========================================================================
+  // Stage 5: Offline Refresh (Challenge/Response) + Lease Token Verification
+  // =========================================================================
+
+  /**
+   * POST /api/licence/offline-challenge
+   * Generate a challenge token for offline refresh flow.
+   * Auth: customer-auth required (portal user)
+   * Body: { entitlementId: number, deviceId: string, publicKey?: string, deviceName?: string }
+   */
+  async offlineChallenge(ctx) {
+    const { mintOfflineChallenge } = require("../../../utils/lease-token");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        ctx.status = 401;
+        ctx.body = { error: "Authentication required" };
+        return;
+      }
+
+      const { entitlementId, deviceId, publicKey, deviceName } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId || !deviceId) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "missing_fields",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "entitlementId and deviceId are required" };
+        return;
+      }
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Entitlement not found" };
+        return;
+      }
+
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "You do not own this entitlement" };
+        return;
+      }
+
+      // Check entitlement is active
+      if (entitlement.status !== "active") {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Entitlement is not active", status: entitlement.status };
+        return;
+      }
+
+      // Verify device is registered to customer
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Device not found" };
+        return;
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is not registered to your account" };
+        return;
+      }
+
+      // Mint challenge
+      const challengeData = mintOfflineChallenge({
+        entitlementId: parseInt(entitlementId, 10),
+        customerId: customer.id,
+        deviceId,
+      });
+
+      audit.offlineChallenge(ctx, {
+        outcome: "success",
+        reason: "challenge_issued",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        nonce: challengeData.nonce,
+      });
+
+      ctx.body = {
+        challenge: challengeData.challenge,
+        expiresAt: challengeData.expiresAt,
+        serverTime: challengeData.serverTime,
+        // Include entitlement info for display
+        entitlement: {
+          id: entitlement.id,
+          tier: entitlement.tier,
+          isLifetime: entitlement.isLifetime,
+        },
+      };
+    } catch (err) {
+      strapi.log.error(`[offlineChallenge] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error" };
+    }
+  },
+
+  /**
+   * POST /api/licence/offline-refresh
+   * Redeem a challenge token for a new lease token.
+   * Auth: customer-auth required (portal user logged in)
+   * Body: { challenge: string }
+   */
+  async offlineRefresh(ctx) {
+    const { verifyOfflineChallenge, mintLeaseToken } = require("../../../utils/lease-token");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        ctx.status = 401;
+        ctx.body = { error: "Authentication required" };
+        return;
+      }
+
+      const { challenge } = ctx.request.body;
+
+      if (!challenge) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "missing_challenge",
+          customerId: customer.id,
+        });
+        ctx.status = 400;
+        ctx.body = { error: "challenge is required" };
+        return;
+      }
+
+      // Verify challenge
+      let decoded;
+      try {
+        decoded = verifyOfflineChallenge(challenge);
+      } catch (verifyErr) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: verifyErr.code === "CHALLENGE_EXPIRED" ? "challenge_expired" : "invalid_challenge",
+          customerId: customer.id,
+          error: verifyErr.message,
+        });
+        ctx.status = 400;
+        ctx.body = {
+          error: verifyErr.code === "CHALLENGE_EXPIRED" ? "Challenge has expired" : "Invalid challenge",
+          code: verifyErr.code,
+        };
+        return;
+      }
+
+      const { entitlementId, deviceId, nonce } = decoded;
+      const jti = decoded.jti || nonce; // jti is the nonce
+
+      // Check replay: has this challenge been used before?
+      const existingUse = await strapi.entityService.findMany(
+        "api::offline-challenge.offline-challenge",
+        { filters: { jti }, limit: 1 }
+      );
+
+      if (existingUse && existingUse.length > 0) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "replay_rejected",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          jti,
+        });
+        ctx.status = 409;
+        ctx.body = { error: "Challenge has already been used (replay rejected)" };
+        return;
+      }
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Entitlement not found" };
+        return;
+      }
+
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "You do not own this entitlement" };
+        return;
+      }
+
+      // Check entitlement is active (or lifetime)
+      const isValid = entitlement.isLifetime || entitlement.status === "active";
+      if (!isValid) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Entitlement is not active", status: entitlement.status };
+        return;
+      }
+
+      // Verify device exists and is owned by customer
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 404;
+        ctx.body = { error: "Device not found" };
+        return;
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        ctx.status = 403;
+        ctx.body = { error: "Device is not registered to your account" };
+        return;
+      }
+
+      // Record challenge usage for replay protection
+      const now = new Date();
+      await strapi.entityService.create("api::offline-challenge.offline-challenge", {
+        data: {
+          jti,
+          entitlementId,
+          deviceId,
+          customerId: customer.id,
+          usedAt: now,
+          challengeIssuedAt: decoded.iat ? new Date(decoded.iat * 1000) : null,
+          challengeExpiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null,
+        },
+      });
+
+      // Lifetime entitlements don't need lease tokens
+      if (entitlement.isLifetime) {
+        audit.offlineRefresh(ctx, {
+          outcome: "success",
+          reason: "lifetime_no_lease_needed",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+
+        ctx.body = {
+          ok: true,
+          leaseRequired: false,
+          leaseToken: null,
+          leaseExpiresAt: null,
+          refreshCode: null,
+          message: "Lifetime entitlement does not require offline refresh",
+          serverTime: now.toISOString(),
+        };
+        return;
+      }
+
+      // Mint lease token for subscription
+      const lease = mintLeaseToken({
+        entitlementId,
+        customerId: customer.id,
+        deviceId,
+        tier: entitlement.tier,
+        isLifetime: false,
+      });
+
+      audit.offlineRefresh(ctx, {
+        outcome: "success",
+        reason: "lease_issued",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        leaseJti: lease.jti,
+      });
+
+      // Update device lastSeenAt
+      await strapi.entityService.update("api::device.device", device.id, {
+        data: { lastSeenAt: now },
+      });
+
+      ctx.body = {
+        ok: true,
+        leaseRequired: true,
+        leaseToken: lease.token,
+        leaseExpiresAt: lease.expiresAt,
+        refreshCode: lease.token, // refreshCode is the lease token for simplicity
+        serverTime: now.toISOString(),
+      };
+    } catch (err) {
+      strapi.log.error(`[offlineRefresh] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      ctx.status = 500;
+      ctx.body = { error: "Internal server error" };
+    }
+  },
+
+  /**
+   * POST /api/licence/verify-lease
+   * Debug endpoint to verify a lease token.
+   * Auth: customer-auth required
+   * Body: { leaseToken: string }
+   */
+  async verifyLease(ctx) {
+    const { verifyLeaseToken } = require("../../../utils/lease-token");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        ctx.status = 401;
+        ctx.body = { error: "Authentication required" };
+        return;
+      }
+
+      const { leaseToken } = ctx.request.body;
+
+      if (!leaseToken) {
+        ctx.status = 400;
+        ctx.body = { error: "leaseToken is required" };
+        return;
+      }
+
+      try {
+        const decoded = verifyLeaseToken(leaseToken);
+
+        // Verify the token belongs to this customer
+        if (decoded.customerId !== customer.id) {
+          ctx.status = 403;
+          ctx.body = { error: "Lease token does not belong to your account" };
+          return;
+        }
+
+        ctx.body = {
+          valid: true,
+          claims: {
+            entitlementId: decoded.entitlementId,
+            customerId: decoded.customerId,
+            deviceId: decoded.deviceId,
+            tier: decoded.tier,
+            isLifetime: decoded.isLifetime,
+            issuedAt: new Date(decoded.iat * 1000).toISOString(),
+            expiresAt: new Date(decoded.exp * 1000).toISOString(),
+            jti: decoded.jti,
+          },
+          serverTime: new Date().toISOString(),
+        };
+      } catch (verifyErr) {
+        ctx.status = 400;
+        ctx.body = {
+          valid: false,
+          error: verifyErr.message,
+          code: verifyErr.code,
+          expiredAt: verifyErr.expiredAt ? verifyErr.expiredAt.toISOString() : null,
+        };
+      }
+    } catch (err) {
+      strapi.log.error(`[verifyLease] Error: ${err.message}`);
       strapi.log.error(err.stack);
       ctx.status = 500;
       ctx.body = { error: "Internal server error" };

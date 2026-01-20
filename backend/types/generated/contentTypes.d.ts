@@ -1455,6 +1455,43 @@ export interface ApiMailingListSignupMailingListSignup
   };
 }
 
+export interface ApiOfflineChallengeOfflineChallenge
+  extends Schema.CollectionType {
+  collectionName: 'offline_challenges';
+  info: {
+    singularName: 'offline-challenge';
+    pluralName: 'offline-challenges';
+    displayName: 'Offline Challenge';
+    description: 'Tracks used offline challenge tokens for replay protection (Stage 5)';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    jti: Attribute.String & Attribute.Required & Attribute.Unique;
+    entitlementId: Attribute.Integer & Attribute.Required;
+    deviceId: Attribute.String & Attribute.Required;
+    customerId: Attribute.Integer;
+    usedAt: Attribute.DateTime & Attribute.Required;
+    challengeIssuedAt: Attribute.DateTime;
+    challengeExpiresAt: Attribute.DateTime;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::offline-challenge.offline-challenge',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::offline-challenge.offline-challenge',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiPagePage extends Schema.CollectionType {
   collectionName: 'pages';
   info: {
@@ -1663,6 +1700,7 @@ declare module '@strapi/types' {
       'api::lead.lead': ApiLeadLead;
       'api::license-key.license-key': ApiLicenseKeyLicenseKey;
       'api::mailing-list-signup.mailing-list-signup': ApiMailingListSignupMailingListSignup;
+      'api::offline-challenge.offline-challenge': ApiOfflineChallengeOfflineChallenge;
       'api::page.page': ApiPagePage;
       'api::purchase.purchase': ApiPurchasePurchase;
       'api::release.release': ApiReleaseRelease;

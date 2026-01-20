@@ -264,6 +264,64 @@ const audit = {
     });
   },
 
+  // -------------------------------------------------------------------------
+  // Stage 5: Lease Token & Offline Refresh audit events
+  // -------------------------------------------------------------------------
+
+  /**
+   * Log lease token issuance (online refresh)
+   */
+  leaseIssued(ctx, { outcome, reason, customerId, entitlementId, deviceId, jti }) {
+    return auditLog("lease_issued", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: maskSensitive(deviceId, 8),
+        jti: jti ? jti.slice(0, 8) + "..." : null,
+      },
+    });
+  },
+
+  /**
+   * Log offline challenge generation
+   */
+  offlineChallenge(ctx, { outcome, reason, customerId, entitlementId, deviceId, nonce, error }) {
+    return auditLog("offline_challenge", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceId ? maskSensitive(deviceId, 8) : null,
+        nonce: nonce ? nonce.slice(0, 8) + "..." : null,
+        error: error || null,
+      },
+    });
+  },
+
+  /**
+   * Log offline refresh attempt
+   */
+  offlineRefresh(ctx, { outcome, reason, customerId, entitlementId, deviceId, jti, leaseJti, error }) {
+    return auditLog("offline_refresh", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceId ? maskSensitive(deviceId, 8) : null,
+        challengeJti: jti ? jti.slice(0, 8) + "..." : null,
+        leaseJti: leaseJti ? leaseJti.slice(0, 8) + "..." : null,
+        error: error || null,
+      },
+    });
+  },
+
   /**
    * Generic audit log
    */

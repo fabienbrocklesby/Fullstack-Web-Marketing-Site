@@ -530,6 +530,60 @@ module.exports = createCoreController(
       }
     },
 
+    // Get customer's registered devices and their entitlement bindings
+    // GET /api/customers/me/devices
+    async devices(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        // Fetch all devices for this customer
+        const devices = await strapi.entityService.findMany(
+          "api::device.device",
+          {
+            filters: {
+              customer: customerId,
+            },
+            populate: ["entitlement"],
+            sort: { lastSeenAt: "desc" },
+          }
+        );
+
+        // Sanitize output
+        const sanitizedDevices = devices.map((d) => ({
+          id: d.id,
+          deviceId: d.deviceId,
+          name: d.deviceName || null,
+          platform: d.platform || null,
+          lastSeen: d.lastSeenAt || null,
+          createdAt: d.createdAt,
+          // Binding info
+          entitlement: d.entitlement ? {
+            id: d.entitlement.id,
+            tier: d.entitlement.tier,
+            status: d.entitlement.status,
+            isLifetime: d.entitlement.isLifetime || false,
+          } : null,
+          isActivated: !!d.entitlement,
+        }));
+
+        ctx.body = {
+          devices: sanitizedDevices,
+          meta: {
+            total: sanitizedDevices.length,
+            activatedCount: sanitizedDevices.filter((d) => d.isActivated).length,
+          },
+        };
+      } catch (error) {
+        console.error("Get devices error:", error);
+        ctx.status = 500;
+        ctx.body = { error: "Failed to fetch devices" };
+      }
+    },
+
     // Create Stripe billing portal session
     async billingPortal(ctx) {
       try {

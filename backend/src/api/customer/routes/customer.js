@@ -77,6 +77,16 @@ module.exports = {
         middlewares: ["global::customer-auth"],
       },
     },
+    // Get customer's registered devices (Stage 4/5)
+    {
+      method: "GET",
+      path: "/customers/me/devices",
+      handler: "customer.devices",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
     // Create Stripe billing portal session (alias for customer convenience)
     {
       method: "POST",

@@ -1,8 +1,35 @@
 # LightLane Licensing Portal - Current State (Verified)
 
-**Audit Date:** 2026-01-20  
-**Last Updated:** Stage 4 implemented (verification checklist below)  
+**Audit Date:** 2026-01-21  
+**Last Updated:** Stage 5 + Portal UI fixes + Documentation overhaul  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
+
+---
+
+## Changelog (2026-01-21 Portal UI Fixes)
+
+### 🐛 Bug Fixes (Portal UI)
+
+- **FIXED**: Offline Refresh entitlement dropdown was empty - Added explicit `loadEntitlementsForStage45()` function that fetches and caches entitlements before populating dropdowns
+- **FIXED**: Legacy section was showing subscription keys - Now filters to only show keys where `source === 'legacy_purchase'` or standalone legacy keys
+- **FIXED**: Legacy section now hidden entirely when no legacy keys exist (starts with `hidden` class)
+- **FIXED**: Offline Refresh section now hidden if user has no subscription entitlements (only lifetime/subscription with `leaseRequired !== false`)
+
+### ✨ Improvements (Portal UI)
+
+- **Offline Refresh Error Handling**:
+  - Added inline error alert element (`#offline-error`) instead of browser alerts
+  - Specific error messages for 401 (redirect to login), 403 (access denied), 409 (token already redeemed), 400 (invalid token)
+  - Basic challenge token validation before API call
+
+- **Copy Lease Token UX**:
+  - Button now shows visual feedback (changes to "✓ Copied!" with success color for 2 seconds)
+  - Added helper text explaining to copy token to offline machine
+  - Changed button style to `btn-secondary` with clipboard emoji
+
+- **Entitlement Dropdown Labels**: Now show `TIER • Subscription (status)` format for clarity
+
+- **Removed fetch() interceptor**: Entitlements are now loaded explicitly via `loadEntitlementsForStage45()` instead of intercepting fetch calls
 
 ---
 
@@ -22,15 +49,87 @@
 - **Binding model**: Device record itself serves as binding (has `entitlement` relation, `boundAt`, `lastSeenAt`)
 - **maxDevices enforcement**: Prevents activating more devices than allowed per entitlement
 
-### � Bug Fixes (Stage 4 Verification - 2026-01-20)
+### 🐛 Bug Fixes (Stage 4 Verification - 2026-01-20)
 
 - **FIXED**: `custom/controllers/custom.js:1165` had `pro: 2` in fallback maxDevices mapping. Changed to `pro: 1` to match canonical TIER_CONFIG.
 
-### �🔮 Stage 5 TODOs (Not Yet Implemented)
+---
 
-- Lease token generation and verification
-- Nonce/signature replay protection
-- Offline deactivation code verification
+## Changelog (2026-01-20 Stage 5)
+
+### ➕ Added Items (Stage 5: Lease Tokens + Offline Refresh)
+
+- **Lease Token System**:
+  - Subscription entitlements now receive 7-day signed lease tokens on refresh
+  - Lifetime/founders entitlements return `leaseRequired: false` (no token needed)
+  - Lease tokens are RS256-signed JWTs with: `entitlementId`, `customerId`, `deviceId`, `tier`, `exp`, `jti`
+  - Configure TTL via `LEASE_TOKEN_TTL_SECONDS` env (default: 604800 = 7 days)
+  - Requires `JWT_PUBLIC_KEY` env for verification
+
+- **Updated `/api/licence/refresh`**:
+  - Now returns `leaseToken`, `leaseExpiresAt`, `leaseRequired`, `serverTime` for subscriptions
+  - Lifetime entitlements get `leaseRequired: false, leaseToken: null`
+
+- **New Offline Refresh Endpoints**:
+  - `POST /api/licence/offline-challenge` - Generate challenge token (customer-auth)
+  - `POST /api/licence/offline-refresh` - Redeem challenge for lease token (customer-auth)
+  - `POST /api/licence/verify-lease` - Debug endpoint to verify lease tokens
+
+- **Replay Protection**:
+  - New `offline-challenge` content-type stores used challenge `jti` values
+  - Replay attempts return 409 Conflict
+
+- **New Audit Events**:
+  - `lease_issued` - When lease token is minted (online refresh)
+  - `offline_challenge` - Challenge generation attempts
+  - `offline_refresh` - Challenge redemption attempts (success/failure/replay)
+
+- **New Utils**:
+  - `backend/src/utils/lease-token.js` - `mintLeaseToken()`, `verifyLeaseToken()`, `mintOfflineChallenge()`, `verifyOfflineChallenge()`
+
+---
+
+## Changelog (2026-01-20 Portal UI)
+
+### ➕ Added Items (Stage 4/5 Portal UI)
+
+- **New Backend Endpoint**:
+  - `GET /api/customers/me/devices` - List customer's registered devices with entitlement bindings
+  - Returns: `{ devices: [{ id, deviceId, name, platform, lastSeen, entitlement, isActivated }], meta: { total, activatedCount } }`
+
+- **New Portal Sections** (`frontend/src/pages/customer/dashboard.astro`):
+  1. **Device Activations (New System)** - Table showing registered devices with:
+     - Register Device button + modal
+     - Device list with platform icons, status badges, last seen timestamp
+     - Per-device actions: Activate, Refresh, Deactivate
+  2. **Offline Refresh (Factory Machines)** - Form for air-gapped devices:
+     - Select entitlement and device dropdowns
+     - Challenge token input textarea
+     - Redeem button → displays lease token with expiry details
+     - Copy-to-clipboard functionality
+
+- **New Modals**:
+  - `register_device_modal` - Device ID, name (optional), platform (optional)
+  - `activate_device_modal` - Select entitlement from active ones
+  - `deactivate_device_modal` - Confirmation with device/entitlement info
+  - `refresh_device_modal` - Manual refresh/heartbeat trigger
+
+- **Legacy Section Renamed**:
+  - "Your License Keys" → "License Keys (Legacy)" with subtitle "MAC-address based activation for older systems"
+
+- **JavaScript Functions Added**:
+  - `loadDevices()` - Fetch and cache customer devices
+  - `renderDevicesList()` - Display devices table
+  - `openActivateDeviceModal()`, `openDeactivateDeviceModal()`, `openRefreshDeviceModal()` - Modal handlers
+  - `populateOfflineDropdowns()` - Fill entitlement/device selects for offline refresh
+  - `showLeaseTokenResult()` - Display generated lease token
+  - `copyLeaseToken()`, `resetOfflineRefresh()` - UI utilities
+
+### 🔮 Stage 6+ TODOs (Not Yet Implemented)
+
+- Device-side signature verification (nonce signing)
+- Offline deactivation code verification (cryptographic proof)
+- Desktop app integration with lease token storage
 
 ---
 
@@ -75,6 +174,251 @@
 
 ---
 
+## How Activation Works (Human Overview)
+
+> **This section explains the three activation flows in plain English.**
+
+### Overview Diagram
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        ACTIVATION FLOW OVERVIEW                        │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  FLOW A: Legacy MAC-Based (deprecated, portal only)                    │
+│  ─────────────────────────────────────────────────────────────────     │
+│  Customer Portal → Generate Activation Code → Paste into Desktop App   │
+│  Uses: license-key.machineId (MAC hash), license-key.jti              │
+│  Endpoints: /api/license/activate, /api/license/deactivate            │
+│                                                                        │
+│  FLOW B: Stage 4 Online Device Activation                              │
+│  ─────────────────────────────────────────────────────────────────     │
+│  Desktop App → Register Device → Activate Entitlement → Refresh        │
+│  Uses: device.deviceId + device.publicKeyHash, device↔entitlement      │
+│  Endpoints: /api/device/register, /api/licence/activate, refresh, etc  │
+│                                                                        │
+│  FLOW C: Stage 5 Subscription Lease Tokens                             │
+│  ─────────────────────────────────────────────────────────────────     │
+│  Online: /api/licence/refresh → returns leaseToken (7-day JWT)         │
+│  Offline: /api/licence/offline-challenge + offline-refresh             │
+│  Uses: RS256-signed JWT, replay protection via offline-challenge jti   │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Flow A: Legacy MAC-Based Activation (Portal Only)
+
+**When used:** Customers with existing license keys (pre-Stage 4), shown in "License Keys (Legacy)" section.
+
+**How it works:**
+
+1. Customer logs into portal, sees their license key
+2. Customer clicks "Generate Activation Code" for a license
+3. Backend generates a signed JWT activation code containing `machineId` (from `license-key.machineId`)
+4. Customer copies code and pastes into desktop app
+5. Desktop app validates JWT and activates
+
+**Key data:**
+
+- `license-key.machineId` — Normalized MAC address hash (legacy identifier)
+- `license-key.jti` — JWT ID for current activation token
+- `license-key.status` — `unused` or `active`
+
+**Verified in code:** `custom/controllers/custom.js:1096-1415` (licenseActivate, licenseDeactivate)
+
+### Flow B: Stage 4 Device-Based Activation (Online)
+
+**When used:** All new activations. Desktop app communicates directly with backend.
+
+**What is `deviceId`?**
+
+> ⚠️ **IMPORTANT:** `deviceId` is NOT a MAC address! It's a stable machine identifier generated by the desktop app (e.g., UUID, hardware fingerprint). The desktop app owns the format.
+
+**How it works:**
+
+1. Desktop app generates a stable `deviceId` and optional keypair
+2. App calls `POST /api/device/register` with `deviceId` + `publicKey`
+3. User selects which entitlement to activate
+4. App calls `POST /api/licence/activate` with `entitlementId` + `deviceId`
+5. Backend checks `maxDevices` limit, binds device to entitlement
+6. App periodically calls `POST /api/licence/refresh` as heartbeat
+
+**Key data:**
+
+- `device.deviceId` — Stable identifier from desktop app
+- `device.publicKeyHash` — SHA256 of public key (for future signature verification)
+- `device.entitlement` — Relation to bound entitlement
+- `device.boundAt`, `device.lastSeenAt` — Timestamps
+
+**maxDevices per tier (verified in `utils/entitlement-mapping.js:128-145`):**
+| Tier | maxDevices |
+|------------|------------|
+| maker | 1 |
+| pro | 1 |
+| education | 5 |
+| enterprise | 10 |
+
+**Verified in code:** `custom/controllers/custom.js:2580-3180` (deviceRegister, licenceActivate, licenceRefresh, licenceDeactivate)
+
+### Flow C: Stage 5 Lease Tokens (Subscriptions Only)
+
+**When used:** Subscription entitlements need periodic verification. Lifetime/founders skip this.
+
+**How it works (online):**
+
+1. Desktop app calls `POST /api/licence/refresh`
+2. Backend checks if `entitlement.isLifetime`:
+   - **If true:** Returns `leaseRequired: false` (no token needed)
+   - **If false:** Mints 7-day RS256-signed lease token
+3. Desktop app stores lease token, uses it for offline validation
+
+**How it works (offline/air-gapped):**
+
+1. Admin generates challenge via portal: `POST /api/licence/offline-challenge`
+2. Admin copies challenge token to USB, brings to air-gapped machine
+3. Air-gapped app displays challenge
+4. Admin brings response back, redeems via `POST /api/licence/offline-refresh`
+5. Backend validates challenge, mints lease token
+6. Admin copies lease token to air-gapped machine
+
+**Lease token payload (JWT):**
+
+```json
+{
+  "sub": "entitlementId",
+  "customerId": 123,
+  "deviceId": "stable-device-id",
+  "tier": "pro",
+  "iat": 1705862400,
+  "exp": 1706467200,
+  "jti": "unique-token-id"
+}
+```
+
+**Replay protection:**
+
+- Challenge tokens have unique `jti` values
+- Used `jti` values stored in `offline-challenge` content-type
+- Replay attempts return `409 Conflict`
+
+**Verified in code:** `custom/controllers/custom.js:2968-3420` (licenceRefresh with lease minting), `utils/lease-token.js`
+
+### What You Should See in the Portal UI
+
+**1. Device Activations (New System)** — Top section
+
+- Register Device button + modal
+- Table of registered devices: name, platform, status, last seen
+- Per-device actions: Activate, Refresh, Deactivate
+
+**2. Offline Refresh (Factory Machines)** — Middle section
+
+- Dropdown: Select entitlement (only shows subscriptions where `leaseRequired !== false`)
+- Dropdown: Select device (only shows devices bound to selected entitlement)
+- Textarea: Paste challenge token
+- Button: Redeem → shows lease token + expiry + copy button
+- Note: Section hidden if user has no subscription entitlements
+
+**3. License Keys (Legacy)** — Bottom section (hidden if no legacy keys)
+
+- Only shows keys where `entitlement.source === 'legacy_purchase'` or no entitlement
+- Generate Activation Code button → copies code
+- Deactivate button → resets machine binding
+
+**Verified in code:** `frontend/src/pages/customer/dashboard.astro:1753-1820` (displayLicenseKeys), `dashboard.astro:2422` (loadEntitlementsForStage45), `dashboard.astro:3177` (populateOfflineDropdowns)
+
+---
+
+## Stage Boundaries (What's Implemented vs Planned)
+
+> **⚠️ CRITICAL:** Read this before assuming any feature exists.
+
+### ✅ Stage 4: Device-Based Activation (IMPLEMENTED)
+
+| Feature                                                       | Status         | Evidence                        |
+| ------------------------------------------------------------- | -------------- | ------------------------------- |
+| Device registration (`/api/device/register`)                  | ✅ Implemented | `custom.js:2580-2680`           |
+| Device activation (`/api/licence/activate`)                   | ✅ Implemented | `custom.js:2700-2960`           |
+| Device refresh (`/api/licence/refresh`)                       | ✅ Implemented | `custom.js:2968-3180`           |
+| Device deactivation (`/api/licence/deactivate`)               | ✅ Implemented | `custom.js:3184-3330`           |
+| maxDevices enforcement                                        | ✅ Implemented | `custom.js:2895-2915`           |
+| Audit events (device_register, activate, refresh, deactivate) | ✅ Implemented | Throughout controller           |
+| Rate limiting (10 req/min)                                    | ✅ Implemented | `license-rate-limit` middleware |
+
+### ✅ Stage 5: Lease Tokens (IMPLEMENTED)
+
+| Feature                               | Status         | Evidence                                |
+| ------------------------------------- | -------------- | --------------------------------------- |
+| Lease token minting for subscriptions | ✅ Implemented | `custom.js:3125-3145`, `lease-token.js` |
+| `leaseRequired: false` for lifetime   | ✅ Implemented | `custom.js:3118-3125`                   |
+| Offline challenge generation          | ✅ Implemented | `custom.js:3336-3420`                   |
+| Offline challenge redemption          | ✅ Implemented | `custom.js:3422-3540`                   |
+| Replay protection (jti storage)       | ✅ Implemented | `offline-challenge` content-type        |
+| Portal UI for offline refresh         | ✅ Implemented | `dashboard.astro:3150-3300`             |
+
+### ❌ NOT Implemented (Planned for Future Stages)
+
+| Feature                                       | Status     | Notes                                 |
+| --------------------------------------------- | ---------- | ------------------------------------- |
+| Device signature verification (nonce signing) | ❌ Planned | `nonce` param logged but not enforced |
+| Cryptographic offline deactivation code       | ❌ Planned | Currently uses DB lookup only         |
+| Desktop app integration with lease storage    | ❌ Planned | API ready, desktop app needs update   |
+
+---
+
+## Quick Troubleshooting
+
+### "Why does Offline Refresh show no entitlements?"
+
+**Possible causes:**
+
+1. **User has no subscription entitlements** — Offline refresh only applies to subscriptions, not lifetime/founders
+2. **Entitlement is inactive** — Check `entitlement.status` in admin
+3. **API not loading** — Check browser console for 401/403 errors
+
+**How to verify:** Check `loadEntitlementsForStage45()` response in browser DevTools Network tab.
+
+### "Why do subscription keys appear under Legacy section?"
+
+**They shouldn't.** The Legacy section filters to `entitlement.source === 'legacy_purchase'` only.
+
+**If they do appear:**
+
+- Check the entitlement's `source` field in Strapi admin
+- New purchases from webhooks should have `source: 'stripe_checkout'`
+- Only manually-created or migrated keys should have `source: 'legacy_purchase'`
+
+**Verified in code:** `dashboard.astro:1773-1785` (legacyKeys filter)
+
+### "Why do I see multiple Pro items in dropdowns?"
+
+**This is expected!** A customer can have:
+
+- **Pro (Founders)** — One-time purchase during founders sale, `isLifetime: true`
+- **Pro (Subscription)** — Monthly/annual subscription, `isLifetime: false`
+
+Both are valid entitlements. The dropdown shows `TIER • type (status)` to distinguish them.
+
+### "Device shows 'not activated' but I activated it"
+
+**Possible causes:**
+
+1. **Activated on different entitlement** — Each device↔entitlement binding is separate
+2. **Deactivated since** — Check `device.deactivatedAt` timestamp
+3. **maxDevices limit hit** — Another device took the slot
+
+**How to verify:** Call `GET /api/customers/me/devices` and check the `entitlement` field on the device.
+
+### "Offline challenge returns 409 Conflict"
+
+**Cause:** Challenge token was already redeemed (replay protection).
+
+**Solution:** Generate a new challenge token via the portal. Each challenge can only be redeemed once.
+
+**Verified in code:** `custom.js:3480-3500` (replay check)
+
+---
+
 ## 0. Repo Context
 
 ### Framework
@@ -105,20 +449,22 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 
 ### Environment Variables (Actually Read)
 
-| Variable                            | Usage                          | File:Line                                                                    |
-| ----------------------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
-| `STRIPE_SECRET_KEY`                 | Stripe API authentication      | `custom/controllers/custom.js:1`                                             |
-| `STRIPE_WEBHOOK_SECRET`             | Webhook signature verification | `custom/controllers/custom.js:~278`                                          |
-| `JWT_SECRET`                        | Customer token signing (HS256) | `customer/controllers/customer.js:92,170`, `middlewares/customer-auth.js:13` |
-| `JWT_PRIVATE_KEY`                   | License token signing (RS256)  | `utils/jwt-keys.js:16`, `custom/controllers/custom.js:~1117`                 |
-| `JWT_ISSUER`                        | JWT issuer claim               | `custom/controllers/custom.js:~1089`                                         |
-| `NODE_ENV`                          | Dev mode checks                | Multiple files                                                               |
-| `FOUNDERS_SALE_END_ISO`             | Founders sale end override     | `utils/entitlement-mapping.js:86-95` (default: 2026-01-11T23:59:59Z)         |
-| `ADMIN_INTERNAL_TOKEN`              | Admin endpoint protection      | `middlewares/admin-internal.js:14`                                           |
-| `STRIPE_PRICE_ID_MAKER_ONETIME`     | Stripe price ID for maker tier | `custom/controllers/custom.js:27`, `stripe-webhook-handler.js:150`           |
-| `STRIPE_PRICE_ID_PRO_ONETIME`       | Stripe price ID for pro tier   | `custom/controllers/custom.js:34`, `stripe-webhook-handler.js:151`           |
-| `STRIPE_PRICE_ID_MAKER_SUB_MONTHLY` | Maker subscription price       | `custom/controllers/custom.js:42`, `stripe-webhook-handler.js:152`           |
-| `STRIPE_PRICE_ID_PRO_SUB_MONTHLY`   | Pro subscription price         | `custom/controllers/custom.js:48`, `stripe-webhook-handler.js:153`           |
+| Variable                            | Usage                                      | File:Line                                                                    |
+| ----------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`                 | Stripe API authentication                  | `custom/controllers/custom.js:1`                                             |
+| `STRIPE_WEBHOOK_SECRET`             | Webhook signature verification             | `custom/controllers/custom.js:~278`                                          |
+| `JWT_SECRET`                        | Customer token signing (HS256)             | `customer/controllers/customer.js:92,170`, `middlewares/customer-auth.js:13` |
+| `JWT_PRIVATE_KEY`                   | License token signing (RS256)              | `utils/jwt-keys.js:16`, `custom/controllers/custom.js:~1117`                 |
+| `JWT_PUBLIC_KEY`                    | Lease token verification                   | `utils/lease-token.js:50,131,221`                                            |
+| `JWT_ISSUER`                        | JWT issuer claim                           | `custom/controllers/custom.js:~1089`                                         |
+| `LEASE_TOKEN_TTL_SECONDS`           | Lease token TTL (default: 604800 = 7 days) | `utils/lease-token.js:38`                                                    |
+| `NODE_ENV`                          | Dev mode checks                            | Multiple files                                                               |
+| `FOUNDERS_SALE_END_ISO`             | Founders sale end override                 | `utils/entitlement-mapping.js:86-95` (default: 2026-01-11T23:59:59Z)         |
+| `ADMIN_INTERNAL_TOKEN`              | Admin endpoint protection                  | `middlewares/admin-internal.js:14`                                           |
+| `STRIPE_PRICE_ID_MAKER_ONETIME`     | Stripe price ID for maker tier             | `custom/controllers/custom.js:27`, `stripe-webhook-handler.js:150`           |
+| `STRIPE_PRICE_ID_PRO_ONETIME`       | Stripe price ID for pro tier               | `custom/controllers/custom.js:34`, `stripe-webhook-handler.js:151`           |
+| `STRIPE_PRICE_ID_MAKER_SUB_MONTHLY` | Maker subscription price                   | `custom/controllers/custom.js:42`, `stripe-webhook-handler.js:152`           |
+| `STRIPE_PRICE_ID_PRO_SUB_MONTHLY`   | Pro subscription price                     | `custom/controllers/custom.js:48`, `stripe-webhook-handler.js:153`           |
 
 ---
 
@@ -1110,11 +1456,131 @@ Stage 4 introduces a clean, unified activation API that uses `deviceId` + `publi
 | education | 5 |
 | enterprise | 10 |
 
-### 🔮 Planned for Stage 5 (NOT YET IMPLEMENTED)
+---
 
-- **Lease token generation and verification** - Refresh will return signed lease tokens
-- **Nonce/signature replay protection** - Refresh will verify device signature
-- **Offline deactivation code verification** - Deactivate will verify cryptographic proof
+## Stage 5: Lease Tokens + Offline Refresh (IMPLEMENTED)
+
+### Overview
+
+Stage 5 adds subscription-compatible offline support:
+
+- **Subscriptions**: Receive 7-day signed lease tokens on refresh
+- **Lifetime/Founders**: No lease required (`leaseRequired: false`) - valid forever
+- **Offline machines**: Can refresh via manual challenge/response flow through portal
+
+### Lease Token Details
+
+| Property     | Value                                                                                |
+| ------------ | ------------------------------------------------------------------------------------ |
+| Algorithm    | RS256                                                                                |
+| Default TTL  | 7 days (604800 seconds)                                                              |
+| Env Override | `LEASE_TOKEN_TTL_SECONDS`                                                            |
+| Claims       | `entitlementId`, `customerId`, `deviceId`, `tier`, `isLifetime`, `iat`, `exp`, `jti` |
+
+### Online Refresh Flow
+
+```
+Desktop App → POST /api/licence/refresh → Server returns leaseToken + leaseExpiresAt
+```
+
+Response for subscriptions:
+
+```json
+{
+  "ok": true,
+  "status": "active",
+  "leaseRequired": true,
+  "leaseToken": "eyJhbG...",
+  "leaseExpiresAt": "2026-01-27T12:00:00.000Z",
+  "serverTime": "2026-01-20T12:00:00.000Z"
+}
+```
+
+Response for lifetime:
+
+```json
+{
+  "ok": true,
+  "status": "active",
+  "leaseRequired": false,
+  "leaseToken": null,
+  "leaseExpiresAt": null
+}
+```
+
+### Manual Offline Refresh Flow (Challenge/Response)
+
+For factory machines without internet, users can refresh via the portal:
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│ Offline Machine │     │  Portal (User)   │     │     Server      │
+└────────┬────────┘     └────────┬─────────┘     └────────┬────────┘
+         │                       │                        │
+         │ 1. Shows challenge    │                        │
+         │    request screen     │                        │
+         │<──────────────────────│                        │
+         │                       │                        │
+         │ 2. User copies info   │                        │
+         │    to portal          │                        │
+         │──────────────────────>│                        │
+         │                       │                        │
+         │                       │ 3. POST /offline-challenge
+         │                       │───────────────────────>│
+         │                       │                        │
+         │                       │<───────────────────────│
+         │                       │ 4. Returns challenge   │
+         │                       │    token               │
+         │                       │                        │
+         │                       │ 5. POST /offline-refresh
+         │                       │───────────────────────>│
+         │                       │                        │
+         │                       │<───────────────────────│
+         │                       │ 6. Returns lease token │
+         │                       │    (refreshCode)       │
+         │                       │                        │
+         │ 7. User pastes        │                        │
+         │    refreshCode        │                        │
+         │<──────────────────────│                        │
+         │                       │                        │
+         │ 8. Machine stores     │                        │
+         │    lease, continues   │                        │
+         └───────────────────────┴────────────────────────┘
+```
+
+**Step-by-step:**
+
+1. **Offline machine** shows a "Refresh Needed" screen with `entitlementId` and `deviceId`
+2. **User** logs into portal, navigates to license management
+3. **User** clicks "Generate Offline Challenge" (portal calls `POST /api/licence/offline-challenge`)
+4. **Server** returns a short-lived challenge token (10 min TTL)
+5. **User** clicks "Redeem Challenge" (portal calls `POST /api/licence/offline-refresh`)
+6. **Server** validates challenge, returns `refreshCode` (= lease token)
+7. **User** copies `refreshCode` and pastes into offline machine
+8. **Machine** stores the lease token and continues operating
+
+### Replay Protection
+
+- Each challenge has a unique `jti` (nonce)
+- On redemption, the `jti` is stored in `offline-challenge` content-type
+- Replay attempts (same challenge used twice) return **409 Conflict**
+- Challenge tokens expire after 10 minutes
+
+### Audit Events (Stage 5)
+
+| Event               | Outcome | Reason Codes                                                                                                                                                                             |
+| ------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lease_issued`      | success | `online_refresh`                                                                                                                                                                         |
+| `offline_challenge` | success | `challenge_issued`                                                                                                                                                                       |
+| `offline_challenge` | failure | `missing_fields`, `entitlement_not_found`, `not_owner`, `entitlement_not_active`, `device_not_found`, `device_not_owned`                                                                 |
+| `offline_refresh`   | success | `lease_issued`, `lifetime_no_lease_needed`                                                                                                                                               |
+| `offline_refresh`   | failure | `missing_challenge`, `challenge_expired`, `invalid_challenge`, `replay_rejected`, `entitlement_not_found`, `not_owner`, `entitlement_not_active`, `device_not_found`, `device_not_owned` |
+
+### 🔮 Planned for Stage 6+ (NOT YET IMPLEMENTED)
+
+- **Device signature verification** - Nonce signing with device private key
+- **Offline deactivation codes** - Cryptographic proof for offline uninstall
+- **Desktop app integration** - Store/manage lease tokens locally
 
 ### Device Schema
 
@@ -1135,6 +1601,20 @@ Stage 4 introduces a clean, unified activation API that uses `deviceId` + `publi
 | platform      | enum     |          | `windows`, `macos`, `linux`, `unknown`        |
 | appVersion    | string   |          | App version on device                         |
 | metadata      | json     |          | Additional metadata                           |
+
+### Offline Challenge Schema (NEW - Stage 5)
+
+**File:** `backend/src/api/offline-challenge/content-types/offline-challenge/schema.json`
+
+| Field              | Type     | Required | Description                       |
+| ------------------ | -------- | -------- | --------------------------------- |
+| jti                | string   | ✓        | Challenge nonce (unique)          |
+| entitlementId      | integer  | ✓        | Associated entitlement            |
+| deviceId           | string   | ✓        | Associated device                 |
+| customerId         | integer  |          | Customer who redeemed             |
+| usedAt             | datetime | ✓        | When challenge was redeemed       |
+| challengeIssuedAt  | datetime |          | When challenge was created        |
+| challengeExpiresAt | datetime |          | When challenge would have expired |
 
 ### Binding Model
 
@@ -1399,20 +1879,20 @@ echo "=== All tests completed ==="
 
 ## Future Stage References
 
-### Stage 5: Lease Tokens & Offline Verification
+### Stage 6: Cryptographic Verification (Planned)
 
-Stage 5 will add:
+Stage 6 will add:
 
-- **Lease token generation**: Refresh returns a signed JWT lease token with expiry
-- **Nonce/signature replay protection**: Device must sign requests with its private key
+- **Device signature verification**: Device must sign requests with its private key over a nonce
 - **Offline deactivation code verification**: Deactivate verifies cryptographic proof for offline scenarios
-- **Manual refresh**: Customer portal can trigger refresh for offline devices
+- **Challenge-response nonce enforcement**: Currently logged but not enforced
 
-### Stage 7: Desktop App Integration
+### Stage 7: Desktop App Integration (Planned)
 
 Stage 7 will integrate the desktop app with the Stage 4/5 API:
 
 - Desktop app calls `/api/device/register` on first launch
 - Desktop app calls `/api/licence/activate` when user enters license
 - Desktop app calls `/api/licence/refresh` periodically (heartbeat)
+- Desktop app stores and validates lease tokens locally
 - Desktop app calls `/api/licence/deactivate` on uninstall/transfer
