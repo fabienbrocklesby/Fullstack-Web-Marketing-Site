@@ -1,534 +1,108 @@
 ---
-// License Portal for CNC Desktop App
+// License Portal - RETIRED (Stage 5.5 Cutover)
+// This page previously provided MAC-based license activation for testing.
+// All activation now uses the Stage 4/5 device-based system via the Customer Portal.
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout
-  title="CNC License Portal"
-  description="Activate and manage your CNC desktop application licenses"
+  title="License Portal - Retired"
+  description="This activation portal has been retired. Please use the Customer Portal."
 >
   <style>
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
     }
-
-    .jwt-display {
-      max-height: 300px;
-      overflow-y: auto;
-      word-break: break-all;
-      font-family: "Monaco", "Menlo", "Courier New", monospace;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    .jwt-part pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      max-width: 100%;
-    }
-
-    .result-container {
-      max-height: 400px;
-      overflow-y: auto;
-    }
   </style>
 
-  <main class="min-h-screen p-4 lg:p-8">
-    <div class="container mx-auto max-w-7xl">
-      <!-- Header -->
-      <div class="text-center mb-8">
-        <h1 class="text-5xl lg:text-6xl font-bold text-white mb-4">
-          🔧 CNC License Portal
-        </h1>
-        <p class="text-xl text-white/90">
-          Activate and manage your CNC desktop application licenses
-        </p>
-      </div>
+  <main class="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+    <div class="container mx-auto max-w-2xl">
+      <div class="card bg-base-100 shadow-2xl">
+        <div class="card-body text-center">
+          <div class="text-6xl mb-4">🔒</div>
+          <h1 class="card-title text-3xl justify-center mb-4">
+            License Portal Retired
+          </h1>
 
-      <!-- Main Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <!-- License Activation Card -->
-        <div class="card bg-base-100 shadow-2xl">
-          <div class="card-body">
-            <h2 class="card-title text-2xl mb-4">🔓 Activate License</h2>
-            <form id="activateForm" class="space-y-4">
-              <div class="form-control">
-                <label class="label" for="licenseKey">
-                  <span class="label-text font-medium">License Key</span>
-                </label>
-                <input
-                  type="text"
-                  id="licenseKey"
-                  name="licenseKey"
-                  placeholder="e.g., TRIAL-ABC8-DEF2"
-                  class="input input-bordered w-full"
-                  required
-                />
-              </div>
-              <div class="card-actions">
-                <button type="submit" class="btn btn-primary w-full">
-                  Generate JWT Token
-                </button>
-              </div>
-            </form>
-            <div id="activateResult" class="result-container mt-4"></div>
-          </div>
-        </div>
-
-        <!-- License Deactivation Card -->
-        <div class="card bg-base-100 shadow-2xl">
-          <div class="card-body">
-            <h2 class="card-title text-2xl mb-4">🔒 Deactivate License</h2>
-            <form id="deactivateForm" class="space-y-4">
-              <div class="form-control">
-                <label class="label" for="deactivateLicenseKey">
-                  <span class="label-text font-medium">License Key</span>
-                </label>
-                <input
-                  type="text"
-                  id="deactivateLicenseKey"
-                  name="licenseKey"
-                  placeholder="Current active license key"
-                  class="input input-bordered w-full"
-                  required
-                />
-              </div>
-              <div class="form-control">
-                <label class="label" for="deactivationCode">
-                  <span class="label-text font-medium">Deactivation Code</span>
-                </label>
-                <input
-                  type="text"
-                  id="deactivationCode"
-                  name="deactivationCode"
-                  placeholder="From your desktop app"
-                  class="input input-bordered w-full"
-                  required
-                />
-              </div>
-              <div class="card-actions">
-                <button type="submit" class="btn btn-error w-full">
-                  Deactivate License
-                </button>
-              </div>
-            </form>
-            <div id="deactivateResult" class="result-container mt-4"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Demo License Keys -->
-      <div class="card bg-base-100 shadow-2xl mb-8">
-        <div class="card-body">
-          <h2 class="card-title text-2xl mb-4">📋 Demo License Keys</h2>
-          <p class="text-base-content/70 mb-4">
-            Use these demo license keys for testing the portal:
-          </p>
-
-          <div class="overflow-x-auto">
-            <table class="table table-zebra w-full">
-              <thead>
-                <tr>
-                  <th>License Key</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="font-mono text-sm">TRIAL-CNC-001-DEMO</td>
-                  <td><span class="badge badge-neutral">Trial</span></td>
-                  <td><span class="badge badge-error">Inactive</span></td>
-                  <td>7-day trial license</td>
-                </tr>
-                <tr>
-                  <td class="font-mono text-sm">PRICE_STARTER-076484D5DF3F</td>
-                  <td><span class="badge badge-accent">Starter</span></td>
-                  <td><span class="badge badge-error">Inactive</span></td>
-                  <td>Starter plan license ($29)</td>
-                </tr>
-                <tr>
-                  <td class="font-mono text-sm">PRICE_PRO-F1AED1D58105</td>
-                  <td><span class="badge badge-secondary">Pro</span></td>
-                  <td><span class="badge badge-error">Inactive</span></td>
-                  <td>Pro plan license ($99)</td>
-                </tr>
-                <tr>
-                  <td class="font-mono text-sm"
-                    >PRICE_ENTERPRISE-1A9DB2781F02</td
-                  >
-                  <td><span class="badge badge-primary">Enterprise</span></td>
-                  <td><span class="badge badge-error">Inactive</span></td>
-                  <td>Enterprise plan license ($299)</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="alert alert-info mt-4">
+          <div class="alert alert-warning mb-6">
             <svg
               xmlns="http://www.w3.org/2000/svg"
+              class="stroke-current shrink-0 h-6 w-6"
               fill="none"
               viewBox="0 0 24 24"
-              class="stroke-current shrink-0 w-6 h-6"
             >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               ></path>
             </svg>
-            <span
-              >💡 Tip: Copy any license key above and try activating it! Machine
-              IDs are auto-generated for testing.</span
-            >
+            <div>
+              <p class="font-semibold">Stage 5.5 Cutover Complete</p>
+              <p class="text-sm">
+                Legacy MAC-based activation has been retired.
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- JWT Decoder -->
-      <div class="card bg-base-100 shadow-2xl">
-        <div class="card-body">
-          <h2 class="card-title text-2xl mb-4">🔍 JWT Decoder</h2>
-          <p class="text-base-content/70 mb-4">
-            Paste a JWT token below to decode and view its contents:
+          <p class="text-base-content/70 mb-6">
+            This portal previously provided MAC-address based license activation
+            for testing purposes. All license activation now uses the <strong
+              >Stage 4/5 device-based entitlement system</strong
+            >
+            through the Customer Portal.
           </p>
 
-          <div class="space-y-4">
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text font-medium">JWT Token</span>
-              </label>
-              <input
-                type="text"
-                id="jwtInput"
-                placeholder="Paste JWT token here..."
-                class="input input-bordered w-full"
-              />
-            </div>
-            <button type="button" class="btn btn-primary" id="decodeJWTBtn">
-              Decode JWT
-            </button>
+          <div class="bg-base-200 rounded-lg p-4 mb-6 text-left">
+            <h3 class="font-semibold mb-2">New Activation Flow:</h3>
+            <ol
+              class="list-decimal list-inside text-sm space-y-1 text-base-content/80"
+            >
+              <li>
+                Log into the <a
+                  href="/customer/dashboard"
+                  class="link link-primary">Customer Portal</a>
+              </li>
+              <li>Register your device with a stable Device ID</li>
+              <li>Activate your entitlement on the registered device</li>
+              <li>For offline machines, use the Offline Refresh feature</li>
+            </ol>
           </div>
 
-          <div id="jwtDecoded" class="mt-6"></div>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/customer/dashboard" class="btn btn-primary">
+              Go to Customer Portal
+            </a>
+            <a href="/customer/login" class="btn btn-outline">
+              Customer Login
+            </a>
+          </div>
+
+          <div class="divider">For Developers</div>
+
+          <div class="text-sm text-base-content/60 text-left">
+            <p class="mb-2">
+              Legacy endpoints now return <code
+                class="badge badge-error badge-sm">410 Gone</code
+              >:
+            </p>
+            <ul class="list-disc list-inside space-y-1 font-mono text-xs">
+              <li>POST /api/license/activate</li>
+              <li>POST /api/license/deactivate</li>
+              <li>POST /api/license-keys/:id/generate-activation-code</li>
+              <li>POST /api/license-keys/:id/deactivate-with-code</li>
+            </ul>
+            <p class="mt-2">
+              See the <a
+                href="https://github.com/lightlane/main-website/blob/main/docs/licensing-portal-current-state.md"
+                class="link link-primary">API documentation</a
+              > for the Stage 4/5 endpoints.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   </main>
-
-  <script>
-    // Type-safe DOM element getters
-    function getElement(id) {
-      return document.getElementById(id);
-    }
-
-    function getInputElement(id) {
-      const element = document.getElementById(id);
-      return element instanceof HTMLInputElement ? element : null;
-    }
-
-    function getFormElement(id) {
-      const element = document.getElementById(id);
-      return element instanceof HTMLFormElement ? element : null;
-    }
-
-    // API Base URL
-    import { STRAPI_API_URL } from "../config/strapi";
-    const API_BASE = STRAPI_API_URL;
-
-    // Show result in DaisyUI alert format
-    function showResult(elementId, success, title, content) {
-      const element = getElement(elementId);
-      if (!element) return;
-
-      const alertClass = success ? "alert-success" : "alert-error";
-      const icon = success ? "✅" : "❌";
-
-      element.innerHTML = `
-                <div class="alert ${alertClass}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${
-                          success
-                            ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        }" />
-                    </svg>
-                    <div>
-                        <div class="font-bold">${icon} ${title}</div>
-                        <div class="text-sm mt-1">${content}</div>
-                    </div>
-                </div>
-            `;
-    }
-
-    // Handle license activation
-    const activateForm = getFormElement("activateForm");
-    if (activateForm) {
-      activateForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const target = e.target;
-        if (!(target instanceof HTMLFormElement)) return;
-
-        const formData = new FormData(target);
-        const data = Object.fromEntries(formData);
-
-        // Auto-generate machine ID for demo purposes
-        const machineId = `MACHINE-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
-
-        // Convert licenseKey to licenceKey for backend compatibility
-        if (data.licenseKey) {
-          data.licenceKey = data.licenseKey;
-          delete data.licenseKey;
-        }
-        data.machineId = machineId;
-
-        try {
-          const response = await fetch(`${API_BASE}/license/activate`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-          });
-
-          const result = await response.json();
-
-          if (response.ok && result.jwt) {
-            const content = `
-                            <div class="space-y-2 mt-2">
-                                <div><strong>New License Key:</strong> <code class="text-xs">${result.licenseKey}</code></div>
-                                <div><strong>Deactivation Code:</strong> <code class="text-xs">${result.deactivationCode}</code></div>
-                                <div><strong>Machine ID:</strong> <code class="text-xs">${result.machineId}</code></div>
-                                ${result.trialStart ? `<div><strong>Trial Start:</strong> ${result.trialStart}</div>` : ""}
-                                <div class="mt-4">
-                                    <div class="label-text font-medium mb-2">JWT Token:</div>
-                                    <div class="mockup-code">
-                                        <div class="jwt-display px-4 py-2 text-xs">${result.jwt}</div>
-                                    </div>
-                                    <button class="btn btn-sm btn-success mt-2" onclick="copyToClipboard('${result.jwt}')">
-                                        📋 Copy JWT
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-
-            showResult(
-              "activateResult",
-              true,
-              "JWT token generated successfully!",
-              content,
-            );
-
-            // Auto-fill deactivation form
-            const deactivateLicenseKeyInput = getInputElement(
-              "deactivateLicenseKey",
-            );
-            const deactivationCodeInput = getInputElement("deactivationCode");
-            const jwtInput = getInputElement("jwtInput");
-
-            if (deactivateLicenseKeyInput)
-              deactivateLicenseKeyInput.value = result.licenseKey;
-            if (deactivationCodeInput)
-              deactivationCodeInput.value = result.deactivationCode;
-            if (jwtInput) {
-              jwtInput.value = result.jwt;
-              decodeJWT();
-            }
-          } else {
-            showResult(
-              "activateResult",
-              false,
-              "Activation failed",
-              result.message || result.error || "Unknown error occurred",
-            );
-          }
-        } catch (error) {
-          showResult("activateResult", false, "Network error", error.message);
-        }
-      });
-    }
-
-    // Handle license deactivation
-    const deactivateForm = getFormElement("deactivateForm");
-    if (deactivateForm) {
-      deactivateForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const target = e.target;
-        if (!(target instanceof HTMLFormElement)) return;
-
-        const formData = new FormData(target);
-        const data = Object.fromEntries(formData);
-
-        // Convert licenseKey to licenceKey for backend compatibility
-        if (data.licenseKey) {
-          data.licenceKey = data.licenseKey;
-          delete data.licenseKey;
-        }
-
-        try {
-          const response = await fetch(`${API_BASE}/license/deactivate`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-          });
-
-          const result = await response.json();
-
-          if (response.ok && result.success) {
-            const content = `
-                            <div class="space-y-2 mt-2">
-                                <div><strong>New License Key:</strong> <code class="text-xs">${result.newLicenseKey}</code></div>
-                                <div class="text-sm opacity-75">Your license has been deactivated and a new license key has been generated for future use.</div>
-                            </div>
-                        `;
-            showResult(
-              "deactivateResult",
-              true,
-              "License deactivated successfully!",
-              content,
-            );
-          } else {
-            showResult(
-              "deactivateResult",
-              false,
-              "Deactivation failed",
-              result.message || result.error || "Unknown error occurred",
-            );
-          }
-        } catch (error) {
-          showResult("deactivateResult", false, "Network error", error.message);
-        }
-      });
-    }
-
-    // Copy to clipboard function
-    function copyToClipboard(text) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => {
-          // Show success toast
-          const toast = document.createElement("div");
-          toast.className = "toast toast-end";
-          toast.innerHTML = `
-                    <div class="alert alert-success">
-                        <span>JWT copied to clipboard!</span>
-                    </div>
-                `;
-          document.body.appendChild(toast);
-          setTimeout(() => {
-            document.body.removeChild(toast);
-          }, 3000);
-        })
-        .catch((err) => {
-          console.error("Failed to copy: ", err);
-          // Fallback for older browsers
-          const textArea = document.createElement("textarea");
-          textArea.value = text;
-          document.body.appendChild(textArea);
-          textArea.select();
-          document.execCommand("copy");
-          document.body.removeChild(textArea);
-          alert("JWT copied to clipboard!");
-        });
-    }
-
-    // Decode JWT function
-    function decodeJWT() {
-      const jwtInput = getInputElement("jwtInput");
-      const decodedDiv = getElement("jwtDecoded");
-
-      if (!jwtInput || !decodedDiv) return;
-
-      const jwt = jwtInput.value.trim();
-
-      if (!jwt) {
-        decodedDiv.innerHTML = `
-                    <div class="alert alert-warning">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L3.316 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                        </svg>
-                        <span>Please enter a JWT token</span>
-                    </div>
-                `;
-        return;
-      }
-
-      try {
-        const parts = jwt.split(".");
-        if (parts.length !== 3) {
-          throw new Error("Invalid JWT format");
-        }
-
-        const header = JSON.parse(atob(parts[0]));
-        const payload = JSON.parse(atob(parts[1]));
-
-        decodedDiv.innerHTML = `
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <div class="card bg-base-200">
-                            <div class="card-body p-4">
-                                <h4 class="card-title text-base">Header</h4>
-                                <div class="mockup-code">
-                                    <pre class="jwt-part text-xs"><code>${JSON.stringify(header, null, 2)}</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card bg-base-200">
-                            <div class="card-body p-4">
-                                <h4 class="card-title text-base">Payload</h4>
-                                <div class="mockup-code">
-                                    <pre class="jwt-part text-xs"><code>${JSON.stringify(payload, null, 2)}</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card bg-base-200">
-                            <div class="card-body p-4">
-                                <h4 class="card-title text-base">Signature</h4>
-                                <div class="mockup-code">
-                                    <pre class="jwt-part text-xs"><code>${parts[2]}</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-      } catch (error) {
-        decodedDiv.innerHTML = `
-                    <div class="alert alert-error">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <div class="font-bold">Failed to decode JWT</div>
-                            <div class="text-sm">${error.message}</div>
-                        </div>
-                    </div>
-                `;
-      }
-    }
-
-    // Auto-decode JWT when input changes
-    const jwtInput = getInputElement("jwtInput");
-    if (jwtInput) {
-      jwtInput.addEventListener("input", () => {
-        const jwt = jwtInput.value.trim();
-        if (jwt && jwt.split(".").length === 3) {
-          decodeJWT();
-        }
-      });
-    }
-
-    // Add event listener for decode button
-    const decodeJWTBtn = getElement("decodeJWTBtn");
-    if (decodeJWTBtn) {
-      decodeJWTBtn.addEventListener("click", decodeJWT);
-    }
-  </script>
 </Layout>

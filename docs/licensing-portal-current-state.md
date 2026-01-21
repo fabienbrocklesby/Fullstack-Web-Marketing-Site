@@ -1,8 +1,202 @@
 # LightLane Licensing Portal - Current State (Verified)
 
 **Audit Date:** 2026-01-21  
-**Last Updated:** Stage 5 + Portal UI fixes + Documentation overhaul  
+**Last Updated:** Stage 5.5 Cutover - Legacy MAC-based activation retired  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
+
+---
+
+## Status at a Glance
+
+### Active System (Stage 4/5)
+
+| What                 | Endpoint/Field                        | Notes                            |
+| -------------------- | ------------------------------------- | -------------------------------- |
+| Register device      | `POST /api/device/register`           | deviceId + publicKey             |
+| Activate entitlement | `POST /api/licence/activate`          | Binds device to entitlement      |
+| Refresh lease        | `POST /api/licence/refresh`           | Subscriptions only (7-day token) |
+| Deactivate           | `POST /api/licence/deactivate`        | Unbinds device                   |
+| Offline challenge    | `POST /api/licence/offline-challenge` | Subscriptions only               |
+| Offline refresh      | `POST /api/licence/offline-refresh`   | Subscriptions only               |
+| List entitlements    | `GET /api/customers/me/entitlements`  | Includes `leaseRequired` field   |
+| List devices         | `GET /api/customers/me/devices`       | Customer's registered devices    |
+
+### Retired (Legacy MAC-based) — Returns 410 Gone
+
+| What                   | Endpoint                                              | Migration                     |
+| ---------------------- | ----------------------------------------------------- | ----------------------------- |
+| Legacy list keys       | `GET /api/license-keys`                               | Use entitlements endpoint     |
+| Legacy generate code   | `POST /api/license-keys/:id/generate-activation-code` | Use `/api/licence/activate`   |
+| Legacy deactivate code | `POST /api/license-keys/:id/deactivate-with-code`     | Use `/api/licence/deactivate` |
+| Legacy app activate    | `POST /api/license/activate`                          | Use `/api/licence/activate`   |
+| Legacy app deactivate  | `POST /api/license/deactivate`                        | Use `/api/licence/deactivate` |
+
+### App Integration Quick Reference
+
+**Online subscription flow:**
+
+```
+login → GET /customers/me/entitlements → POST /device/register → POST /licence/activate → periodic POST /licence/refresh
+```
+
+**Online lifetime flow:**
+
+```
+login → GET /customers/me/entitlements → POST /device/register → POST /licence/activate (no refresh needed)
+```
+
+**Offline subscription flow (air-gapped machines):**
+
+```
+portal: POST /licence/offline-challenge → copy token to air-gapped machine → bring response back → POST /licence/offline-refresh → copy lease token back → repeat every 7 days
+```
+
+**Offline lifetime:** Not supported (online-only, no lease tokens needed).
+
+---
+
+## Changelog (2026-01-22 Stage 5.5 Cutover)
+
+### 🚨 BREAKING CHANGES - Legacy MAC Activation Retired
+
+Stage 5.5 completes the migration to a unified device-based activation system. **All activation now uses the Stage 4/5 device-based entitlement system.** Legacy MAC-based activation endpoints have been retired and return 410 Gone.
+
+### ❌ Retired Endpoints (Return 410 Gone)
+
+All legacy MAC-address based activation endpoints now return HTTP 410 Gone with migration guidance:
+
+| Endpoint                                              | Status   | Migration                                      |
+| ----------------------------------------------------- | -------- | ---------------------------------------------- |
+| `GET /api/license-keys`                               | 410 Gone | Use `GET /api/customers/me/entitlements`       |
+| `GET /api/license-keys/:id`                           | 410 Gone | Use `GET /api/customers/me/entitlements`       |
+| `POST /api/license-keys/:id/generate-activation-code` | 410 Gone | Use `POST /api/licence/activate` with deviceId |
+| `POST /api/license-keys/:id/deactivate-with-code`     | 410 Gone | Use `POST /api/licence/deactivate`             |
+| `POST /api/license/activate`                          | 410 Gone | Use `POST /api/licence/activate`               |
+| `POST /api/license/deactivate`                        | 410 Gone | Use `POST /api/licence/deactivate`             |
+
+### ✅ Active Endpoints (Stage 4/5 System)
+
+| Endpoint                              | Purpose                                                     |
+| ------------------------------------- | ----------------------------------------------------------- |
+| `GET /api/customers/me/entitlements`  | List customer entitlements (includes `leaseRequired` field) |
+| `GET /api/customers/me/devices`       | List customer's registered devices                          |
+| `POST /api/device/register`           | Register a new device                                       |
+| `POST /api/licence/activate`          | Activate entitlement on device                              |
+| `POST /api/licence/refresh`           | Refresh lease token (subscriptions)                         |
+| `POST /api/licence/deactivate`        | Deactivate device from entitlement                          |
+| `POST /api/licence/offline-challenge` | Generate offline challenge token (subscriptions only)       |
+| `POST /api/licence/offline-refresh`   | Redeem challenge for lease token (subscriptions only)       |
+
+### 🎯 Subscription-Only Offline Refresh (v1 Policy)
+
+**Offline lease refresh is only available for subscription entitlements.** Lifetime/Founders licenses are online-only and do not need lease tokens.
+
+| Entitlement Type      | `leaseRequired` | Offline Refresh  | Notes                              |
+| --------------------- | --------------- | ---------------- | ---------------------------------- |
+| Subscription (Stripe) | `true`          | ✅ Supported     | Requires 7-day lease token renewal |
+| Lifetime/Founders     | `false`         | ❌ Not Supported | Online-only, no lease needed       |
+
+**Backend Behavior:**
+
+- `POST /api/licence/offline-challenge` returns **400** with code `LIFETIME_NOT_SUPPORTED` for lifetime entitlements
+- `POST /api/licence/offline-refresh` returns **400** with code `LIFETIME_NOT_SUPPORTED` for lifetime entitlements
+- Frontend hides Offline Refresh section entirely if user has no subscription entitlements
+
+**Rationale:**
+
+- Lifetime/Founders customers get perpetual online-only access (simpler model)
+- Subscription customers need lease tokens for offline grace period validation
+- This simplifies the v1 offline flow while covering the primary use case (subscription users on air-gapped machines)
+
+### 🔄 Backend Changes
+
+1. **Controllers Modified**:
+   - `backend/src/api/license-key/controllers/license-key.js` - All methods now return 410 Gone
+   - `backend/src/api/custom/controllers/custom.js` - Added `licenseActivateLegacyRetired()` and `licenseDeactivateLegacyRetired()` handlers
+
+2. **Routes Modified**:
+   - `backend/src/api/license-key/routes/license-key.js` - Routes point to retired handlers
+   - `backend/src/api/custom/routes/custom.js` - Legacy activation routes point to retired handlers
+
+3. **Entitlements Response Enhanced**:
+   - `GET /api/customers/me/entitlements` now includes `leaseRequired: boolean` computed server-side
+   - `leaseRequired: false` for lifetime/founders entitlements (no refresh needed)
+   - `leaseRequired: true` for subscription entitlements (require periodic refresh)
+
+### 🖥️ Portal UI Changes (Stage 5.5)
+
+> **Summary:** Legacy MAC-based UI was removed. Only Stage 4/5 device-based UI remains.
+
+1. **Removed (no longer exists)**:
+   - Legacy license keys card
+   - MAC-based activation modal
+   - Legacy offline deactivation modal
+
+2. **Removed JavaScript Functions**:
+   - `displayLicenseKeys()`, `updateStats()`
+   - `openGenerateActivationModal()`, `proceedToActivation()`
+   - `generateActivationCodeWithMac()`, `submitDeactivation()`
+   - All MAC address helper functions
+
+3. **Unchanged (Still Active)**:
+   - Device Activations section (Stage 4 system)
+   - Offline Refresh section (Stage 5 system)
+   - All Stage 4/5 modals and functions
+
+### 📜 Migration Script
+
+A migration script is available to convert legacy license keys to entitlements:
+
+```bash
+# Dry run (preview only)
+node scripts/migrate-legacy-keys-to-entitlements.js --dry-run
+
+# Apply migration
+node scripts/migrate-legacy-keys-to-entitlements.js --apply
+
+# Migrate specific customer
+node scripts/migrate-legacy-keys-to-entitlements.js --apply --email user@example.com
+```
+
+**Migration Logic**:
+
+- Maps license type to tier: `maker` → `maker`, `pro` → `pro`
+- Founders/lifetime status based on purchase date (before 2026-01-11)
+- Creates entitlement with `source: 'legacy_migration'`
+- Marks migrated licenses with `metadata.migratedAt` timestamp
+- Idempotent: skips already-migrated licenses
+
+### 🧪 Smoke Test
+
+A comprehensive smoke test validates the cutover:
+
+```bash
+source docs/api/http/use-local-env.sh
+./scripts/stage5-cutover-smoke-test.sh
+```
+
+**Tests Performed**:
+
+1. Customer login
+2. Legacy endpoints return 410 Gone
+3. Entitlements endpoint returns `leaseRequired` field
+4. Device registration works
+5. Licence activation works
+6. Licence refresh works
+7. Offline challenge/response works
+8. Licence deactivation works
+9. Offline challenge rejects lifetime entitlements (400)
+10. Offline refresh replay protection (409 on reuse)
+
+### 📋 Founders/Lifetime Entitlements
+
+"Founders" and "Lifetime" are the same thing from an entitlement perspective:
+
+- `isLifetime: true` in the entitlement record
+- `leaseRequired: false` in API responses
+- Never require `/api/licence/refresh` calls
+- **Online-only:** Cannot use offline challenge/refresh endpoints (returns 400)
+- Desktop app should skip heartbeat/refresh logic for these
 
 ---
 
@@ -114,8 +308,7 @@
   - `deactivate_device_modal` - Confirmation with device/entitlement info
   - `refresh_device_modal` - Manual refresh/heartbeat trigger
 
-- **Legacy Section Renamed**:
-  - "Your License Keys" → "License Keys (Legacy)" with subtitle "MAC-address based activation for older systems"
+> **Note:** Legacy "License Keys" section was removed entirely in Stage 5.5.
 
 - **JavaScript Functions Added**:
   - `loadDevices()` - Fetch and cache customer devices
@@ -176,7 +369,7 @@
 
 ## How Activation Works (Human Overview)
 
-> **This section explains the three activation flows in plain English.**
+> **This section explains the active activation flows.**
 
 ### Overview Diagram
 
@@ -185,48 +378,28 @@
 │                        ACTIVATION FLOW OVERVIEW                        │
 ├────────────────────────────────────────────────────────────────────────┤
 │                                                                        │
-│  FLOW A: Legacy MAC-Based (deprecated, portal only)                    │
-│  ─────────────────────────────────────────────────────────────────     │
-│  Customer Portal → Generate Activation Code → Paste into Desktop App   │
-│  Uses: license-key.machineId (MAC hash), license-key.jti              │
-│  Endpoints: /api/license/activate, /api/license/deactivate            │
-│                                                                        │
-│  FLOW B: Stage 4 Online Device Activation                              │
+│  Stage 4: Online Device Activation ✅ ACTIVE                           │
 │  ─────────────────────────────────────────────────────────────────     │
 │  Desktop App → Register Device → Activate Entitlement → Refresh        │
 │  Uses: device.deviceId + device.publicKeyHash, device↔entitlement      │
 │  Endpoints: /api/device/register, /api/licence/activate, refresh, etc  │
 │                                                                        │
-│  FLOW C: Stage 5 Subscription Lease Tokens                             │
+│  Stage 5: Subscription Lease Tokens ✅ ACTIVE                          │
 │  ─────────────────────────────────────────────────────────────────     │
 │  Online: /api/licence/refresh → returns leaseToken (7-day JWT)         │
 │  Offline: /api/licence/offline-challenge + offline-refresh             │
 │  Uses: RS256-signed JWT, replay protection via offline-challenge jti   │
 │                                                                        │
+│  Legacy (Retired) ❌                                                   │
+│  ─────────────────────────────────────────────────────────────────     │
+│  POST /api/license/activate → 410 Gone                                 │
+│  POST /api/license/deactivate → 410 Gone                               │
+│  Migration: scripts/migrate-legacy-keys-to-entitlements.cjs            │
+│                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Flow A: Legacy MAC-Based Activation (Portal Only)
-
-**When used:** Customers with existing license keys (pre-Stage 4), shown in "License Keys (Legacy)" section.
-
-**How it works:**
-
-1. Customer logs into portal, sees their license key
-2. Customer clicks "Generate Activation Code" for a license
-3. Backend generates a signed JWT activation code containing `machineId` (from `license-key.machineId`)
-4. Customer copies code and pastes into desktop app
-5. Desktop app validates JWT and activates
-
-**Key data:**
-
-- `license-key.machineId` — Normalized MAC address hash (legacy identifier)
-- `license-key.jti` — JWT ID for current activation token
-- `license-key.status` — `unused` or `active`
-
-**Verified in code:** `custom/controllers/custom.js:1096-1415` (licenseActivate, licenseDeactivate)
-
-### Flow B: Stage 4 Device-Based Activation (Online)
+### Stage 4: Device-Based Activation (Online)
 
 **When used:** All new activations. Desktop app communicates directly with backend.
 
@@ -260,7 +433,7 @@
 
 **Verified in code:** `custom/controllers/custom.js:2580-3180` (deviceRegister, licenceActivate, licenceRefresh, licenceDeactivate)
 
-### Flow C: Stage 5 Lease Tokens (Subscriptions Only)
+### Stage 5: Lease Tokens (Subscriptions Only)
 
 **When used:** Subscription entitlements need periodic verification. Lifetime/founders skip this.
 
@@ -319,13 +492,9 @@
 - Button: Redeem → shows lease token + expiry + copy button
 - Note: Section hidden if user has no subscription entitlements
 
-**3. License Keys (Legacy)** — Bottom section (hidden if no legacy keys)
+> **Note:** Legacy "License Keys" section was removed in Stage 5.5. All activation uses Stage 4/5 device-based system.
 
-- Only shows keys where `entitlement.source === 'legacy_purchase'` or no entitlement
-- Generate Activation Code button → copies code
-- Deactivate button → resets machine binding
-
-**Verified in code:** `frontend/src/pages/customer/dashboard.astro:1753-1820` (displayLicenseKeys), `dashboard.astro:2422` (loadEntitlementsForStage45), `dashboard.astro:3177` (populateOfflineDropdowns)
+**Verified in code:** `dashboard.astro` (loadEntitlementsForStage45), `dashboard.astro` (populateOfflineDropdowns)
 
 ---
 
@@ -485,18 +654,18 @@ Strapi 4 loads APIs alphabetically. For `/api/license/activate`:
 | `entitlement`        | relation | -        | -          | oneToOne → entitlement (1:1, `mappedBy: licenseKey`) |
 | `isActive`           | boolean  | -        | `true`     |                                                      |
 | `status`             | enum     | -        | `"unused"` | `["unused", "active"]`                               |
-| `jti`                | string   | -        | -          | JWT ID for current activation                        |
-| `machineId`          | string   | -        | -          | Device fingerprint (normalized MAC or hash)          |
+| `jti`                | string   | -        | -          | **Historical** - JWT ID for legacy activation        |
+| `machineId`          | string   | -        | -          | **Historical** - Legacy MAC/fingerprint (not used)   |
 | `typ`                | enum     | -        | `"paid"`   | `["trial", "paid", "starter", "pro", "enterprise"]`  |
 | `trialStart`         | datetime | -        | -          |                                                      |
-| `isUsed`             | boolean  | -        | `false`    | Legacy field                                         |
-| `deviceInfo`         | json     | -        | -          |                                                      |
+| `isUsed`             | boolean  | -        | `false`    | **Historical** - Legacy field                        |
+| `deviceInfo`         | json     | -        | -          | **Historical** - Legacy device info                  |
 | `activatedAt`        | datetime | -        | -          |                                                      |
 | `expiresAt`          | datetime | -        | -          |                                                      |
-| `maxActivations`     | integer  | -        | `1`        | (min: 1)                                             |
-| `currentActivations` | integer  | -        | `0`        | (min: 0)                                             |
-| `deactivationCode`   | text     | -        | -          | Encrypted deactivation code                          |
-| `activationNonce`    | string   | -        | -          | SHA-256 hashed nonce for offline deactivation        |
+| `maxActivations`     | integer  | -        | `1`        | **Historical** - Use entitlement.maxDevices instead  |
+| `currentActivations` | integer  | -        | `0`        | **Historical** - Use device count instead            |
+| `deactivationCode`   | text     | -        | -          | **Historical** - Legacy deactivation code            |
+| `activationNonce`    | string   | -        | -          | **Historical** - Legacy offline nonce                |
 
 ### customer
 
@@ -610,18 +779,18 @@ Override via `FOUNDERS_SALE_END_ISO` environment variable.
 
 ### Customer Portal Routes (ACTIVE)
 
-| Method | Path                                             | Auth            | Handler                              | Evidence                                  |
-| ------ | ------------------------------------------------ | --------------- | ------------------------------------ | ----------------------------------------- |
-| POST   | `/api/customers/register`                        | auth-rate-limit | `customer.register`                  | `customer/routes/customer.js:5-12`        |
-| POST   | `/api/customers/login`                           | auth-rate-limit | `customer.login`                     | `customer/routes/customer.js:14-21`       |
-| GET    | `/api/customers/me`                              | customer-auth   | `customer.me`                        | `customer/routes/customer.js:22-29`       |
-| PUT    | `/api/customers/profile`                         | customer-auth   | `customer.updateProfile`             | `customer/routes/customer.js:30-37`       |
-| PUT    | `/api/customers/password`                        | customer-auth   | `customer.changePassword`            | `customer/routes/customer.js:38-45`       |
-| GET    | `/api/customers/entitlements`                    | customer-auth   | `customer.entitlements`              | `customer/routes/customer.js:47-54`       |
-| GET    | `/api/license-keys`                              | customer-auth   | `license-key.find`                   | `license-key/routes/license-key.js:2-11`  |
-| GET    | `/api/license-keys/:id`                          | customer-auth   | `license-key.findOne`                | `license-key/routes/license-key.js:12-21` |
-| POST   | `/api/license-keys/:id/generate-activation-code` | customer-auth   | `license-key.generateActivationCode` | `license-key/routes/license-key.js:22-30` |
-| POST   | `/api/license-keys/:id/deactivate-with-code`     | customer-auth   | `license-key.deactivateWithCode`     | `license-key/routes/license-key.js:31-41` |
+| Method | Path                                             | Auth            | Handler                   | Evidence                                 |
+| ------ | ------------------------------------------------ | --------------- | ------------------------- | ---------------------------------------- |
+| POST   | `/api/customers/register`                        | auth-rate-limit | `customer.register`       | `customer/routes/customer.js:5-12`       |
+| POST   | `/api/customers/login`                           | auth-rate-limit | `customer.login`          | `customer/routes/customer.js:14-21`      |
+| GET    | `/api/customers/me`                              | customer-auth   | `customer.me`             | `customer/routes/customer.js:22-29`      |
+| PUT    | `/api/customers/profile`                         | customer-auth   | `customer.updateProfile`  | `customer/routes/customer.js:30-37`      |
+| PUT    | `/api/customers/password`                        | customer-auth   | `customer.changePassword` | `customer/routes/customer.js:38-45`      |
+| GET    | `/api/customers/entitlements`                    | customer-auth   | `customer.entitlements`   | `customer/routes/customer.js:47-54`      |
+| GET    | `/api/license-keys`                              | customer-auth   | **RETIRED → 410 Gone**    | Use `GET /api/customers/me/entitlements` |
+| GET    | `/api/license-keys/:id`                          | customer-auth   | **RETIRED → 410 Gone**    | Use `GET /api/customers/me/entitlements` |
+| POST   | `/api/license-keys/:id/generate-activation-code` | customer-auth   | **RETIRED → 410 Gone**    | Use `POST /api/licence/activate`         |
+| POST   | `/api/license-keys/:id/deactivate-with-code`     | customer-auth   | **RETIRED → 410 Gone**    | Use `POST /api/licence/deactivate`       |
 
 ### Checkout & Payment Routes (ACTIVE)
 
@@ -635,13 +804,15 @@ Override via `FOUNDERS_SALE_END_ISO` environment variable.
 | GET    | `/api/pricing`                        | None          | `custom.getPricing`                   | `custom/routes/custom.js:37-43` |
 | POST   | `/api/affiliate-checkout`             | None          | `custom.affiliateCheckout`            | `custom/routes/custom.js:2-10`  |
 
-### Desktop App License API (ACTIVE - via custom controller)
+### Desktop App License API (RETIRED - Legacy MAC-based)
 
-| Method | Path                      | Auth               | Handler                    | Evidence                          |
-| ------ | ------------------------- | ------------------ | -------------------------- | --------------------------------- |
-| POST   | `/api/license/activate`   | license-rate-limit | `custom.licenseActivate`   | `custom/routes/custom.js:87-94`   |
-| POST   | `/api/license/deactivate` | license-rate-limit | `custom.licenseDeactivate` | `custom/routes/custom.js:95-102`  |
-| POST   | `/api/license/reset`      | admin-internal     | `custom.licenseReset`      | `custom/routes/custom.js:104-112` |
+> **⚠️ RETIRED:** These endpoints return HTTP 410 Gone. Use Stage 4/5 endpoints below instead.
+
+| Method | Path                      | Auth               | Status              | Migration                          |
+| ------ | ------------------------- | ------------------ | ------------------- | ---------------------------------- |
+| POST   | `/api/license/activate`   | license-rate-limit | **410 Gone**        | Use `POST /api/licence/activate`   |
+| POST   | `/api/license/deactivate` | license-rate-limit | **410 Gone**        | Use `POST /api/licence/deactivate` |
+| POST   | `/api/license/reset`      | admin-internal     | Admin tool (active) | Internal use only                  |
 
 ### Stage 4: Device-Based Activation API (NEW)
 
@@ -906,231 +1077,213 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 
 ### System Classification
 
-| System                      | Controller       | Routes File                         | Status                       |
-| --------------------------- | ---------------- | ----------------------------------- | ---------------------------- |
-| **Customer Portal Offline** | `license-key.js` | `license-key/routes/license-key.js` | **ACTIVE** (customer portal) |
-| **Desktop App Online**      | `custom.js`      | `custom/routes/custom.js`           | **ACTIVE** (public API)      |
+| System                        | Controller       | Routes File                         | Status                   |
+| ----------------------------- | ---------------- | ----------------------------------- | ------------------------ |
+| **Stage 4/5 Device-Based**    | `custom.js`      | `custom/routes/custom.js`           | **ACTIVE** (all clients) |
+| **Legacy MAC-Based (Portal)** | `license-key.js` | `license-key/routes/license-key.js` | **RETIRED** (410 Gone)   |
+| **Legacy MAC-Based (App)**    | `custom.js`      | `custom/routes/custom.js`           | **RETIRED** (410 Gone)   |
 
 ### Rate Limiting
 
-**License endpoints** (`/api/license/activate`, `/api/license/deactivate`) are protected by:
+**Stage 4/5 endpoints** (`/api/licence/activate`, `/api/licence/deactivate`, `/api/licence/refresh`) are protected by:
 
-- `license-rate-limit` middleware: 10 requests per minute per IP
-- **Evidence:** `middlewares/license-rate-limit.js:1-10`, `middlewares/rate-limit.js:69-75`
+- Standard Strapi rate limiting
+- Customer-auth middleware (authenticated endpoints)
 
 ---
 
-### System A: Customer Portal Offline Activation (ACTIVE)
+### System A: Legacy MAC-Based Activation ❌ RETIRED (Stage 5.5)
 
-**Used by:** Customer dashboard for generating activation codes that work offline
+> **These endpoints return HTTP 410 Gone with migration guidance.**
+> **All activation now uses the Stage 4/5 device-based system (see System B below).**
 
-#### Endpoint: Generate Activation Code
+**Retired Endpoints:**
 
-**Route:** `POST /api/license-keys/:id/generate-activation-code`  
-**Controller:** `backend/src/api/license-key/controllers/license-key.js:97-230`  
+- `POST /api/license-keys/:id/generate-activation-code` → 410 Gone
+- `POST /api/license-keys/:id/deactivate-with-code` → 410 Gone
+- `POST /api/license/activate` → 410 Gone
+- `POST /api/license/deactivate` → 410 Gone
+
+**Migration Path:**
+
+1. Customers with legacy license keys should use the migration script
+2. Desktop apps should use Stage 4/5 device-based activation
+3. See `scripts/migrate-legacy-keys-to-entitlements.js` for bulk migration
+
+---
+
+### System B: Stage 4/5 Device-Based Activation (ACTIVE)
+
+**Used by:** Desktop app and customer portal for all activation operations
+
+#### Endpoint: Register Device
+
+**Route:** `POST /api/device/register`  
+**Controller:** `backend/src/api/custom/controllers/custom.js`  
 **Auth:** customer-auth middleware
 
 **Request:**
 
 ```json
 {
-  "machineId": "aa:bb:cc:dd:ee:ff" // MAC address format
+  "deviceId": "stable-unique-device-id",
+  "publicKey": "base64-encoded-public-key",
+  "name": "My MacBook Pro",
+  "platform": "macos"
 }
 ```
-
-**Algorithm:**
-
-1. Normalize MAC address to `aa:bb:cc:dd:ee:ff` format (L112-127)
-2. Validate license belongs to customer and status is `"unused"` (L129-156)
-3. Generate 4-byte random nonce (L159)
-4. Create payload (12 bytes total):
-   - Bytes 0-3: SHA-256(licenseKey)[0:4]
-   - Bytes 4-7: SHA-256(machineId)[0:4]
-   - Bytes 8-11: nonce
-5. Create XOR key (12 bytes):
-   - Bytes 0-3: SHA-256(licenseKey)[4:8]
-   - Bytes 4-11: SHA-256(machineId)[8:16]
-6. XOR encrypt payload
-7. Base58 encode result → activation code (~16 chars)
-8. Store SHA-256(nonce) in `activationNonce` field
-9. Update license: `status="active"`, `machineId=normalizedMac`, `activatedAt=now`
 
 **Response:**
 
 ```json
 {
-  "activationCode": "3xK7Pm9QrT2wYz",
-  "licenseKey": "STA-1234-M5X2QK1-A1B2C3D4",
-  "machineId": "aa:bb:cc:dd:ee:ff"
+  "device": {
+    "id": 123,
+    "deviceId": "stable-unique-device-id",
+    "name": "My MacBook Pro",
+    "platform": "macos",
+    "publicKeyHash": "sha256-of-public-key"
+  }
 }
 ```
 
-**Evidence:** `license-key/controllers/license-key.js:159-207`
+#### Endpoint: Activate Entitlement on Device
 
-#### Endpoint: Deactivate with Code
-
-**Route:** `POST /api/license-keys/:id/deactivate-with-code`  
-**Controller:** `backend/src/api/license-key/controllers/license-key.js:235-447`  
+**Route:** `POST /api/licence/activate`  
+**Controller:** `backend/src/api/custom/controllers/custom.js`  
 **Auth:** customer-auth middleware
 
-**Request (Structured format):**
-
-```json
-{
-  "deactivationCode": "base64payload.checksum"
-}
-```
-
-Where `base64payload` decodes to:
-
-```json
-{
-  "license_key": "...",
-  "machine_id": "...",
-  "nonce": "...",
-  "timestamp": 1234567890
-}
-```
-
-**Request (Legacy format):**
-
-```json
-{
-  "deactivationCode": "hex_nonce_string"
-}
-```
-
-**Validation:**
-
-1. Structured format (L291-341):
-   - Decode base64 → JSON
-   - Verify `license_key` matches
-   - Verify `machine_id` matches stored
-   - Verify `timestamp` within 48 hours
-   - Verify SHA-256(nonce) matches stored `activationNonce`
-2. Legacy format fallback (L343-396):
-   - SHA-256(deactivationCode) must match stored `activationNonce`
-
-**Side effects:**
-
-- Sets `status="unused"`, clears `activationNonce`, `activatedAt`, `machineId`
-
----
-
-### System B: Desktop App Online Activation (ACTIVE)
-
-**Used by:** Desktop app calling public API endpoints
-
-#### Endpoint: Activate
-
-**Route:** `POST /api/license/activate`  
-**Controller:** `backend/src/api/custom/controllers/custom.js:834-1151`  
-**Auth:** None (public)  
-**Rate Limit:** 10 requests/minute per IP (in-memory bucket)
-
 **Request:**
 
 ```json
 {
-  "licenceKey": "STA-1234-M5X2QK1-A1B2C3D4",
-  "machineId": "any_string"
+  "entitlementId": 456,
+  "deviceId": "stable-unique-device-id"
 }
 ```
-
-**Algorithm:**
-
-1. Find license by key
-2. **Stage 2 Fix-up: Auto-create entitlement if missing** (deterministically based on purchase/license data)
-3. **Enforce entitlement status** - must be "active" (reject if expired/canceled/inactive)
-4. **Enforce expiry** - if non-lifetime and expiresAt is past, auto-mark expired and reject
-5. Validate status is not `"active"`
-6. For trial: validate status is `"unused"` (one-time only)
-7. Generate new license key with type prefix: `{TYPE}-{12_CHAR_SHORT_KEY}`
-   - Short key format: `XXXX-XXXX-XXXX` (alphanumeric, no confusing chars)
-8. Generate 8-char deactivation code
-9. Encrypt deactivation code with AES-256-CBC (key = SHA-256(newLicenseKey))
-10. Store encrypted deactivation code
-11. Update license with new key, status="active", machineId (raw), jti (UUID)
-12. Sign JWT with RS256 using `JWT_PRIVATE_KEY`
-
-**Response:**
-
-```json
-{
-  "jwt": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "jti": "550e8400-e29b-41d4-a716-446655440000",
-  "machineId": "...",
-  "licenseKey": "STARTER-ABCD-EFGH-JKLM",
-  "deactivationCode": "X7Y2Z9AB",
-  "trialStart": "2026-01-12T10:00:00.000Z" // only for trial
-}
-```
-
-**JWT Payload:**
-
-```json
-{
-  "iss": "https://lightlane.app",
-  "sub": "123",
-  "jti": "550e8400-e29b-41d4-a716-446655440000",
-  "typ": "starter",
-  "machineId": "...",
-  "deactivationCode": "X7Y2Z9AB",
-  "licenseKey": "STARTER-ABCD-EFGH-JKLM",
-  "iat": 1736679600,
-  "trialStart": 1736679600
-}
-```
-
-**Evidence:** `custom/controllers/custom.js:926-1066` (JWT generation at L1010-1066)
-
-#### Endpoint: Deactivate
-
-**Route:** `POST /api/license/deactivate`  
-**Controller:** `backend/src/api/custom/controllers/custom.js:1156-1273`  
-**Auth:** None (public)  
-**Rate Limit:** 10 requests/minute per IP (in-memory bucket)
-
-**Request:**
-
-```json
-{
-  "licenceKey": "STARTER-ABCD-EFGH-JKLM",
-  "deactivationCode": "X7Y2Z9AB"
-}
-```
-
-**Validation:**
-
-1. Find active license by key
-2. Decrypt stored deactivation code using AES-256-CBC
-3. Compare with provided code
 
 **Response:**
 
 ```json
 {
   "success": true,
-  "message": "License deactivated successfully",
-  "newLicenseKey": "STARTER-MNOP-QRST-UVWX"
+  "device": { "id": 123, "boundAt": "2026-01-20T..." },
+  "entitlement": { "id": 456, "tier": "pro" }
 }
 ```
 
-**Side effects:**
+**Validation:**
 
-- Generates new license key
-- Sets `status="unused"`, clears `jti`, `machineId`, `trialStart`, `activatedAt`, `deactivationCode`
+1. Device must be registered and belong to authenticated customer
+2. Entitlement must belong to authenticated customer and be active
+3. Device count must be under `maxDevices` for entitlement tier
 
----
+#### Endpoint: Refresh (Lease Token for Subscriptions)
 
-### machineId Handling Comparison
+**Route:** `POST /api/licence/refresh`  
+**Controller:** `backend/src/api/custom/controllers/custom.js`  
+**Auth:** customer-auth middleware
 
-| System                           | Storage        | Format                |
-| -------------------------------- | -------------- | --------------------- |
-| Customer Portal (license-key.js) | Normalized MAC | `aa:bb:cc:dd:ee:ff`   |
-| Desktop App (custom.js)          | Raw string     | Whatever client sends |
-| Legacy license.js                | SHA-256 hash   | 64-char hex           |
-| Legacy license-portal.js         | Raw string     | Whatever client sends |
+**Request:**
+
+```json
+{
+  "deviceId": "stable-unique-device-id"
+}
+```
+
+**Response (subscription):**
+
+```json
+{
+  "leaseRequired": true,
+  "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2026-01-27T..."
+}
+```
+
+**Response (lifetime/founders):**
+
+```json
+{
+  "leaseRequired": false,
+  "message": "Lifetime entitlements do not require lease tokens"
+}
+```
+
+#### Endpoint: Deactivate Device
+
+**Route:** `POST /api/licence/deactivate`  
+**Controller:** `backend/src/api/custom/controllers/custom.js`  
+**Auth:** customer-auth middleware
+
+**Request:**
+
+```json
+{
+  "deviceId": "stable-unique-device-id"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Device deactivated"
+}
+```
+
+#### Endpoint: Offline Challenge (Subscriptions Only)
+
+**Route:** `POST /api/licence/offline-challenge`  
+**Controller:** `backend/src/api/custom/controllers/custom.js`  
+**Auth:** customer-auth middleware
+
+**Request:**
+
+```json
+{
+  "entitlementId": 456,
+  "deviceId": "stable-unique-device-id"
+}
+```
+
+**Response:**
+
+```json
+{
+  "challengeToken": "base64-encoded-challenge-jwt",
+  "expiresAt": "2026-01-21T..."
+}
+```
+
+**Note:** Returns 400 with `LIFETIME_NOT_SUPPORTED` for lifetime entitlements.
+
+#### Endpoint: Offline Refresh (Subscriptions Only)
+
+**Route:** `POST /api/licence/offline-refresh`  
+**Controller:** `backend/src/api/custom/controllers/custom.js`  
+**Auth:** customer-auth middleware
+
+**Request:**
+
+```json
+{
+  "challengeResponse": "base64-encoded-response-from-app"
+}
+```
+
+**Response:**
+
+```json
+{
+  "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2026-01-27T..."
+}
+```
+
+**Note:** Returns 400 with `LIFETIME_NOT_SUPPORTED` for lifetime entitlements.
 
 ---
 
@@ -1202,55 +1355,64 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ### Pages
 
-| Page      | Path                  | API Calls                                                                                                                                                                                 | Evidence                                |
-| --------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| Login     | `/customer/login`     | `POST /api/customers/login`                                                                                                                                                               | `login.astro:212-213`                   |
-| Register  | `/customer/register`  | `POST /api/customers/register`                                                                                                                                                            | `register.astro:299-300`                |
-| Dashboard | `/customer/dashboard` | `GET /api/customers/me`, `GET /api/license-keys`, `POST /api/customer-checkout`, `POST /api/license-keys/:id/generate-activation-code`, `POST /api/license-keys/:id/deactivate-with-code` | `dashboard.astro:606,629,768,1152,1277` |
-| Profile   | `/customer/profile`   | `GET /api/customers/me`, `PUT /api/customers/profile`, `PUT /api/customers/password`                                                                                                      | `profile.astro:182,273,343`             |
-| Success   | `/customer/success`   | `GET /api/customer/purchase-status` (polling)                                                                                                                                             | `success.astro:81-130`                  |
+| Page      | Path                  | API Calls                                                                                                                     | Evidence          |
+| --------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Login     | `/customer/login`     | `POST /api/customers/login`                                                                                                   | `login.astro`     |
+| Register  | `/customer/register`  | `POST /api/customers/register`                                                                                                | `register.astro`  |
+| Dashboard | `/customer/dashboard` | `GET /api/customers/me`, `GET /api/customers/me/entitlements`, `GET /api/customers/me/devices`, `POST /api/customer-checkout` | `dashboard.astro` |
+| Profile   | `/customer/profile`   | `GET /api/customers/me`, `PUT /api/customers/profile`, `PUT /api/customers/password`                                          | `profile.astro`   |
+| Success   | `/customer/success`   | `GET /api/customer/purchase-status` (polling)                                                                                 | `success.astro`   |
 
-### Dashboard License Display
+### Dashboard Entitlements Display (Stage 4/5)
 
-**Location:** `frontend/src/pages/customer/dashboard.astro:629-670`
+1. Calls `GET /api/customers/me/entitlements` with customer token
+2. Response includes: `{ entitlements: [{ id, tier, isLifetime, leaseRequired, expiresAt, devices }] }`
+3. Shows device activation status, tier, and offline refresh availability
 
-1. Calls `GET /api/license-keys` with customer token
-2. Response shape: `{ licenseKeys: [...] }`
-3. Each license has `isUsed` computed: `key.status === "active"`
+### Dashboard Devices Display (Stage 4/5)
 
-### Activation Flow (Customer Portal)
+1. Calls `GET /api/customers/me/devices` with customer token
+2. Response includes: `{ devices: [{ id, deviceId, name, platform, lastSeen, entitlement }] }`
+3. Shows bound devices per entitlement with deactivation controls
 
-**Location:** `frontend/src/pages/customer/dashboard.astro:1145-1200`
+### Offline Refresh Flow (Subscriptions Only)
 
-1. User enters MAC address
-2. Frontend calls `POST /api/license-keys/:id/generate-activation-code` with `{ machineId }`
-3. Receives `{ activationCode, licenseKey, machineId }`
-4. Displays activation code for user to enter in desktop app
+1. Portal shows "Offline Refresh" section only if user has subscription entitlements (`leaseRequired: true`)
+2. Admin generates challenge via `POST /api/licence/offline-challenge`
+3. Challenge token copied to air-gapped machine
+4. Response brought back, redeemed via `POST /api/licence/offline-refresh`
+5. Lease token returned for offline validation
 
-### Deactivation Flow (Customer Portal)
+> **Note:** Offline refresh is disabled for lifetime/founders entitlements (`leaseRequired: false`)
 
-**Location:** `frontend/src/pages/customer/dashboard.astro:1260-1310`
+### What Was Removed in Stage 5.5
 
-1. User pastes deactivation code from desktop app
-2. Frontend calls `POST /api/license-keys/:id/deactivate-with-code` with `{ deactivationCode }`
-3. On success, license becomes available for reactivation
+> **Historical note:** The following dashboard sections no longer exist.
+
+- Legacy license keys card
+- Legacy activation modal
+- Legacy offline deactivation modal
 
 ---
 
 ## 8. Desktop App Expectations (from Portal POV)
 
-### Activation Endpoint
+> **Note:** This section documents the Stage 4/5 device-based API that the desktop app should use.
+> **Legacy MAC-based endpoints (`/api/license/activate`, `/api/license/deactivate`) return 410 Gone.**
 
-**URL:** `POST /api/license/activate`  
-**Auth:** None required  
-**Rate Limit:** 10 requests/minute per IP
+### Device Registration
+
+**URL:** `POST /api/device/register`  
+**Auth:** Customer JWT required
 
 **Request:**
 
 ```json
 {
-  "licenceKey": "string (the license key user purchased)",
-  "machineId": "string (device identifier)"
+  "deviceId": "stable-unique-device-id",
+  "publicKey": "base64-encoded-public-key",
+  "name": "Device Name",
+  "platform": "macos|windows|linux"
 }
 ```
 
@@ -1258,35 +1420,27 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ```json
 {
-  "jwt": "string (RS256 signed JWT)",
-  "jti": "string (UUID)",
-  "machineId": "string",
-  "licenseKey": "string (NEW key with type prefix)",
-  "deactivationCode": "string (8 chars)",
-  "trialStart": "string (ISO date, only for trial type)"
+  "device": {
+    "id": 123,
+    "deviceId": "stable-unique-device-id",
+    "name": "Device Name",
+    "platform": "macos",
+    "publicKeyHash": "sha256-of-public-key"
+  }
 }
 ```
 
-**Error Responses:**
+### Activation Endpoint
 
-- 400: `{ "error": "licenceKey and machineId are required" }`
-- 400: `{ "error": "License is already active on another device" }`
-- 400: `{ "error": "Trial license has already been used" }`
-- 404: `{ "error": "License key not found" }`
-- 500: `{ "error": "JWT private key not configured" }`
-
-### Deactivation Endpoint
-
-**URL:** `POST /api/license/deactivate`  
-**Auth:** None required  
-**Rate Limit:** 10 requests/minute per IP
+**URL:** `POST /api/licence/activate`  
+**Auth:** Customer JWT required
 
 **Request:**
 
 ```json
 {
-  "licenceKey": "string (the ACTIVE license key - may differ from original)",
-  "deactivationCode": "string (8-char code from activation)"
+  "entitlementId": 456,
+  "deviceId": "stable-unique-device-id"
 }
 ```
 
@@ -1295,16 +1449,70 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 ```json
 {
   "success": true,
-  "message": "License deactivated successfully",
-  "newLicenseKey": "string (new unused key for future use)"
+  "device": { "id": 123, "boundAt": "2026-01-20T..." },
+  "entitlement": { "id": 456, "tier": "pro" }
 }
 ```
 
 **Error Responses:**
 
-- 400: `{ "error": "licenceKey and deactivationCode are required" }`
-- 400: `{ "error": "Invalid deactivation code" }`
-- 404: `{ "error": "License key not found or not active" }`
+- 400: `{ "error": "Device not found or not registered" }`
+- 400: `{ "error": "Entitlement not found or not active" }`
+- 400: `{ "error": "Device limit reached for this entitlement" }`
+
+### Refresh Endpoint (Lease Token for Subscriptions)
+
+**URL:** `POST /api/licence/refresh`  
+**Auth:** Customer JWT required
+
+**Request:**
+
+```json
+{
+  "deviceId": "stable-unique-device-id"
+}
+```
+
+**Success Response (200) - Subscription:**
+
+```json
+{
+  "leaseRequired": true,
+  "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2026-01-27T..."
+}
+```
+
+**Success Response (200) - Lifetime:**
+
+```json
+{
+  "leaseRequired": false,
+  "message": "Lifetime entitlements do not require lease tokens"
+}
+```
+
+### Deactivation Endpoint
+
+**URL:** `POST /api/licence/deactivate`  
+**Auth:** Customer JWT required
+
+**Request:**
+
+```json
+{
+  "deviceId": "stable-unique-device-id"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Device deactivated"
+}
+```
 
 ### Reset Endpoint (Testing Only)
 
@@ -1365,16 +1573,11 @@ Resets ALL licenses to unused state. **For internal/testing use only.**
 
 ### Remaining Items (Still Valid)
 
-### GAP-003: Multiple Activation Systems with Different machineId Handling
+### ~~GAP-003: Multiple Activation Systems with Different machineId Handling~~ (RETIRED)
 
-**Status:** Still present (by design)
+**Status:** ✅ RESOLVED in Stage 5.5
 
-**What code proves:**
-
-- `license-key.js` normalizes MAC address to `aa:bb:cc:dd:ee:ff`
-- `custom.js` stores raw machineId
-
-**Impact:** Activation codes generated via customer portal require specific MAC format; desktop app accepts any string
+Legacy MAC-based activation systems have been retired. All activation now uses Stage 4/5 device-based system with `deviceId` (not MAC address). The legacy `license-key.js` and `custom.js` MAC-based endpoints return 410 Gone.
 
 ### GAP-004: ~~Shadowed Routes~~ (RESOLVED)
 
@@ -1400,20 +1603,20 @@ All license operations now go through `custom/controllers/custom.js`.
 
 ## Appendix: File Reference
 
-| File                                                     | Purpose                                          |
-| -------------------------------------------------------- | ------------------------------------------------ |
-| `backend/src/api/custom/routes/custom.js`                | Checkout, webhook, license API routes            |
-| `backend/src/api/custom/controllers/custom.js`           | Main controller for payments and license ops     |
-| `backend/src/utils/stripe-webhook-handler.js`            | Server-truth webhook processing with idempotency |
-| `backend/src/utils/entitlement-mapping.js`               | Tier mapping and founders logic                  |
-| `backend/src/api/customer/routes/customer.js`            | Customer auth routes                             |
-| `backend/src/api/customer/controllers/customer.js`       | Customer registration, login, profile            |
-| `backend/src/api/license-key/routes/license-key.js`      | Customer portal license routes                   |
-| `backend/src/api/license-key/controllers/license-key.js` | Offline activation/deactivation                  |
-| `backend/src/middlewares/customer-auth.js`               | JWT verification for customer routes             |
-| `backend/src/middlewares/admin-internal.js`              | Admin token protection for internal routes       |
-| `backend/src/middlewares/license-rate-limit.js`          | Rate limiting for license endpoints              |
-| `frontend/src/pages/customer/dashboard.astro`            | Customer dashboard UI                            |
+| File                                                     | Purpose                                                          |
+| -------------------------------------------------------- | ---------------------------------------------------------------- |
+| `backend/src/api/custom/routes/custom.js`                | Checkout, webhook, device, licence API routes                    |
+| `backend/src/api/custom/controllers/custom.js`           | Main controller for payments, device registration, Stage 4/5 ops |
+| `backend/src/utils/stripe-webhook-handler.js`            | Server-truth webhook processing with idempotency                 |
+| `backend/src/utils/entitlement-mapping.js`               | Tier mapping and founders logic                                  |
+| `backend/src/utils/lease-token.js`                       | RS256 lease token generation and validation                      |
+| `backend/src/api/customer/routes/customer.js`            | Customer auth routes                                             |
+| `backend/src/api/customer/controllers/customer.js`       | Customer registration, login, profile                            |
+| `backend/src/api/license-key/routes/license-key.js`      | Legacy routes (return 410 Gone)                                  |
+| `backend/src/api/license-key/controllers/license-key.js` | Legacy handlers (return 410 Gone)                                |
+| `backend/src/middlewares/customer-auth.js`               | JWT verification for customer routes                             |
+| `backend/src/middlewares/admin-internal.js`              | Admin token protection for internal routes                       |
+| `frontend/src/pages/customer/dashboard.astro`            | Customer dashboard UI (Stage 4/5 device management)              |
 
 ---
 

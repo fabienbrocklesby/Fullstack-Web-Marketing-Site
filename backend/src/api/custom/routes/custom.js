@@ -86,12 +86,14 @@ module.exports = {
         middlewares: ["global::customer-auth"],
       },
     },
-    // License Portal Endpoints
-    // Rate limited to prevent brute force attacks
+    // =========================================================================
+    // LEGACY MAC-BASED ENDPOINTS - RETIRED (Stage 5.5 Cutover)
+    // These endpoints now return 410 Gone. All activation uses Stage 4/5.
+    // =========================================================================
     {
       method: "POST",
       path: "/license/activate",
-      handler: "custom.licenseActivate",
+      handler: "custom.licenseActivateLegacyRetired",
       config: {
         auth: false,
         middlewares: ["global::license-rate-limit"],
@@ -100,13 +102,14 @@ module.exports = {
     {
       method: "POST",
       path: "/license/deactivate",
-      handler: "custom.licenseDeactivate",
+      handler: "custom.licenseDeactivateLegacyRetired",
       config: {
         auth: false,
         middlewares: ["global::license-rate-limit"],
       },
     },
     // LOCKED: License reset is extremely dangerous - requires admin token
+    // (Still available for admin maintenance)
     {
       method: "POST",
       path: "/license/reset",

@@ -411,6 +411,10 @@ module.exports = createCoreController(
           maxDevices: e.maxDevices,
           source: e.source,
           createdAt: e.createdAt,
+          // Stage 5.5: Compute leaseRequired server-side
+          // Lifetime entitlements NEVER require lease refresh
+          // Subscriptions always require lease refresh
+          leaseRequired: !e.isLifetime,
           // Subscription-specific fields for dashboard display
           currentPeriodEnd: e.currentPeriodEnd || null,
           cancelAtPeriodEnd: e.cancelAtPeriodEnd || false,
@@ -428,7 +432,7 @@ module.exports = createCoreController(
             stripePriceId: e.stripePriceId || null,
           } : {}),
           // Note: tier is feature tier (maker/pro/education/enterprise)
-          // isLifetime=true means "founders lifetime" billing
+          // isLifetime=true means "founders lifetime" billing, leaseRequired=false
         }));
 
         ctx.body = {

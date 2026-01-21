@@ -1,0 +1,43 @@
+# Customer Entitlements
+# Fetch all entitlements for the authenticated customer
+#
+# Prerequisites:
+#   - Run shared/login.http first to get JWT
+#   - Copy the token value to @token variable
+
+@baseUrl = {{$dotenv API_URL}}
+@token = {{$dotenv JWT}}
+
+### Get all entitlements for logged-in customer
+# @name entitlements
+GET {{baseUrl}}/api/customers/me/entitlements
+Authorization: Bearer {{token}}
+
+### Response will contain:
+# {
+#   "entitlements": [
+#     {
+#       "id": 1,
+#       "tier": "standard",
+#       "maxDevices": 1,
+#       "isLifetime": false,
+#       "status": "active",
+#       "expiresAt": "2025-12-31T23:59:59.000Z",
+#       "devices": [...],
+#       "leaseRequired": true
+#     },
+#     {
+#       "id": 2,
+#       "tier": "founders",
+#       "maxDevices": 3,
+#       "isLifetime": true,
+#       "status": "active",
+#       "expiresAt": null,
+#       "devices": [...],
+#       "leaseRequired": false
+#     }
+#   ]
+# }
+#
+# Note: isLifetime=true entitlements do NOT support offline refresh
+# Note: leaseRequired=true means the app needs a valid lease token

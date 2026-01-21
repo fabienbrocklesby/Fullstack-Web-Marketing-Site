@@ -1092,457 +1092,69 @@ module.exports = {
     };
   },
 
+  // =========================================================================
+  // LEGACY MAC-BASED ENDPOINTS - RETIRED (Stage 5.5 Cutover)
+  // These return 410 Gone. All activation uses Stage 4/5 device-based system.
+  // =========================================================================
+
   /**
-   * License Portal: Activate a license key
+   * RETIRED: Legacy MAC-based license activation
    * POST /api/license/activate
+   * 
+   * Use instead:
+   *   1. POST /api/device/register
+   *   2. POST /api/licence/activate
    */
-  async licenseActivate(ctx) {
-    const jwt = require("jsonwebtoken");
-    const { v4: uuidv4 } = require("uuid");
-    const crypto = require("crypto");
-
-    try {
-      const { licenceKey, machineId } = ctx.request.body;
-
-      // Validate input
-      if (!licenceKey || !machineId) {
-        audit.licenseActivation(ctx, "denied", "missing_fields", { licenceKey: maskSensitive(licenceKey), machineId });
-        ctx.status = 400;
-        ctx.body = { error: "licenceKey and machineId are required" };
-        return;
-      }
-
-      // Find the license by key
-      const license = await strapi.entityService.findMany(
-        "api::license-key.license-key",
-        {
-          filters: { key: licenceKey },
-          populate: ["entitlement", "customer"],
-          limit: 1,
-        },
-      );
-
-      if (!license || license.length === 0) {
-        audit.licenseActivation(ctx, "denied", "not_found", { licenceKey: maskSensitive(licenceKey), machineId });
-        ctx.status = 404;
-        ctx.body = { error: "License key not found" };
-        return;
-      }
-
-      const licenseRecord = license[0];
-
-      // Stage 2 Fix: Entitlement is REQUIRED - auto-create if missing
-      let entitlement = licenseRecord.entitlement;
-
-      if (!entitlement) {
-        // Auto-create entitlement deterministically
-        console.log(`🔧 License key #${licenseRecord.id} has no entitlement. Auto-creating...`);
-
-        try {
-          // Try to find associated purchase for better tier mapping
-          let purchase = null;
-          if (licenseRecord.purchase) {
-            purchase = await strapi.entityService.findOne(
-              "api::purchase.purchase",
-              typeof licenseRecord.purchase === "object" ? licenseRecord.purchase.id : licenseRecord.purchase
-            );
-          }
-
-          // Determine tier
-          const tierMapping = determineEntitlementTier({
-            priceId: purchase?.priceId || licenseRecord.priceId,
-            amount: purchase ? parseFloat(purchase.amount) : null,
-            createdAt: purchase?.createdAt || licenseRecord.createdAt,
-            metadata: purchase?.metadata || null,
-          });
-
-          // Fallback: use licenseKey.typ if mapping uncertain
-          if (tierMapping.confidence === "low" && licenseRecord.typ) {
-            const typToTier = { starter: "maker", pro: "pro", enterprise: "enterprise", paid: "maker", trial: "maker" };
-            const mappedTier = typToTier[licenseRecord.typ];
-            if (mappedTier) {
-              tierMapping.tier = mappedTier;
-              tierMapping.maxDevices = { maker: 1, pro: 1, education: 5, enterprise: 10 }[mappedTier] || 1;
-            }
-          }
-
-          // Get customer - required for entitlement
-          let customerId = null;
-          if (licenseRecord.customer) {
-            customerId = typeof licenseRecord.customer === "object" ? licenseRecord.customer.id : licenseRecord.customer;
-          }
-
-          if (!customerId) {
-            console.error(`❌ Cannot auto-create entitlement: license #${licenseRecord.id} has no customer`);
-            audit.licenseActivation(ctx, "denied", "no_customer", { licenseId: licenseRecord.id, machineId });
-            ctx.status = 400;
-            ctx.body = { error: "License has no associated customer. Please contact support." };
-            return;
-          }
-
-          // Create entitlement
-          entitlement = await strapi.entityService.create(
-            "api::entitlement.entitlement",
-            {
-              data: {
-                customer: customerId,
-                licenseKey: licenseRecord.id,
-                purchase: purchase?.id || null,
-                tier: tierMapping.tier,
-                status: "active",
-                isLifetime: tierMapping.isLifetime,
-                expiresAt: tierMapping.isLifetime ? null : null,
-                maxDevices: tierMapping.maxDevices,
-                source: "legacy_purchase",
-                metadata: {
-                  ...tierMapping.metadata,
-                  mappingConfidence: tierMapping.confidence,
-                  reason: "autocreated_on_activation",
-                  createdAt: new Date().toISOString(),
-                },
-              },
-            }
-          );
-
-          console.log(`✅ Auto-created entitlement #${entitlement.id} for license #${licenseRecord.id} (tier: ${tierMapping.tier}, lifetime: ${tierMapping.isLifetime})`);
-
-        } catch (autoCreateErr) {
-          console.error(`❌ Failed to auto-create entitlement for license #${licenseRecord.id}:`, autoCreateErr.message);
-          audit.licenseActivation(ctx, "error", "entitlement_autocreate_failed", { licenseId: licenseRecord.id, error: autoCreateErr.message });
-          ctx.status = 500;
-          ctx.body = { error: "Failed to initialize license. Please contact support." };
-          return;
-        }
-      }
-
-      // Enforce entitlement status
-      if (entitlement.status !== "active") {
-        audit.licenseActivation(ctx, "denied", "entitlement_inactive", {
-          licenseId: licenseRecord.id,
-          entitlementId: entitlement.id,
-          entitlementStatus: entitlement.status,
-          machineId,
-        });
-        ctx.status = 403;
-        ctx.body = {
-          error: "Entitlement is not active",
-          entitlementStatus: entitlement.status,
-          message: entitlement.status === "expired"
-            ? "Your license has expired. Please renew to continue."
-            : entitlement.status === "canceled"
-            ? "Your license has been canceled."
-            : "Your license is currently inactive.",
-        };
-        return;
-      }
-
-      // Enforce lifetime/expiry consistency
-      if (entitlement.isLifetime && entitlement.expiresAt) {
-        // Normalize: lifetime entitlements should not have expiresAt
-        console.log(`🔧 Normalizing lifetime entitlement #${entitlement.id}: clearing expiresAt`);
-        await strapi.entityService.update("api::entitlement.entitlement", entitlement.id, {
-          data: { expiresAt: null },
-        });
-        entitlement.expiresAt = null;
-      }
-
-      // Check expiry for non-lifetime entitlements
-      if (!entitlement.isLifetime && entitlement.expiresAt) {
-        const now = new Date();
-        const expiresAt = new Date(entitlement.expiresAt);
-        if (expiresAt < now) {
-          // Mark as expired
-          await strapi.entityService.update("api::entitlement.entitlement", entitlement.id, {
-            data: { status: "expired" },
-          });
-          audit.licenseActivation(ctx, "denied", "entitlement_expired", {
-            licenseId: licenseRecord.id,
-            entitlementId: entitlement.id,
-            expiresAt: entitlement.expiresAt,
-            machineId,
-          });
-          ctx.status = 403;
-          ctx.body = {
-            error: "License expired",
-            message: "Your license has expired. Please renew to continue.",
-            expiresAt: entitlement.expiresAt,
-          };
-          return;
-        }
-      }
-
-      // Check if license is already active
-      if (licenseRecord.status === "active") {
-        audit.licenseActivation(ctx, "denied", "already_active", { licenseId: licenseRecord.id, machineId });
-        ctx.status = 400;
-        ctx.body = { error: "License is already active on another device" };
-        return;
-      }
-
-      // For trial licenses, only allow one-time activation
-      if (licenseRecord.typ === "trial" && licenseRecord.status !== "unused") {
-        audit.licenseActivation(ctx, "denied", "trial_already_used", { licenseId: licenseRecord.id, machineId });
-        ctx.status = 400;
-        ctx.body = { error: "Trial license has already been used" };
-        return;
-      }
-
-      // Generate new license key and deactivation code for security
-      const generateShortKey = () => {
-        const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // No confusing chars like 0,O,1,I
-        let result = "";
-        for (let i = 0; i < 12; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-          if (i === 3 || i === 7) result += "-"; // Add dashes for readability
-        }
-        return result;
-      };
-
-      const generateDeactivationCode = () => {
-        const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-        let result = "";
-        for (let i = 0; i < 8; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-      };
-
-      // Map license types to proper prefixes
-      const getPrefix = (typ) => {
-        const prefixMap = {
-          trial: "TRIAL",
-          starter: "STARTER",
-          pro: "PRO",
-          enterprise: "ENTERPRISE",
-          paid: "PAID",
-        };
-        return prefixMap[typ] || typ.toUpperCase();
-      };
-
-      // Generate new identifiers
-      const jti = uuidv4();
-      const newLicenseKey = `${getPrefix(licenseRecord.typ)}-${generateShortKey()}`;
-      const deactivationCode = generateDeactivationCode();
-      const now = new Date();
-      const trialStart = licenseRecord.typ === "trial" ? now : undefined;
-
-      // Encrypt deactivation code using license key as encryption key
-      const encryptDeactivationCode = (code, licenseKey) => {
-        const algorithm = "aes-256-cbc";
-        const key = crypto.createHash("sha256").update(licenseKey).digest();
-        const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv(algorithm, key, iv);
-        let encrypted = cipher.update(code, "utf8", "hex");
-        encrypted += cipher.final("hex");
-        return iv.toString("hex") + ":" + encrypted;
-      };
-
-      const encryptedDeactivationCode = encryptDeactivationCode(
-        deactivationCode,
-        newLicenseKey,
-      );
-
-      // Update license record with new key and encrypted deactivation code
-      await strapi.entityService.update(
-        "api::license-key.license-key",
-        licenseRecord.id,
-        {
-          data: {
-            key: newLicenseKey, // Generate new key to prevent reuse
-            status: "active",
-            jti,
-            machineId,
-            trialStart,
-            activatedAt: now,
-            isUsed: true,
-            deactivationCode: encryptedDeactivationCode, // Store encrypted deactivation code
-            currentActivations: 1, // Always 1 for single device
-            maxActivations: 1, // Always 1 for single device
-          },
-        },
-      );
-
-      // Create JWT payload with deactivation code
-      const payload = {
-        iss: process.env.JWT_ISSUER || `https://${ctx.request.host}`,
-        sub: licenseRecord.id.toString(),
-        jti,
-        typ: licenseRecord.typ,
-        machineId,
-        deactivationCode, // Include deactivation code in JWT
-        licenseKey: newLicenseKey,
-        iat: Math.floor(now.getTime() / 1000),
-      };
-
-      // Add trialStart for trial licenses
-      if (licenseRecord.typ === "trial") {
-        payload.trialStart = Math.floor(now.getTime() / 1000);
-      }
-
-      // Get private key from environment (no filesystem fallback)
-      const privateKey = getRS256PrivateKey();
-      if (!privateKey) {
-        console.error("JWT_PRIVATE_KEY not set in environment");
-        ctx.status = 500;
-        ctx.body = { error: "JWT private key not configured" };
-        return;
-      }
-
-      // Sign JWT with RS256
-      const token = jwt.sign(payload, privateKey, {
-        algorithm: "RS256",
-        noTimestamp: true, // We set iat manually
-      });
-
-      audit.licenseActivation(ctx, "success", "activated", { licenseId: licenseRecord.id, typ: licenseRecord.typ, machineId });
-
-      ctx.status = 200;
-      ctx.body = {
-        jwt: token,
-        jti,
-        machineId,
-        licenseKey: newLicenseKey, // Return new license key
-        deactivationCode, // Return deactivation code
-        ...(licenseRecord.typ === "trial" && { trialStart: now.toISOString() }),
-      };
-    } catch (error) {
-      console.error("License activation error:", error);
-      console.error("Error stack:", error.stack);
-      audit.licenseActivation(ctx, "error", "internal_error", { error: error.message });
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error", details: error.message };
-    }
+  async licenseActivateLegacyRetired(ctx) {
+    strapi.log.warn(`[RETIRED] POST /api/license/activate called - legacy MAC-based activation`);
+    ctx.status = 410;
+    ctx.body = {
+      error: "Legacy MAC-based activation retired",
+      message: "This endpoint has been retired. Please use the new device-based activation system.",
+      migrationGuide: "1) Register your device: POST /api/device/register, 2) Activate entitlement: POST /api/licence/activate",
+      endpoints: {
+        register: "POST /api/device/register",
+        activate: "POST /api/licence/activate",
+        refresh: "POST /api/licence/refresh",
+        deactivate: "POST /api/licence/deactivate",
+      },
+    };
   },
 
   /**
-   * License Portal: Deactivate a license key
+   * RETIRED: Legacy MAC-based license deactivation
    * POST /api/license/deactivate
+   * 
+   * Use instead: POST /api/licence/deactivate
    */
-  async licenseDeactivate(ctx) {
-    try {
-      const { licenceKey, deactivationCode } = ctx.request.body;
-
-      // Validate input
-      if (!licenceKey || !deactivationCode) {
-        audit.licenseDeactivation(ctx, "denied", "missing_fields", { licenceKey: maskSensitive(licenceKey) });
-        ctx.status = 400;
-        ctx.body = { error: "licenceKey and deactivationCode are required" };
-        return;
-      }
-
-      // Find the active license (without checking deactivation code yet)
-      const license = await strapi.entityService.findMany(
-        "api::license-key.license-key",
-        {
-          filters: {
-            key: licenceKey,
-            status: "active",
-          },
-          limit: 1,
-        },
-      );
-
-      if (!license || license.length === 0) {
-        audit.licenseDeactivation(ctx, "denied", "not_found_or_inactive", { licenceKey: maskSensitive(licenceKey) });
-        ctx.status = 404;
-        ctx.body = { error: "License key not found or not active" };
-        return;
-      }
-
-      const licenseRecord = license[0];
-
-      // Decrypt and verify deactivation code
-      const decryptDeactivationCode = (encryptedCode, licenseKey) => {
-        try {
-          const algorithm = "aes-256-cbc";
-          const key = crypto.createHash("sha256").update(licenseKey).digest();
-          const parts = encryptedCode.split(":");
-          if (parts.length !== 2) return null;
-          const iv = Buffer.from(parts[0], "hex");
-          const encrypted = parts[1];
-          const decipher = crypto.createDecipheriv(algorithm, key, iv);
-          let decrypted = decipher.update(encrypted, "hex", "utf8");
-          decrypted += decipher.final("utf8");
-          return decrypted;
-        } catch {
-          return null; // Invalid encryption/decryption
-        }
-      };
-
-      const decryptedCode = decryptDeactivationCode(
-        licenseRecord.deactivationCode,
-        licenceKey,
-      );
-
-      if (!decryptedCode || decryptedCode !== deactivationCode) {
-        audit.licenseDeactivation(ctx, "denied", "invalid_deactivation_code", { licenseId: licenseRecord.id });
-        ctx.status = 400;
-        ctx.body = { error: "Invalid deactivation code" };
-        return;
-      }
-
-      // Generate new unused license key for future use
-      const generateShortKey = () => {
-        const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // No confusing chars
-        let result = "";
-        for (let i = 0; i < 12; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-          if (i === 3 || i === 7) result += "-";
-        }
-        return result;
-      };
-
-      // Map license types to proper prefixes
-      const getPrefix = (typ) => {
-        const prefixMap = {
-          trial: "TRIAL",
-          starter: "STARTER",
-          pro: "PRO",
-          enterprise: "ENTERPRISE",
-          paid: "PAID",
-        };
-        return prefixMap[typ] || typ.toUpperCase();
-      };
-
-      const newLicenseKey = `${getPrefix(licenseRecord.typ)}-${generateShortKey()}`;
-
-      // Deactivate and reset the license with new key
-      await strapi.entityService.update(
-        "api::license-key.license-key",
-        licenseRecord.id,
-        {
-          data: {
-            key: newLicenseKey, // New license key for reuse
-            status: "unused",
-            jti: null,
-            machineId: null,
-            trialStart: null,
-            activatedAt: null,
-            isUsed: false,
-            deactivationCode: null, // Clear the encrypted deactivation code
-            currentActivations: 0,
-          },
-        },
-      );
-
-      audit.licenseDeactivation(ctx, "success", "deactivated", { licenseId: licenseRecord.id, typ: licenseRecord.typ });
-
-      ctx.status = 200;
-      ctx.body = {
-        success: true,
-        message: "License deactivated successfully",
-        newLicenseKey: newLicenseKey,
-      };
-    } catch (error) {
-      console.error("License deactivation error:", error);
-      audit.licenseDeactivation(ctx, "error", "internal_error", { error: error.message });
-      ctx.status = 500;
-      ctx.body = {
-        error: "Failed to deactivate license",
-        details: error.message,
-      };
-    }
+  async licenseDeactivateLegacyRetired(ctx) {
+    strapi.log.warn(`[RETIRED] POST /api/license/deactivate called - legacy MAC-based deactivation`);
+    ctx.status = 410;
+    ctx.body = {
+      error: "Legacy MAC-based deactivation retired",
+      message: "This endpoint has been retired. Please use POST /api/licence/deactivate with your deviceId.",
+      migrationGuide: "Use POST /api/licence/deactivate with { entitlementId, deviceId }",
+    };
   },
+
+  // =========================================================================
+  // LEGACY MAC-BASED CODE REMOVED (Stage 5.5 Cutover - 2026-01-21)
+  // =========================================================================
+  // The following functions were previously preserved for reference but have
+  // been removed in Stage 5.5 to eliminate all legacy MAC/machineId code paths:
+  //   - licenseActivate() - Legacy MAC-based activation
+  //   - licenseDeactivate() - Legacy MAC-based deactivation
+  //
+  // All activation now uses the Stage 4/5 device-based system:
+  //   - POST /api/device/register
+  //   - POST /api/licence/activate
+  //   - POST /api/licence/refresh
+  //   - POST /api/licence/deactivate
+  //
+  // Legacy endpoints POST /api/license/activate and /api/license/deactivate
+  // are handled by licenseActivateLegacyRetired() and licenseDeactivateLegacyRetired()
+  // which return 410 Gone with migration guidance.
+  // =========================================================================
 
   /**
    * License Portal: Reset all licenses to unused state (for testing)
@@ -3389,6 +3001,26 @@ module.exports = {
         return;
       }
 
+      // Offline refresh is only available for subscription entitlements
+      // Lifetime/Founders licenses are online-only and don't need lease tokens
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          isLifetime: entitlement.isLifetime,
+          leaseRequired: entitlement.leaseRequired,
+        });
+        ctx.status = 400;
+        ctx.body = {
+          error: "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.",
+          code: "LIFETIME_NOT_SUPPORTED",
+        };
+        return;
+      }
+
       // Verify device is registered to customer
       const devices = await strapi.entityService.findMany("api::device.device", {
         filters: { deviceId },
@@ -3579,6 +3211,26 @@ module.exports = {
         return;
       }
 
+      // Offline refresh is only available for subscription entitlements
+      // Lifetime/Founders licenses are online-only and don't need lease tokens
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          isLifetime: entitlement.isLifetime,
+          leaseRequired: entitlement.leaseRequired,
+        });
+        ctx.status = 400;
+        ctx.body = {
+          error: "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.",
+          code: "LIFETIME_NOT_SUPPORTED",
+        };
+        return;
+      }
+
       // Verify device exists and is owned by customer
       const devices = await strapi.entityService.findMany("api::device.device", {
         filters: { deviceId },
@@ -3627,29 +3279,7 @@ module.exports = {
         },
       });
 
-      // Lifetime entitlements don't need lease tokens
-      if (entitlement.isLifetime) {
-        audit.offlineRefresh(ctx, {
-          outcome: "success",
-          reason: "lifetime_no_lease_needed",
-          customerId: customer.id,
-          entitlementId,
-          deviceId,
-        });
-
-        ctx.body = {
-          ok: true,
-          leaseRequired: false,
-          leaseToken: null,
-          leaseExpiresAt: null,
-          refreshCode: null,
-          message: "Lifetime entitlement does not require offline refresh",
-          serverTime: now.toISOString(),
-        };
-        return;
-      }
-
-      // Mint lease token for subscription
+      // Mint lease token for subscription (lifetime entitlements already rejected above)
       const lease = mintLeaseToken({
         entitlementId,
         customerId: customer.id,

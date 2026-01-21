@@ -216,8 +216,9 @@ The licensing system uses **Entitlements as the source of truth** for access con
 
 - **Entitlement** represents a customer's access rights (tier, device limit, lifetime vs subscription)
 - **License Key** is linked to an Entitlement and enforces it during activation
-- **Tiers**: maker (1 device), pro (2), education (5), enterprise (10)
+- **Tiers**: maker (1 device), pro (1), education (5), enterprise (10)
 - **Founders** purchases (before 2026-01-12) get `isLifetime: true`
+- **Legacy MAC activation retired** (returns 410 Gone). Use Stage 4/5 device-based activation.
 
 **Backfill existing license keys:**
 

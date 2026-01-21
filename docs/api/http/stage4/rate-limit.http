@@ -1,0 +1,40 @@
+# Stage 4: Rate Limit Testing
+# Tests rate limit headers and 429 response
+#
+# Rate limits (per minute):
+#   - authRateLimit: 5/min (login)
+#   - licenseRateLimit: 10/min (activate, refresh, deactivate)
+#   - apiRateLimit: 30/min (general endpoints)
+
+@baseUrl = {{$dotenv API_URL}}
+@token = {{$dotenv JWT}}
+
+### Check rate limit headers on entitlements endpoint
+# Look for: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+GET {{baseUrl}}/api/customer/entitlements
+Authorization: Bearer {{token}}
+
+### Trigger rate limit (run this 6+ times quickly)
+# Should return 429 Too Many Requests after 5 attempts
+POST {{baseUrl}}/api/auth/local
+Content-Type: application/json
+
+{
+  "identifier": "test@example.com",
+  "password": "wrongpassword"
+}
+
+### Response when rate limited (429):
+# {
+#   "error": {
+#     "status": 429,
+#     "name": "TooManyRequestsError",
+#     "message": "Rate limit exceeded. Try again in 60 seconds."
+#   }
+# }
+#
+# Headers will include:
+#   X-RateLimit-Limit: 5
+#   X-RateLimit-Remaining: 0
+#   X-RateLimit-Reset: 1705329600
+#   Retry-After: 60

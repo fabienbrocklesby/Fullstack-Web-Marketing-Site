@@ -1,0 +1,72 @@
+# Stage 5: Subscription Offline Refresh
+# Challenge/response flow for air-gapped devices (subscription entitlements only)
+#
+# Use case: Customer has a device in an air-gapped network. They cannot
+# refresh the lease online. Instead, they:
+#   1. On portal (online): Generate challenge with entitlementId + deviceId
+#   2. On air-gapped device: Sign the challenge with device private key
+#   3. On portal (online): Submit signed response, get offline refresh token
+#   4. On air-gapped device: Import the refresh token
+#
+# IMPORTANT: Only subscription entitlements (isLifetime=false) support this.
+# Lifetime/founders entitlements are online-only.
+#
+# Prerequisites:
+#   - Run shared/login.http first to get JWT
+#   - Have a subscription entitlement (not lifetime)
+#   - Device must be registered and activated first
+
+@baseUrl = {{$dotenv API_URL}}
+@token = {{$dotenv JWT}}
+@entitlementId = 1
+@deviceId = smoke-test-device-001
+
+### Step 1: Request offline challenge
+# Portal generates a challenge string for the customer
+# @name getChallenge
+POST {{baseUrl}}/api/licence/offline-challenge
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceId}}"
+}
+
+### Response (200):
+# {
+#   "challenge": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "expiresAt": "2025-01-15T12:00:00.000Z"
+# }
+
+###
+
+### Step 2: Submit signed response
+# Air-gapped device signs the challenge, customer brings signature to portal
+# Portal validates and returns an offline refresh token
+# @name submitResponse
+POST {{baseUrl}}/api/licence/offline-refresh
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entitlementId": {{entitlementId}},
+  "deviceId": "{{deviceId}}",
+  "challenge": "{{getChallenge.response.body.challenge}}",
+  "signature": "DEVICE_SIGNATURE_HERE"
+}
+
+### Response (200):
+# {
+#   "ok": true,
+#   "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "leaseExpiresAt": "2025-02-15T23:59:59.000Z"
+# }
+#
+# The leaseToken can be imported on the air-gapped device.
+# It's valid for a longer period than normal lease tokens (e.g., 30 days).
+#
+# Error responses:
+# - 400: Invalid signature, expired challenge, or lifetime entitlement
+# - 403: Device not authorized for this entitlement
+# - 404: Entitlement not found

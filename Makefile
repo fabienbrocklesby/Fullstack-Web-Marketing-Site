@@ -22,6 +22,12 @@ help:
 	@echo "  make deps         - Force reinstall dependencies on next restart"
 	@echo "  make deps-watch   - Force reinstall and follow logs"
 	@echo ""
+	@echo "Smoke Tests:"
+	@echo "  make seed-test-customer - Create test customer + entitlements (idempotent)"
+	@echo "  make smoke        - Run all smoke tests"
+	@echo "  make smoke-stage4 - Run Stage 4 device activation test"
+	@echo "  make smoke-stage5 - Run Stage 5.5 full licensing test"
+	@echo ""
 	@echo "Checks (CI/CD):"
 	@echo "  make check        - Run all must-pass checks (env, lint, build)"
 	@echo "  make check-env    - Validate required environment variables"
@@ -165,6 +171,29 @@ sanity-stage3-polling:
 # Cleanup Stage 3 sanity test data
 sanity-stage3-cleanup:
 	@$(DOCKER_COMPOSE) exec -T backend sh -c "cd /workspace/backend && node scripts/sanity-stage3.js --cleanup"
+
+# ============================================================
+# Smoke tests (API integration tests)
+# ============================================================
+
+# Create test customer + entitlements for smoke tests (idempotent)
+seed-test-customer:
+	@echo "🌱 Seeding smoke test data..."
+	@./docs/api/http/seed-test-customer.sh
+
+# Run Stage 4 smoke test (device-based activation)
+smoke-stage4:
+	@echo "🧪 Running Stage 4 smoke test..."
+	@./docs/api/http/stage4/smoke-test.sh
+
+# Run Stage 5.5 smoke test (full licensing validation)
+smoke-stage5:
+	@echo "🧪 Running Stage 5.5 smoke test..."
+	@./docs/api/http/stage5/smoke-test.sh
+
+# Run all smoke tests (Stage 5.5 is the comprehensive one)
+smoke: smoke-stage5
+	@echo "✅ All smoke tests completed"
 
 # ============================================================
 # CI/CD check targets
