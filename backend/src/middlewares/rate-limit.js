@@ -5,6 +5,7 @@
  */
 
 const { audit } = require("../utils/audit-logger");
+const { ErrorCodes } = require("../utils/api-responses");
 
 const buckets = new Map();
 
@@ -50,9 +51,12 @@ function createRateLimiter(options = {}) {
       ctx.status = 429;
       ctx.set('Retry-After', Math.ceil(windowMs / 1000));
       ctx.body = {
-        error: 'Too many requests',
+        ok: false,
+        code: ErrorCodes.RATE_LIMITED,
         message: `Rate limit exceeded. Please wait ${Math.ceil(windowMs / 1000)} seconds.`,
-        retryAfter: Math.ceil(windowMs / 1000),
+        details: {
+          retryAfter: Math.ceil(windowMs / 1000),
+        },
       };
       return;
     }

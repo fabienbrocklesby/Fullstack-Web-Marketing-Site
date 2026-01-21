@@ -187,6 +187,10 @@ ENT_STATUS=$(echo "$ENT_RESPONSE" | tail -1)
 check_rate_limit "$ENT_STATUS" "/api/customers/me/entitlements"
 assert_equals "200" "$ENT_STATUS" "Fetch entitlements returns 200"
 
+# Stage 6A: Check for ok boolean in response
+ENT_OK=$(echo "$ENT_BODY" | jq -r '.ok // "missing"')
+assert_equals "true" "$ENT_OK" "Fetch entitlements response has ok: true"
+
 ENT_COUNT=$(echo "$ENT_BODY" | jq '.entitlements | length')
 log_info "Found $ENT_COUNT entitlements"
 
@@ -227,6 +231,17 @@ if [ "$REG_STATUS" = "200" ]; then
   TESTS_PASSED=$((TESTS_PASSED + 1))
   log_pass "Device registration returns 200"
   
+  # Stage 6A: Check for ok boolean
+  REG_OK=$(echo "$REG_BODY" | jq -r '.ok // "missing"')
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$REG_OK" = "true" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Device registration response has ok: true"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Device registration response missing ok: true (got: $REG_OK)"
+  fi
+  
   DEVICE_DB_ID=$(echo "$REG_BODY" | jq -r '.data.id // empty')
   log_info "Device registered/updated (DB ID: $DEVICE_DB_ID)"
 else
@@ -258,6 +273,17 @@ else
   check_rate_limit "$ACT_STATUS" "/api/licence/activate"
   assert_equals "200" "$ACT_STATUS" "License activation returns 200"
   
+  # Stage 6A: Check for ok boolean
+  ACT_OK=$(echo "$ACT_BODY" | jq -r '.ok // "missing"')
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$ACT_OK" = "true" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "License activation response has ok: true"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "License activation response missing ok: true (got: $ACT_OK)"
+  fi
+  
   # Activation returns ok/message/entitlement/device, not a lease token
   # Lease token is obtained via /api/licence/refresh
   DEVICE_BOUND=$(echo "$ACT_BODY" | jq -r '.device.boundAt // empty')
@@ -284,6 +310,17 @@ else
 
   check_rate_limit "$REFRESH_STATUS" "/api/licence/refresh"
   assert_equals "200" "$REFRESH_STATUS" "Lease refresh returns 200"
+
+  # Stage 6A: Check for ok boolean
+  REFRESH_OK=$(echo "$REFRESH_BODY" | jq -r '.ok // "missing"')
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$REFRESH_OK" = "true" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Lease refresh response has ok: true"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Lease refresh response missing ok: true (got: $REFRESH_OK)"
+  fi
 
   LEASE_TOKEN=$(echo "$REFRESH_BODY" | jq -r '.leaseToken // empty')
   assert_not_empty "$LEASE_TOKEN" "Lease token received on refresh"
@@ -312,8 +349,20 @@ else
   check_rate_limit "$CHALLENGE_STATUS" "/api/licence/offline-challenge"
   assert_equals "200" "$CHALLENGE_STATUS" "Offline challenge returns 200"
 
-  CHALLENGE=$(echo "$CHALLENGE_BODY" | jq -r '.challenge // empty')
-  assert_not_empty "$CHALLENGE" "Challenge string received"
+  # Stage 6A: Check for ok boolean and renamed fields
+  CHALLENGE_OK=$(echo "$CHALLENGE_BODY" | jq -r '.ok // "missing"')
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$CHALLENGE_OK" = "true" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Offline challenge response has ok: true"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Offline challenge response missing ok: true (got: $CHALLENGE_OK)"
+  fi
+
+  # Stage 6A: Field renamed from 'challenge' to 'challengeToken'
+  CHALLENGE=$(echo "$CHALLENGE_BODY" | jq -r '.challengeToken // empty')
+  assert_not_empty "$CHALLENGE" "Challenge token received (challengeToken field)"
 
   # Step 2: Submit response (simulate - in real use, app would sign this)
   OFFLINE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/api/licence/offline-refresh" \
@@ -324,13 +373,40 @@ else
   OFFLINE_BODY=$(echo "$OFFLINE_RESPONSE" | sed '$d')
   OFFLINE_STATUS=$(echo "$OFFLINE_RESPONSE" | tail -1)
 
-  check_rate_limit "$OFFLINE_STATUS" "/api/licence/offline-refresh"
+  # Stage 6A: Check response has proper ok/code structure (even on failure)
+  OFFLINE_OK=$(echo "$OFFLINE_BODY" | jq -r '.ok // "missing"')
   
   # This may fail signature validation (expected) - we're just testing the endpoint exists
-  if [ "$OFFLINE_STATUS" = "200" ] || [ "$OFFLINE_STATUS" = "400" ]; then
+  # and returns proper response structure
+  if [ "$OFFLINE_STATUS" = "200" ]; then
     TESTS_RUN=$((TESTS_RUN + 1))
     TESTS_PASSED=$((TESTS_PASSED + 1))
-    log_pass "Offline refresh endpoint responds (status: $OFFLINE_STATUS)"
+    log_pass "Offline refresh succeeded (status: 200)"
+    
+    # Verify ok: true on success
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [ "$OFFLINE_OK" = "true" ]; then
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+      log_pass "Offline refresh response has ok: true"
+    else
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+      log_fail "Offline refresh response missing ok: true (got: $OFFLINE_OK)"
+    fi
+  elif [ "$OFFLINE_STATUS" = "400" ] || [ "$OFFLINE_STATUS" = "409" ]; then
+    TESTS_RUN=$((TESTS_RUN + 1))
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Offline refresh endpoint responds (status: $OFFLINE_STATUS - validation/replay error)"
+    
+    # Verify ok: false and code on error
+    TESTS_RUN=$((TESTS_RUN + 1))
+    OFFLINE_CODE=$(echo "$OFFLINE_BODY" | jq -r '.code // "missing"')
+    if [ "$OFFLINE_OK" = "false" ] && [ "$OFFLINE_CODE" != "missing" ]; then
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+      log_pass "Offline refresh error response has ok: false and code: $OFFLINE_CODE"
+    else
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+      log_fail "Offline refresh error response missing proper structure (ok: $OFFLINE_OK, code: $OFFLINE_CODE)"
+    fi
   else
     TESTS_RUN=$((TESTS_RUN + 1))
     TESTS_FAILED=$((TESTS_FAILED + 1))
@@ -357,10 +433,22 @@ else
   check_rate_limit "$LIFETIME_STATUS" "/api/licence/offline-challenge"
   
   # Should return 400 or 403 - lifetime entitlements don't support offline refresh
+  # Stage 6A: Also check error code is LIFETIME_NOT_SUPPORTED
   if [ "$LIFETIME_STATUS" = "400" ] || [ "$LIFETIME_STATUS" = "403" ]; then
     TESTS_RUN=$((TESTS_RUN + 1))
     TESTS_PASSED=$((TESTS_PASSED + 1))
     log_pass "Lifetime entitlement offline challenge blocked (status: $LIFETIME_STATUS)"
+    
+    # Verify error code
+    LIFETIME_CODE=$(echo "$LIFETIME_BODY" | jq -r '.code // "missing"')
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [ "$LIFETIME_CODE" = "LIFETIME_NOT_SUPPORTED" ]; then
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+      log_pass "Lifetime entitlement error code: LIFETIME_NOT_SUPPORTED"
+    else
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+      log_fail "Lifetime entitlement should have code LIFETIME_NOT_SUPPORTED (got: $LIFETIME_CODE)"
+    fi
   else
     TESTS_RUN=$((TESTS_RUN + 1))
     TESTS_FAILED=$((TESTS_FAILED + 1))
@@ -386,6 +474,20 @@ if [ "$LEGACY_ACTIVATE_STATUS" = "410" ]; then
   TESTS_RUN=$((TESTS_RUN + 1))
   TESTS_PASSED=$((TESTS_PASSED + 1))
   log_pass "/api/license/activate returns 410 Gone (retired)"
+  
+  # Stage 6A: Check retired response has ok: false and code: RETIRED_ENDPOINT
+  LEGACY_ACTIVATE_BODY=$(echo "$LEGACY_ACTIVATE" | sed '$d')
+  # Use jq's raw output - boolean false becomes string "false"
+  LEGACY_OK=$(echo "$LEGACY_ACTIVATE_BODY" | jq -r 'if .ok == false then "false" elif .ok == true then "true" else "missing" end')
+  LEGACY_CODE=$(echo "$LEGACY_ACTIVATE_BODY" | jq -r '.code // "missing"')
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$LEGACY_OK" = "false" ] && [ "$LEGACY_CODE" = "RETIRED_ENDPOINT" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Retired endpoint has ok: false and code: RETIRED_ENDPOINT"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Retired endpoint response structure incorrect (ok: $LEGACY_OK, code: $LEGACY_CODE)"
+  fi
 else
   TESTS_RUN=$((TESTS_RUN + 1))
   TESTS_FAILED=$((TESTS_FAILED + 1))
@@ -428,6 +530,17 @@ else
 
   check_rate_limit "$DEACT_STATUS" "/api/licence/deactivate"
   assert_equals "200" "$DEACT_STATUS" "Device deactivation returns 200"
+  
+  # Stage 6A: Check for ok boolean
+  DEACT_OK=$(echo "$DEACT_BODY" | jq -r '.ok // "missing"')
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$DEACT_OK" = "true" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Device deactivation response has ok: true"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Device deactivation response missing ok: true (got: $DEACT_OK)"
+  fi
 fi
 
 ########################################

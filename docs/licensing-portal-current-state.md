@@ -1,7 +1,7 @@
 # LightLane Licensing Portal - Current State (Verified)
 
 **Audit Date:** 2026-01-21  
-**Last Updated:** Stage 5 Ship-Ready Audit (2026-01-21)  
+**Last Updated:** Stage 6A Proof Pass (2026-01-21)  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
 
 ---
@@ -55,7 +55,129 @@ portal: POST /licence/offline-challenge → copy token to air-gapped machine →
 
 ---
 
-## Changelog (2026-01-21 Stage 5 Ship-Ready Audit)
+## Changelog (2026-01-23 Stage 6A API Hardening)
+
+### 🎯 Purpose
+
+Stage 6A hardens the licensing API for robust desktop app integration by standardizing response shapes, error codes, and field names across all licensing-related endpoints.
+
+### ⚠️ BREAKING CHANGES
+
+**Response structure changes (all licensing endpoints):**
+
+| Before                                      | After                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------- |
+| Success: `{ data: {...} }` or `{ ... }`     | Success: `{ ok: true, ... }`                                           |
+| Error: `{ error: "message" }`               | Error: `{ ok: false, code: "ERROR_CODE", message: "...", details? }`   |
+| Retired: `{ error: "...", migrationGuide }` | Retired: `{ ok: false, code: "RETIRED_ENDPOINT", message, migration }` |
+
+**Field renames in `/api/licence/offline-challenge`:**
+
+| Old Field   | New Field            | Reason                           |
+| ----------- | -------------------- | -------------------------------- |
+| `challenge` | `challengeToken`     | Clarity - token vs string        |
+| `expiresAt` | `challengeExpiresAt` | Disambiguation from lease expiry |
+
+**Field removed from `/api/licence/offline-refresh`:**
+
+| Removed       | Reason                                    |
+| ------------- | ----------------------------------------- |
+| `refreshCode` | Redundant - `leaseToken` already provided |
+
+### 📋 Stable Error Codes
+
+All error responses now include a stable `code` field for programmatic handling:
+
+| Code                     | HTTP | Description                                |
+| ------------------------ | ---- | ------------------------------------------ |
+| `VALIDATION_ERROR`       | 400  | Missing/invalid request parameters         |
+| `UNAUTHENTICATED`        | 401  | No valid JWT or session                    |
+| `FORBIDDEN`              | 403  | Action not allowed (wrong owner, etc)      |
+| `NOT_FOUND`              | 404  | Generic resource not found                 |
+| `ENTITLEMENT_NOT_FOUND`  | 404  | Entitlement doesn't exist                  |
+| `DEVICE_NOT_FOUND`       | 404  | Device doesn't exist                       |
+| `DEVICE_NOT_OWNED`       | 403  | Device belongs to different customer       |
+| `DEVICE_NOT_BOUND`       | 400  | Device not bound to the entitlement        |
+| `ENTITLEMENT_NOT_ACTIVE` | 403  | Entitlement expired/canceled               |
+| `MAX_DEVICES_EXCEEDED`   | 400  | Already at max devices for entitlement     |
+| `LIFETIME_NOT_SUPPORTED` | 400  | Offline refresh not available for lifetime |
+| `CHALLENGE_INVALID`      | 400  | Challenge token malformed or bad signature |
+| `CHALLENGE_EXPIRED`      | 400  | Challenge token past expiry                |
+| `REPLAY_REJECTED`        | 409  | Challenge already redeemed (replay attack) |
+| `RATE_LIMITED`           | 429  | Too many requests                          |
+| `RETIRED_ENDPOINT`       | 410  | Legacy endpoint no longer available        |
+| `INTERNAL_ERROR`         | 500  | Unexpected server error                    |
+
+### 📝 Files Changed
+
+```
+backend/src/utils/api-responses.js                     | NEW (utility helpers)
+backend/src/api/custom/controllers/custom.js           | MODIFIED (all handlers)
+backend/src/api/license-key/controllers/license-key.js | MODIFIED (retired handlers)
+backend/src/api/customer/controllers/customer.js       | MODIFIED (add ok: true)
+backend/src/middlewares/rate-limit.js                  | MODIFIED (error shape)
+docs/api/http/stage5/smoke-test.sh                     | MODIFIED (check ok boolean)
+docs/licensing-portal-current-state.md                 | MODIFIED (this changelog)
+```
+
+### 🧪 Verification
+
+```bash
+# Backend unit tests
+cd backend && npm test
+
+# Smoke tests (validates new response shapes)
+source docs/api/http/use-local-env.sh
+bash docs/api/http/stage5/smoke-test.sh --cleanup
+```
+
+### 🔧 Desktop App Migration Guide
+
+**1. Update response parsing:**
+
+```typescript
+// Before
+const result = await fetch("/api/licence/activate", {...});
+const data = await result.json();
+if (data.error) { /* handle error */ }
+
+// After
+const result = await fetch("/api/licence/activate", {...});
+const data = await result.json();
+if (!data.ok) {
+  // data.code is a stable string enum
+  // data.message is human-readable
+  // data.details may have extra context
+  switch (data.code) {
+    case "MAX_DEVICES_EXCEEDED": /* show upgrade prompt */; break;
+    case "ENTITLEMENT_NOT_ACTIVE": /* show resubscribe prompt */; break;
+    default: /* show generic error */
+  }
+}
+```
+
+**2. Update offline challenge parsing:**
+
+```typescript
+// Before
+const challenge = data.challenge;
+const expiresAt = data.expiresAt;
+
+// After
+const challenge = data.challengeToken;
+const expiresAt = data.challengeExpiresAt;
+```
+
+**3. Handle retired endpoints:**
+
+```typescript
+if (data.code === "RETIRED_ENDPOINT") {
+  // data.migration contains guidance
+  // Prompt user to update app
+}
+```
+
+---
 
 ### 🔍 Audit Summary
 
@@ -129,6 +251,83 @@ bash docs/api/http/stage5/smoke-test.sh --cleanup
 
 - Fixed migration script path: `backend/scripts/migrate-legacy-keys-to-entitlements.cjs` (was `scripts/*.js`)
 - Fixed smoke test path: `docs/api/http/stage5/smoke-test.sh` (was `scripts/stage5-cutover-smoke-test.sh`)
+
+---
+
+## Stage 6A Proof Pass (2026-01-21)
+
+### 🔍 Verification Summary
+
+Final proof pass confirming API response standard implementation, smoke test validity, and doc alignment.
+
+### ✅ Results
+
+| Check                                           | Result       |
+| ----------------------------------------------- | ------------ |
+| Backend unit tests                              | 6/6 passed   |
+| Smoke tests (25 total)                          | 25/25 passed |
+| `success: true` drift in API                    | Fixed → None |
+| Legacy endpoints thin (no DB)                   | Confirmed    |
+| Old response patterns in docs                   | All updated  |
+| Doc expiry field consistency                    | Fixed        |
+
+### 🔧 Fixes Applied
+
+1. **Smoke test jq bug** - Fixed boolean comparison for retired endpoint validation
+   - Changed `.ok // "missing"` to explicit conditional handling
+   - File: `docs/api/http/stage5/smoke-test.sh`
+
+2. **Doc response examples** - Updated all old patterns to new format
+   - Removed `{ "success": true, ... }` examples
+   - Removed `{ "error": "..." }` examples
+   - Added `{ "ok": true, ... }` and `{ "ok": false, "code": "...", ... }` examples
+   - File: `docs/licensing-portal-current-state.md`
+
+3. **Backend `success: true` → `ok: true` drift** - Fixed 8 non-licensing endpoints
+   - `devCreatePurchase`, `devResetLicenses`, `devRecalculateCommissions`
+   - `trackAffiliateVisit`, `trackConversionEvent`, `trackVisitorJourney`
+   - `clearVisitorData`, `devBackfillLicenseKey`
+   - Also standardized error responses to `{ ok: false, code, message }` shape
+   - File: `backend/src/api/custom/controllers/custom.js`
+
+4. **Doc expiry field names** - Disambiguated token-specific expiry fields
+   - Offline challenge: `expiresAt` → `challengeExpiresAt`
+   - Lease tokens: `expiresAt` → `leaseExpiresAt`
+   - Entitlement `expiresAt` field remains unchanged (entity field, not response field)
+   - File: `docs/licensing-portal-current-state.md`
+
+### 📊 Final Diff Stats
+
+```
+backend/src/api/custom/controllers/custom.js           | 383 +++-----
+backend/src/api/customer/controllers/customer.js       |  10 +-
+backend/src/api/license-key/controllers/license-key.js |  51 +-
+backend/src/middlewares/rate-limit.js                  |   8 +-
+docs/api/http/stage5/smoke-test.sh                     | 123 ++-
+docs/licensing-portal-current-state.md                 | 260 +++-
+6 files changed, 526 insertions(+), 309 deletions(-)
+```
+
+### 🧪 Verification Commands
+
+```bash
+# Backend unit tests
+cd backend && npm test
+# Expected: 6/6 tests passed
+
+# Stage 5/6A smoke tests
+source docs/api/http/use-local-env.sh
+bash docs/api/http/stage5/smoke-test.sh --cleanup
+# Expected: 25/25 tests passed
+
+# Verify no success:true drift
+grep -RIn --include="*.js" "success:[[:space:]]*true" backend/src/api
+# Expected: No matches
+
+# Verify doc uses correct expiry field names
+grep -n '"expiresAt"' docs/licensing-portal-current-state.md
+# Expected: Only entitlement entity fields (not response fields)
+```
 
 ---
 
@@ -1239,15 +1438,22 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 }
 ```
 
-**Response:**
+**Response (200):**
 
 ```json
 {
-  "success": true,
+  "ok": true,
+  "message": "Entitlement activated on device",
   "device": { "id": 123, "boundAt": "2026-01-20T..." },
   "entitlement": { "id": 456, "tier": "pro" }
 }
 ```
+
+**Error Responses:**
+
+- 400: `{ "ok": false, "code": "VALIDATION_ERROR", "message": "..." }`
+- 404: `{ "ok": false, "code": "DEVICE_NOT_FOUND", "message": "..." }`
+- 400: `{ "ok": false, "code": "MAX_DEVICES_EXCEEDED", "message": "..." }`
 
 **Validation:**
 
@@ -1273,9 +1479,10 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 
 ```json
 {
+  "ok": true,
   "leaseRequired": true,
   "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresAt": "2026-01-27T..."
+  "leaseExpiresAt": "2026-01-27T..."
 }
 ```
 
@@ -1283,6 +1490,7 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 
 ```json
 {
+  "ok": true,
   "leaseRequired": false,
   "message": "Lifetime entitlements do not require lease tokens"
 }
@@ -1302,14 +1510,19 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 }
 ```
 
-**Response:**
+**Response (200):**
 
 ```json
 {
-  "success": true,
-  "message": "Device deactivated"
+  "ok": true,
+  "message": "Device deactivated from entitlement"
 }
 ```
+
+**Error Responses:**
+
+- 404: `{ "ok": false, "code": "DEVICE_NOT_FOUND", "message": "..." }`
+- 400: `{ "ok": false, "code": "DEVICE_NOT_BOUND", "message": "..." }`
 
 #### Endpoint: Offline Challenge (Subscriptions Only)
 
@@ -1330,8 +1543,9 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 
 ```json
 {
+  "ok": true,
   "challengeToken": "base64-encoded-challenge-jwt",
-  "expiresAt": "2026-01-21T..."
+  "challengeExpiresAt": "2026-01-21T..."
 }
 ```
 
@@ -1355,8 +1569,9 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 
 ```json
 {
+  "ok": true,
   "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresAt": "2026-01-27T..."
+  "leaseExpiresAt": "2026-01-27T..."
 }
 ```
 
@@ -1525,7 +1740,8 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ```json
 {
-  "success": true,
+  "ok": true,
+  "message": "Entitlement activated on device",
   "device": { "id": 123, "boundAt": "2026-01-20T..." },
   "entitlement": { "id": 456, "tier": "pro" }
 }
@@ -1533,9 +1749,10 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 **Error Responses:**
 
-- 400: `{ "error": "Device not found or not registered" }`
-- 400: `{ "error": "Entitlement not found or not active" }`
-- 400: `{ "error": "Device limit reached for this entitlement" }`
+- 404: `{ "ok": false, "code": "DEVICE_NOT_FOUND", "message": "Device not found or not registered" }`
+- 404: `{ "ok": false, "code": "ENTITLEMENT_NOT_FOUND", "message": "Entitlement not found" }`
+- 403: `{ "ok": false, "code": "ENTITLEMENT_NOT_ACTIVE", "message": "Entitlement not active" }`
+- 400: `{ "ok": false, "code": "MAX_DEVICES_EXCEEDED", "message": "Device limit reached for this entitlement" }`
 
 ### Refresh Endpoint (Lease Token for Subscriptions)
 
@@ -1554,9 +1771,10 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ```json
 {
+  "ok": true,
   "leaseRequired": true,
   "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresAt": "2026-01-27T..."
+  "leaseExpiresAt": "2026-01-27T..."
 }
 ```
 
@@ -1564,6 +1782,7 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ```json
 {
+  "ok": true,
   "leaseRequired": false,
   "message": "Lifetime entitlements do not require lease tokens"
 }
@@ -1586,10 +1805,15 @@ Creates ONE entitlement per license-key using purchase data for tier mapping.
 
 ```json
 {
-  "success": true,
-  "message": "Device deactivated"
+  "ok": true,
+  "message": "Device deactivated from entitlement"
 }
 ```
+
+**Error Responses:**
+
+- 404: `{ "ok": false, "code": "DEVICE_NOT_FOUND", "message": "..." }`
+- 400: `{ "ok": false, "code": "DEVICE_NOT_BOUND", "message": "..." }`
 
 ### Reset Endpoint (Testing Only)
 
@@ -2089,12 +2313,12 @@ curl -s http://localhost:1337/api/customers/entitlements \
 | #   | Action                                    | Command                                                                                         | Expected HTTP | Expected Response                                                             |
 | --- | ----------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------- |
 | 1   | Register device A                         | `curl -X POST .../api/device/register -d '{"deviceId":"device-a-123","publicKey":"pk-aaa..."}'` | **200**       | `{"deviceId":"device-a-123","status":"active","message":"Device registered"}` |
-| 2   | Activate entitlement on device A          | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-a-123"}'`      | **200**       | `{"ok":true,"message":"Device activated",...}`                                |
-| 3   | Register device B                         | `curl -X POST .../api/device/register -d '{"deviceId":"device-b-456","publicKey":"pk-bbb..."}'` | **200**       | `{"deviceId":"device-b-456","status":"active","message":"Device registered"}` |
-| 4   | Activate same entitlement on device B     | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-b-456"}'`      | **409**       | `{"error":"Maximum devices limit reached"}`                                   |
-| 5   | Refresh on device A                       | `curl -X POST .../api/licence/refresh -d '{"entitlementId":1,"deviceId":"device-a-123"}'`       | **200**       | `{"ok":true,"status":"active",...}`                                           |
-| 6   | Deactivate device A                       | `curl -X POST .../api/licence/deactivate -d '{"entitlementId":1,"deviceId":"device-a-123"}'`    | **200**       | `{"ok":true,"message":"Device deactivated"}`                                  |
-| 7   | Activate on device B (should now succeed) | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-b-456"}'`      | **200**       | `{"ok":true,"message":"Device activated",...}`                                |
+| 2   | Activate entitlement on device A          | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-a-123"}'`      | **200**       | `{"ok":true,"message":"Entitlement activated on device",...}`                 |
+| 3   | Register device B                         | `curl -X POST .../api/device/register -d '{"deviceId":"device-b-456","publicKey":"pk-bbb..."}'` | **200**       | `{"ok":true,"data":{"deviceId":"device-b-456"},...}`                          |
+| 4   | Activate same entitlement on device B     | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-b-456"}'`      | **400**       | `{"ok":false,"code":"MAX_DEVICES_EXCEEDED","message":"..."}`                  |
+| 5   | Refresh on device A                       | `curl -X POST .../api/licence/refresh -d '{"entitlementId":1,"deviceId":"device-a-123"}'`       | **200**       | `{"ok":true,"leaseRequired":true,"leaseToken":"...",...}`                     |
+| 6   | Deactivate device A                       | `curl -X POST .../api/licence/deactivate -d '{"entitlementId":1,"deviceId":"device-a-123"}'`    | **200**       | `{"ok":true,"message":"Device deactivated from entitlement"}`                 |
+| 7   | Activate on device B (should now succeed) | `curl -X POST .../api/licence/activate -d '{"entitlementId":1,"deviceId":"device-b-456"}'`      | **200**       | `{"ok":true,"message":"Entitlement activated on device",...}`                 |
 
 #### Full Test Script
 
@@ -2122,28 +2346,28 @@ curl -s -X POST "$BASE_URL/api/device/register" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"deviceId":"device-b-456","publicKey":"pk-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}' | jq .
-# Expected: 200, {"deviceId":"device-b-456","status":"active","message":"Device registered"}
+# Expected: 200, {"ok":true,"data":{"deviceId":"device-b-456"},...}
 
 echo "=== Step 4: Try activate same entitlement on device B (should fail) ==="
 curl -s -w "\nHTTP Status: %{http_code}\n" -X POST "$BASE_URL/api/licence/activate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-b-456\"}" | jq .
-# Expected: 409, {"error":"Maximum devices limit reached"}
+# Expected: 400, {"ok":false,"code":"MAX_DEVICES_EXCEEDED","message":"..."}
 
 echo "=== Step 5: Refresh on device A ==="
 curl -s -X POST "$BASE_URL/api/licence/refresh" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-a-123\"}" | jq .
-# Expected: 200, {"ok":true,"status":"active",...}
+# Expected: 200, {"ok":true,"leaseRequired":true,"leaseToken":"...",...}
 
 echo "=== Step 6: Deactivate device A ==="
 curl -s -X POST "$BASE_URL/api/licence/deactivate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"entitlementId\":$ENTITLEMENT_ID,\"deviceId\":\"device-a-123\"}" | jq .
-# Expected: 200, {"ok":true,"message":"Device deactivated"}
+# Expected: 200, {"ok":true,"message":"Device deactivated from entitlement"}
 
 echo "=== Step 7: Activate on device B (should now succeed) ==="
 curl -s -X POST "$BASE_URL/api/licence/activate" \

@@ -436,6 +436,7 @@ module.exports = createCoreController(
         }));
 
         ctx.body = {
+          ok: true,
           entitlements: sanitizedEntitlements,
           meta: {
             total: sanitizedEntitlements.length,
@@ -447,7 +448,7 @@ module.exports = createCoreController(
       } catch (error) {
         console.error("Get entitlements error:", error);
         ctx.status = 500;
-        ctx.body = { error: "Failed to fetch entitlements" };
+        ctx.body = { ok: false, code: "INTERNAL_ERROR", message: "Failed to fetch entitlements" };
       }
     },
 
@@ -477,6 +478,7 @@ module.exports = createCoreController(
 
         if (!entitlements || entitlements.length === 0) {
           ctx.body = {
+            ok: true,
             hasEntitlement: false,
             tier: null,
             status: null,
@@ -517,6 +519,7 @@ module.exports = createCoreController(
         }
 
         ctx.body = {
+          ok: true,
           hasEntitlement: true,
           tier: primary.tier || null,
           status: primary.status || null,
@@ -530,7 +533,7 @@ module.exports = createCoreController(
       } catch (error) {
         console.error("Get primary entitlement error:", error);
         ctx.status = 500;
-        ctx.body = { error: "Failed to fetch entitlement" };
+        ctx.body = { ok: false, code: "INTERNAL_ERROR", message: "Failed to fetch entitlement" };
       }
     },
 
@@ -575,6 +578,7 @@ module.exports = createCoreController(
         }));
 
         ctx.body = {
+          ok: true,
           devices: sanitizedDevices,
           meta: {
             total: sanitizedDevices.length,
@@ -584,7 +588,7 @@ module.exports = createCoreController(
       } catch (error) {
         console.error("Get devices error:", error);
         ctx.status = 500;
-        ctx.body = { error: "Failed to fetch devices" };
+        ctx.body = { ok: false, code: "INTERNAL_ERROR", message: "Failed to fetch devices" };
       }
     },
 

@@ -4,6 +4,7 @@ const { audit, maskSensitive } = require("../../../utils/audit-logger");
 const { determineEntitlementTier } = require("../../../utils/entitlement-mapping");
 const { getRS256PrivateKey } = require("../../../utils/jwt-keys");
 const { processStripeEvent } = require("../../../utils/stripe-webhook-handler");
+const { ErrorCodes, sendOk, sendError, sendRetired } = require("../../../utils/api-responses");
 
 // Helper: generate a unique-ish license key. This used to live in the license-key controller
 // but was referenced here without being in scope, causing a ReferenceError and aborting the
@@ -446,7 +447,7 @@ module.exports = {
       console.log("✅ Purchase created successfully:", purchase.id);
 
       ctx.body = {
-        success: true,
+        ok: true,
         purchase: purchase,
         affiliate: affiliate,
         message: "Purchase created successfully in development mode",
@@ -1107,18 +1108,15 @@ module.exports = {
    */
   async licenseActivateLegacyRetired(ctx) {
     strapi.log.warn(`[RETIRED] POST /api/license/activate called - legacy MAC-based activation`);
-    ctx.status = 410;
-    ctx.body = {
-      error: "Legacy MAC-based activation retired",
-      message: "This endpoint has been retired. Please use the new device-based activation system.",
-      migrationGuide: "1) Register your device: POST /api/device/register, 2) Activate entitlement: POST /api/licence/activate",
-      endpoints: {
+    sendRetired(ctx, "This endpoint has been retired. Please use the new device-based activation system.", {
+      guide: "1) Register your device: POST /api/device/register, 2) Activate entitlement: POST /api/licence/activate",
+      replacement: {
         register: "POST /api/device/register",
         activate: "POST /api/licence/activate",
         refresh: "POST /api/licence/refresh",
         deactivate: "POST /api/licence/deactivate",
       },
-    };
+    });
   },
 
   /**
@@ -1129,12 +1127,10 @@ module.exports = {
    */
   async licenseDeactivateLegacyRetired(ctx) {
     strapi.log.warn(`[RETIRED] POST /api/license/deactivate called - legacy MAC-based deactivation`);
-    ctx.status = 410;
-    ctx.body = {
-      error: "Legacy MAC-based deactivation retired",
-      message: "This endpoint has been retired. Please use POST /api/licence/deactivate with your deviceId.",
-      migrationGuide: "Use POST /api/licence/deactivate with { entitlementId, deviceId }",
-    };
+    sendRetired(ctx, "This endpoint has been retired. Please use POST /api/licence/deactivate with your deviceId.", {
+      guide: "Use POST /api/licence/deactivate with { entitlementId, deviceId }",
+      replacement: "POST /api/licence/deactivate",
+    });
   },
 
   // =========================================================================
@@ -1191,7 +1187,7 @@ module.exports = {
 
       ctx.status = 200;
       ctx.body = {
-        success: true,
+        ok: true,
         message: `Reset ${licenses.length} licenses to unused state`,
         licenses: licenses.map((l) => ({ key: l.key, typ: l.typ })),
       };
@@ -1304,7 +1300,7 @@ module.exports = {
       }
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Commission amounts recalculated successfully",
         summary: {
           totalPurchases: purchases.length,
@@ -1318,7 +1314,8 @@ module.exports = {
       console.error("❌ Error recalculating commissions:", error);
       ctx.status = 500;
       ctx.body = {
-        success: false,
+        ok: false,
+        code: "INTERNAL_ERROR",
         error: "Failed to recalculate commissions",
         details: process.env.NODE_ENV === "development" ? error.message : {},
       };
@@ -1413,15 +1410,16 @@ module.exports = {
       }
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Visit tracked successfully",
       };
     } catch (error) {
       console.error("Error tracking affiliate visit:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to track visit",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to track visit",
       };
     }
   },
@@ -1484,15 +1482,16 @@ module.exports = {
       );
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Conversion event tracked successfully",
       };
     } catch (error) {
       console.error("Error tracking conversion event:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to track conversion event",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to track conversion event",
       };
     }
   },
@@ -1768,7 +1767,7 @@ module.exports = {
       );
 
       ctx.body = {
-        success: true,
+        ok: true,
         visitorId: visitorId,
         message: "Journey tracked successfully",
       };
@@ -1776,8 +1775,9 @@ module.exports = {
       console.error("Error tracking visitor journey:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to track visitor journey",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to track visitor journey",
       };
     }
   },
@@ -1843,15 +1843,16 @@ module.exports = {
       );
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Visitor journey data cleared successfully",
       };
     } catch (error) {
       console.error("Error clearing visitor data:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to clear visitor journey data",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to clear visitor journey data",
       };
     }
   },
@@ -2119,13 +2120,13 @@ module.exports = {
         data: { licenseKey: licenseKeyRecord.id },
       });
       ctx.body = {
-        success: true,
+        ok: true,
         purchaseId: purchase.id,
         licenseKey: licenseKeyRecord.key,
       };
     } catch (e) {
       ctx.status = 500;
-      ctx.body = { error: e.message };
+      ctx.body = { ok: false, code: "INTERNAL_ERROR", message: e.message };
     }
   },
 
@@ -2170,9 +2171,7 @@ module.exports = {
     try {
       const customer = ctx.state.customer;
       if (!customer) {
-        ctx.status = 401;
-        ctx.body = { error: "Authentication required" };
-        return;
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
       }
 
       const { deviceId, publicKey, deviceName, platform } = ctx.request.body;
@@ -2185,9 +2184,9 @@ module.exports = {
           customerId: customer.id,
           deviceId,
         });
-        ctx.status = 400;
-        ctx.body = { error: "deviceId is required and must be at least 3 characters" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deviceId is required and must be at least 3 characters", {
+          field: "deviceId",
+        });
       }
 
       // publicKey is now optional - portal registrations may not have one
@@ -2201,9 +2200,9 @@ module.exports = {
             customerId: customer.id,
             deviceId,
           });
-          ctx.status = 400;
-          ctx.body = { error: "If provided, publicKey must be at least 32 characters" };
-          return;
+          return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "If provided, publicKey must be at least 32 characters", {
+            field: "publicKey",
+          });
         }
         // Hash the public key for storage (truncated for audit logs)
         publicKeyHash = crypto
@@ -2236,9 +2235,7 @@ module.exports = {
             customerId: customer.id,
             deviceIdHash: publicKeyHash,
           });
-          ctx.status = 409;
-          ctx.body = { error: "Device is registered to another account" };
-          return;
+          return sendError(ctx, 409, ErrorCodes.DEVICE_NOT_OWNED, "Device is registered to another account");
         }
 
         // Device belongs to this customer - update it
@@ -2264,12 +2261,11 @@ module.exports = {
           deviceIdHash: publicKeyHash,
         });
 
-        ctx.body = {
+        return sendOk(ctx, {
           deviceId: updatedDevice.deviceId,
           status: updatedDevice.status,
           message: "Device updated",
-        };
-        return;
+        });
       }
 
       // Create new device
@@ -2296,16 +2292,15 @@ module.exports = {
         deviceIdHash: publicKeyHash,
       });
 
-      ctx.body = {
+      return sendOk(ctx, {
         deviceId: newDevice.deviceId,
         status: newDevice.status,
         message: "Device registered",
-      };
+      });
     } catch (err) {
       strapi.log.error(`[deviceRegister] Error: ${err.message}`);
       strapi.log.error(err.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error" };
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 
@@ -2318,9 +2313,7 @@ module.exports = {
     try {
       const customer = ctx.state.customer;
       if (!customer) {
-        ctx.status = 401;
-        ctx.body = { error: "Authentication required" };
-        return;
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
       }
 
       const { entitlementId, deviceId } = ctx.request.body;
@@ -2333,9 +2326,9 @@ module.exports = {
           customerId: customer.id,
           deviceId,
         });
-        ctx.status = 400;
-        ctx.body = { error: "entitlementId is required" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId is required", {
+          field: "entitlementId",
+        });
       }
 
       if (!deviceId || typeof deviceId !== "string") {
@@ -2345,9 +2338,9 @@ module.exports = {
           customerId: customer.id,
           entitlementId,
         });
-        ctx.status = 400;
-        ctx.body = { error: "deviceId is required" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deviceId is required", {
+          field: "deviceId",
+        });
       }
 
       // Load entitlement and verify ownership
@@ -2365,9 +2358,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Entitlement not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
       }
 
       // Verify ownership
@@ -2380,9 +2371,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "You do not own this entitlement" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
       }
 
       // Check entitlement is usable
@@ -2395,12 +2384,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = {
-          error: "Entitlement is not active",
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
           status: entitlement.status,
-        };
-        return;
+        });
       }
 
       // Load device and verify ownership
@@ -2420,9 +2406,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Device not registered. Please register device first." };
-        return;
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not registered. Please register device first.");
       }
 
       const device = devices[0];
@@ -2437,9 +2421,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is not registered to your account" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
       }
 
       // Check device is not blocked
@@ -2451,9 +2433,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is blocked" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Device is blocked");
       }
 
       // Check if device is already bound to this entitlement (idempotent)
@@ -2474,8 +2454,7 @@ module.exports = {
           deviceId,
         });
 
-        ctx.body = {
-          ok: true,
+        return sendOk(ctx, {
           message: "Device already activated",
           entitlement: {
             id: entitlement.id,
@@ -2490,8 +2469,7 @@ module.exports = {
             deviceId: device.deviceId,
             boundAt: device.boundAt,
           },
-        };
-        return;
+        });
       }
 
       // Enforce maxDevices limit
@@ -2517,14 +2495,10 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 409;
-        ctx.body = {
-          error: "Maximum devices limit reached",
+        return sendError(ctx, 409, ErrorCodes.MAX_DEVICES_EXCEEDED, `Maximum devices limit reached. Please deactivate another device first.`, {
           maxDevices: entitlement.maxDevices,
           activeDevices: otherActiveDevices.length,
-          message: `Please deactivate another device first. Max devices: ${entitlement.maxDevices}`,
-        };
-        return;
+        });
       }
 
       // Create binding - update device with entitlement link
@@ -2551,8 +2525,7 @@ module.exports = {
         deviceId,
       });
 
-      ctx.body = {
-        ok: true,
+      return sendOk(ctx, {
         message: "Device activated",
         entitlement: {
           id: entitlement.id,
@@ -2567,12 +2540,11 @@ module.exports = {
           deviceId: device.deviceId,
           boundAt: now,
         },
-      };
+      });
     } catch (err) {
       strapi.log.error(`[licenceActivate] Error: ${err.message}`);
       strapi.log.error(err.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error" };
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 
@@ -2588,9 +2560,7 @@ module.exports = {
     try {
       const customer = ctx.state.customer;
       if (!customer) {
-        ctx.status = 401;
-        ctx.body = { error: "Authentication required" };
-        return;
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
       }
 
       const { entitlementId, deviceId, nonce, signature } = ctx.request.body;
@@ -2604,9 +2574,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 400;
-        ctx.body = { error: "entitlementId and deviceId are required" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId and deviceId are required", {
+          fields: ["entitlementId", "deviceId"],
+        });
       }
 
       // Load device with entitlement
@@ -2626,9 +2596,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Device not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
       }
 
       const device = devices[0];
@@ -2643,9 +2611,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is not registered to your account" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
       }
 
       // Verify device is bound to the specified entitlement
@@ -2658,9 +2624,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is not activated for this entitlement" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
       }
 
       // Verify device is active
@@ -2672,9 +2636,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is not active", status: device.status };
-        return;
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Device is not active", {
+          status: device.status,
+        });
       }
 
       // Load entitlement to check status
@@ -2692,9 +2656,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Entitlement not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
       }
 
       // Check entitlement is still valid
@@ -2707,13 +2669,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = {
-          ok: false,
-          error: "Entitlement is no longer active",
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is no longer active", {
           status: entitlement.status,
-        };
-        return;
+        });
       }
 
       // Stage 5: Nonce/signature validation logged but not enforced yet
@@ -2774,8 +2732,7 @@ module.exports = {
         deviceId,
       });
 
-      ctx.body = {
-        ok: true,
+      return sendOk(ctx, {
         status: entitlement.status,
         isLifetime: entitlement.isLifetime,
         expiresAt: entitlement.expiresAt,
@@ -2783,12 +2740,11 @@ module.exports = {
         serverTime: now.toISOString(),
         // Stage 5: Lease token fields
         ...leaseData,
-      };
+      });
     } catch (err) {
       strapi.log.error(`[licenceRefresh] Error: ${err.message}`);
       strapi.log.error(err.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error" };
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 
@@ -2801,9 +2757,7 @@ module.exports = {
     try {
       const customer = ctx.state.customer;
       if (!customer) {
-        ctx.status = 401;
-        ctx.body = { error: "Authentication required" };
-        return;
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
       }
 
       const { entitlementId, deviceId, deactivationCode } = ctx.request.body;
@@ -2817,9 +2771,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 400;
-        ctx.body = { error: "entitlementId and deviceId are required" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId and deviceId are required", {
+          fields: ["entitlementId", "deviceId"],
+        });
       }
 
       // Load device with entitlement
@@ -2839,9 +2793,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Device not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
       }
 
       const device = devices[0];
@@ -2856,9 +2808,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is not registered to your account" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
       }
 
       // Verify device is bound to the specified entitlement
@@ -2871,9 +2821,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 400;
-        ctx.body = { error: "Device is not activated for this entitlement" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
       }
 
       // TODO Stage 5: Verify deactivationCode for offline proof
@@ -2904,15 +2852,13 @@ module.exports = {
         deviceId,
       });
 
-      ctx.body = {
-        ok: true,
+      return sendOk(ctx, {
         message: "Device deactivated",
-      };
+      });
     } catch (err) {
       strapi.log.error(`[licenceDeactivate] Error: ${err.message}`);
       strapi.log.error(err.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error" };
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 
@@ -2932,9 +2878,7 @@ module.exports = {
     try {
       const customer = ctx.state.customer;
       if (!customer) {
-        ctx.status = 401;
-        ctx.body = { error: "Authentication required" };
-        return;
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
       }
 
       const { entitlementId, deviceId, publicKey, deviceName } = ctx.request.body;
@@ -2948,9 +2892,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 400;
-        ctx.body = { error: "entitlementId and deviceId are required" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId and deviceId are required", {
+          fields: ["entitlementId", "deviceId"],
+        });
       }
 
       // Load entitlement and verify ownership
@@ -2968,9 +2912,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Entitlement not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
       }
 
       const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
@@ -2982,9 +2924,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "You do not own this entitlement" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
       }
 
       // Check entitlement is active
@@ -2996,9 +2936,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Entitlement is not active", status: entitlement.status };
-        return;
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
       }
 
       // Offline refresh is only available for subscription entitlements
@@ -3013,12 +2953,7 @@ module.exports = {
           isLifetime: entitlement.isLifetime,
           leaseRequired: entitlement.leaseRequired,
         });
-        ctx.status = 400;
-        ctx.body = {
-          error: "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.",
-          code: "LIFETIME_NOT_SUPPORTED",
-        };
-        return;
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.");
       }
 
       // Verify device is registered to customer
@@ -3035,9 +2970,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Device not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
       }
 
       const device = devices[0];
@@ -3050,9 +2983,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is not registered to your account" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
       }
 
       // Mint challenge
@@ -3071,9 +3002,9 @@ module.exports = {
         nonce: challengeData.nonce,
       });
 
-      ctx.body = {
-        challenge: challengeData.challenge,
-        expiresAt: challengeData.expiresAt,
+      return sendOk(ctx, {
+        challengeToken: challengeData.challenge,
+        challengeExpiresAt: challengeData.expiresAt,
         serverTime: challengeData.serverTime,
         // Include entitlement info for display
         entitlement: {
@@ -3081,12 +3012,11 @@ module.exports = {
           tier: entitlement.tier,
           isLifetime: entitlement.isLifetime,
         },
-      };
+      });
     } catch (err) {
       strapi.log.error(`[offlineChallenge] Error: ${err.message}`);
       strapi.log.error(err.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error" };
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 
@@ -3102,9 +3032,7 @@ module.exports = {
     try {
       const customer = ctx.state.customer;
       if (!customer) {
-        ctx.status = 401;
-        ctx.body = { error: "Authentication required" };
-        return;
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
       }
 
       const { challenge } = ctx.request.body;
@@ -3115,9 +3043,9 @@ module.exports = {
           reason: "missing_challenge",
           customerId: customer.id,
         });
-        ctx.status = 400;
-        ctx.body = { error: "challenge is required" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "challenge is required", {
+          field: "challenge",
+        });
       }
 
       // Verify challenge
@@ -3125,18 +3053,15 @@ module.exports = {
       try {
         decoded = verifyOfflineChallenge(challenge);
       } catch (verifyErr) {
+        const errorCode = verifyErr.code === "CHALLENGE_EXPIRED" ? ErrorCodes.CHALLENGE_EXPIRED : ErrorCodes.CHALLENGE_INVALID;
+        const errorMsg = verifyErr.code === "CHALLENGE_EXPIRED" ? "Challenge has expired" : "Invalid challenge";
         audit.offlineRefresh(ctx, {
           outcome: "failure",
           reason: verifyErr.code === "CHALLENGE_EXPIRED" ? "challenge_expired" : "invalid_challenge",
           customerId: customer.id,
           error: verifyErr.message,
         });
-        ctx.status = 400;
-        ctx.body = {
-          error: verifyErr.code === "CHALLENGE_EXPIRED" ? "Challenge has expired" : "Invalid challenge",
-          code: verifyErr.code,
-        };
-        return;
+        return sendError(ctx, 400, errorCode, errorMsg);
       }
 
       const { entitlementId, deviceId, nonce } = decoded;
@@ -3157,12 +3082,7 @@ module.exports = {
           deviceId,
           jti,
         });
-        ctx.status = 409;
-        ctx.body = {
-          error: "Challenge has already been used (replay rejected)",
-          code: "REPLAY_REJECTED",
-        };
-        return;
+        return sendError(ctx, 409, ErrorCodes.REPLAY_REJECTED, "Challenge has already been used (replay rejected)");
       }
 
       // Load entitlement and verify ownership
@@ -3180,9 +3100,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Entitlement not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
       }
 
       const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
@@ -3194,9 +3112,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "You do not own this entitlement" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
       }
 
       // Check entitlement is active (or lifetime)
@@ -3209,9 +3125,9 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Entitlement is not active", status: entitlement.status };
-        return;
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
       }
 
       // Offline refresh is only available for subscription entitlements
@@ -3226,12 +3142,7 @@ module.exports = {
           isLifetime: entitlement.isLifetime,
           leaseRequired: entitlement.leaseRequired,
         });
-        ctx.status = 400;
-        ctx.body = {
-          error: "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.",
-          code: "LIFETIME_NOT_SUPPORTED",
-        };
-        return;
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.");
       }
 
       // Verify device exists and is owned by customer
@@ -3248,9 +3159,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 404;
-        ctx.body = { error: "Device not found" };
-        return;
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
       }
 
       const device = devices[0];
@@ -3263,9 +3172,7 @@ module.exports = {
           entitlementId,
           deviceId,
         });
-        ctx.status = 403;
-        ctx.body = { error: "Device is not registered to your account" };
-        return;
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
       }
 
       // Record challenge usage for replay protection
@@ -3305,19 +3212,16 @@ module.exports = {
         data: { lastSeenAt: now },
       });
 
-      ctx.body = {
-        ok: true,
+      return sendOk(ctx, {
         leaseRequired: true,
         leaseToken: lease.token,
         leaseExpiresAt: lease.expiresAt,
-        refreshCode: lease.token, // refreshCode is the lease token for simplicity
         serverTime: now.toISOString(),
-      };
+      });
     } catch (err) {
       strapi.log.error(`[offlineRefresh] Error: ${err.message}`);
       strapi.log.error(err.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error" };
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 
@@ -3333,17 +3237,15 @@ module.exports = {
     try {
       const customer = ctx.state.customer;
       if (!customer) {
-        ctx.status = 401;
-        ctx.body = { error: "Authentication required" };
-        return;
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
       }
 
       const { leaseToken } = ctx.request.body;
 
       if (!leaseToken) {
-        ctx.status = 400;
-        ctx.body = { error: "leaseToken is required" };
-        return;
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "leaseToken is required", {
+          field: "leaseToken",
+        });
       }
 
       try {
@@ -3351,13 +3253,10 @@ module.exports = {
 
         // Verify the token belongs to this customer
         if (decoded.customerId !== customer.id) {
-          ctx.status = 403;
-          ctx.body = { error: "Lease token does not belong to your account" };
-          return;
+          return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Lease token does not belong to your account");
         }
 
-        ctx.body = {
-          valid: true,
+        return sendOk(ctx, {
           claims: {
             entitlementId: decoded.entitlementId,
             customerId: decoded.customerId,
@@ -3369,21 +3268,17 @@ module.exports = {
             jti: decoded.jti,
           },
           serverTime: new Date().toISOString(),
-        };
+        });
       } catch (verifyErr) {
-        ctx.status = 400;
-        ctx.body = {
-          valid: false,
-          error: verifyErr.message,
-          code: verifyErr.code,
+        const errorCode = verifyErr.code === "LEASE_EXPIRED" ? ErrorCodes.CHALLENGE_EXPIRED : ErrorCodes.CHALLENGE_INVALID;
+        return sendError(ctx, 400, errorCode, verifyErr.message, {
           expiredAt: verifyErr.expiredAt ? verifyErr.expiredAt.toISOString() : null,
-        };
+        });
       }
     } catch (err) {
       strapi.log.error(`[verifyLease] Error: ${err.message}`);
       strapi.log.error(err.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error" };
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 };
