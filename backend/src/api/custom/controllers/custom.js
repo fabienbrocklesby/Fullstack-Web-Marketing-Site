@@ -3158,7 +3158,10 @@ module.exports = {
           jti,
         });
         ctx.status = 409;
-        ctx.body = { error: "Challenge has already been used (replay rejected)" };
+        ctx.body = {
+          error: "Challenge has already been used (replay rejected)",
+          code: "REPLAY_REJECTED",
+        };
         return;
       }
 

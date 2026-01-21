@@ -1,7 +1,7 @@
 # LightLane Licensing Portal - Current State (Verified)
 
 **Audit Date:** 2026-01-21  
-**Last Updated:** Stage 5.5 Cutover - Legacy MAC-based activation retired  
+**Last Updated:** Stage 5 Ship-Ready Audit (2026-01-21)  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
 
 ---
@@ -52,6 +52,83 @@ portal: POST /licence/offline-challenge → copy token to air-gapped machine →
 ```
 
 **Offline lifetime:** Not supported (online-only, no lease tokens needed).
+
+---
+
+## Changelog (2026-01-21 Stage 5 Ship-Ready Audit)
+
+### 🔍 Audit Summary
+
+Validated Stage 5 (lease tokens + manual offline refresh for subscriptions) is ship-ready with clean code and intact security boundaries.
+
+### 🐛 Bug Fixes
+
+1. **FIXED**: Frontend offline refresh sent `challengeToken` but backend expected `challenge`
+   - File: `frontend/src/pages/customer/dashboard.astro`
+   - Changed `body: JSON.stringify({ challengeToken })` → `body: JSON.stringify({ challenge: challengeToken })`
+
+2. **FIXED**: Replay rejection error lacked `code` field for consistent error handling
+   - File: `backend/src/api/custom/controllers/custom.js`
+   - Added `code: "REPLAY_REJECTED"` to 409 response for `/api/licence/offline-refresh`
+
+### 🧹 Cleanup
+
+1. **Removed dead code**: Legacy `activateLicense()` and `deactivateLicense()` functions
+   - File: `frontend/src/pages/customer/dashboard.astro`
+   - These called retired endpoints (`/api/license-keys/:id/activate`) but were never used since legacy UI was removed
+
+### ✅ Validated (No Changes Needed)
+
+- Lease token issuance/refresh correctly returns time-bounded JWT (7-day TTL) for subscriptions
+- Lifetime/founders correctly return `leaseRequired: false` with no token
+- Missing JWT keys fail loudly with clear error messages
+- Offline challenge returns stable `LIFETIME_NOT_SUPPORTED` error for lifetime entitlements
+- Offline refresh replay protection enforced (409 with `REPLAY_REJECTED` code)
+- All mutation endpoints behind customer-auth + license-rate-limit middleware
+- `verify-lease` endpoint properly gated (customer-auth, only verifies own tokens)
+- Audit logging present for all lease issuance and offline events
+- Legacy endpoints return 410 Gone with thin handlers (no DB mutations)
+- No alternate/duplicate activation paths found
+
+### 📊 Files Changed
+
+```
+backend/src/api/custom/controllers/custom.js | 5 +-
+frontend/src/pages/customer/dashboard.astro  | 69 +---------
+2 files changed, 7 insertions(+), 67 deletions(-)
+```
+
+### 🧪 Verification
+
+**Commands run:**
+
+```bash
+# Backend unit tests
+cd backend && npm test
+# Result: 6/6 tests passed ✅
+
+# Stage 5 smoke test (against running backend)
+source docs/api/http/use-local-env.sh
+bash docs/api/http/stage5/smoke-test.sh --cleanup
+# Result: 16/16 tests passed ✅
+```
+
+**Smoke test coverage:**
+
+1. ✅ Customer login
+2. ✅ Fetch entitlements
+3. ✅ Device registration
+4. ✅ License activation
+5. ✅ Lease refresh (7-day token)
+6. ✅ Subscription offline refresh flow
+7. ✅ Lifetime entitlement offline blocked (400)
+8. ✅ Legacy endpoints return 410 Gone
+9. ✅ Device deactivation
+
+**Doc path fixes:**
+
+- Fixed migration script path: `backend/scripts/migrate-legacy-keys-to-entitlements.cjs` (was `scripts/*.js`)
+- Fixed smoke test path: `docs/api/http/stage5/smoke-test.sh` (was `scripts/stage5-cutover-smoke-test.sh`)
 
 ---
 
@@ -149,13 +226,13 @@ A migration script is available to convert legacy license keys to entitlements:
 
 ```bash
 # Dry run (preview only)
-node scripts/migrate-legacy-keys-to-entitlements.js --dry-run
+node backend/scripts/migrate-legacy-keys-to-entitlements.cjs --dry-run
 
 # Apply migration
-node scripts/migrate-legacy-keys-to-entitlements.js --apply
+node backend/scripts/migrate-legacy-keys-to-entitlements.cjs --apply
 
 # Migrate specific customer
-node scripts/migrate-legacy-keys-to-entitlements.js --apply --email user@example.com
+node backend/scripts/migrate-legacy-keys-to-entitlements.cjs --apply --email user@example.com
 ```
 
 **Migration Logic**:
@@ -172,7 +249,7 @@ A comprehensive smoke test validates the cutover:
 
 ```bash
 source docs/api/http/use-local-env.sh
-./scripts/stage5-cutover-smoke-test.sh
+bash docs/api/http/stage5/smoke-test.sh --cleanup
 ```
 
 **Tests Performed**:
@@ -1108,7 +1185,7 @@ The `typ` field defaults to `"paid"` per schema. It is used during activation to
 
 1. Customers with legacy license keys should use the migration script
 2. Desktop apps should use Stage 4/5 device-based activation
-3. See `scripts/migrate-legacy-keys-to-entitlements.js` for bulk migration
+3. See `backend/scripts/migrate-legacy-keys-to-entitlements.cjs` for bulk migration
 
 ---
 

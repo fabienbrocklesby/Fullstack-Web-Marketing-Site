@@ -1458,71 +1458,8 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       });
     };
 
-    (window as any).activateLicense = async function (licenseId) {
-      try {
-        const cmsUrl =
-          document.documentElement.getAttribute("data-cms-url") ||
-          "http://localhost:1337";
-        const response = await fetch(
-          `${cmsUrl}/api/license-keys/${licenseId}/activate`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${customerToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              deviceInfo: {
-                userAgent: navigator.userAgent,
-                platform: navigator.platform,
-                timestamp: new Date().toISOString(),
-              },
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to activate license");
-        }
-
-        alert("License activated successfully!");
-        loadDashboardData(); // Reload data
-      } catch (error) {
-        alert(`Error activating license: ${(error as Error).message}`);
-      }
-    };
-
-    (window as any).deactivateLicense = async function (licenseId: string) {
-      if (!confirm("Are you sure you want to deactivate this license?")) {
-        return;
-      }
-
-      try {
-        const cmsUrl =
-          document.documentElement.getAttribute("data-cms-url") ||
-          "http://localhost:1337";
-        const response = await fetch(
-          `${cmsUrl}/api/license-keys/${licenseId}/deactivate`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${customerToken}`,
-            },
-          },
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to deactivate license");
-        }
-
-        alert("License deactivated successfully!");
-        loadDashboardData(); // Reload data
-      } catch (error) {
-        alert(`Error deactivating license: ${(error as Error).message}`);
-      }
-    };
+    // Legacy activateLicense/deactivateLicense removed in Stage 5.5
+    // All activation now uses Stage 4/5 device-based endpoints
 
     // =========================================================================
     // Stage 4/5: Device Activations & Offline Refresh
@@ -2432,7 +2369,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                challengeToken,
+                challenge: challengeToken,
               }),
             },
           );
