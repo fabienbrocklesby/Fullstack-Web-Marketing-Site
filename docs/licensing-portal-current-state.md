@@ -843,4 +843,98 @@ The portal supports:
 
 ---
 
+## 10. Changelog
+
+### 2026-01-22: Customer Dashboard UI Polish
+
+**Summary:** Improved spacing, typography, and DaisyUI component consistency across the customer dashboard, with particular focus on the air-gapped activation card.
+
+**Changes:**
+
+- **Air-gapped activation card:**
+  - Textareas now full-width with `w-full min-h-32` and responsive text sizing (`text-xs sm:text-sm`)
+  - Warning alert uses proper DaisyUI styling with `opacity-80` for secondary text
+  - Buttons changed from `btn-accent` to `btn-primary` for consistency
+  - Result buttons use `btn-ghost` instead of `btn-outline` for secondary actions
+  - Copy/Download buttons laid out in responsive flex column (`flex sm:flex-col`)
+  - Tab content has consistent `pt-1` top padding
+  - Tabs background uses `bg-base-300/50` for subtle contrast
+  - Form labels use `font-medium` for better hierarchy
+  - Helper text uses `text-base-content/60` consistently
+  - File load helper row uses `flex-wrap items-center gap-2` for clean wrapping
+
+- **Dashboard cards (overview + advanced):**
+  - Consistent `p-6` padding and `mb-5` header margins across all cards
+  - Device management description has `mt-1` for proper spacing
+
+**Files touched:**
+
+- `frontend/src/pages/customer/dashboard.astro`
+
+**API/Backend impact:** None. This is a styling-only change; no endpoint contracts, flow logic, or schemas were modified.
+
+**Tests/Scripts run:**
+
+- `pnpm build` (frontend) — ✅ Success
+
+```
+ frontend/src/pages/customer/dashboard.astro | 787 +++-----
+ 1 file changed, 312 insertions(+), 475 deletions(-)
+```
+
+---
+
+### 2026-01-22: Remove Legacy "Offline Refresh" Card from Customer Dashboard
+
+**Summary:** Removed the legacy challenge-based "Offline Refresh" card from the Advanced tab. The newer "Air-Gapped Device Activation" card (with Provision/Refresh/Deactivate tabs) remains and provides all necessary offline functionality.
+
+**Changes:**
+
+- Removed HTML section `<section id="offline-section">` (~175 lines)
+- Removed `renderOfflineSection()` function
+- Removed `updateOfflineBtn()` function
+- Removed event handlers for `offline-redeem-btn`, `copy-lease-btn`, `offline-reset-btn`
+- Updated file header comment
+
+**Rationale:** The legacy Offline Refresh flow (challenge → lease token) overlaps with the air-gapped Lease Refresh tab. Removing it reduces user confusion and code maintenance burden. The `/api/licence/offline-refresh` backend endpoint remains available if needed for other integrations.
+
+**Files touched:**
+
+- `frontend/src/pages/customer/dashboard.astro`
+
+**API/Backend impact:** None. Backend endpoints unchanged.
+
+**Tests/Scripts run:**
+
+- `pnpm build` (frontend) — ✅ Success
+
+---
+
+### 2026-01-22: Customer Portal Dashboard Pagination
+
+**Summary:** Added pagination controls and a plans count label to the customer dashboard for improved usability when customers have many plans or devices.
+
+**Changes:**
+
+- Added "Plans (X)" count badge to the plans section header (matching existing "Devices (X)" style)
+- Added client-side pagination for the plans list (5 items per page)
+- Added client-side pagination for the devices list in Overview tab (3 items per page)
+- Added client-side pagination for the devices table in Advanced tab (10 items per page)
+- Pagination controls appear only when items exceed page size
+- Previous/Next buttons are disabled appropriately on first/last pages
+- Total counts reflect all items (not just current page)
+
+**Files touched:**
+
+- `frontend/src/pages/customer/dashboard.astro`
+
+**API/Backend impact:** None. This is a UI-only change; no endpoint contracts or schemas were modified.
+
+**Tests/Scripts run:**
+
+- `pnpm build` (frontend) — ✅ Success
+- `node --test tests/offline-codes.test.js` (backend) — ✅ 49/49 tests pass
+
+---
+
 _End of contract document._
