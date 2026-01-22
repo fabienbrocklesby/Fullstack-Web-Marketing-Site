@@ -3330,4 +3330,760 @@ module.exports = {
       return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
+
+  // =========================================================================
+  // Air-Gapped Offline Activation Flow (USB/Copy-Paste Codes)
+  // These endpoints support fully offline devices using cryptographic codes.
+  // =========================================================================
+
+  /**
+   * POST /api/licence/offline-provision
+   * Provision an air-gapped device for offline operation.
+   * Accepts a device setup code, registers the device, binds to entitlement,
+   * and returns an activation package with activation token + lease token.
+   *
+   * Auth: customer-auth required
+   * Body: { deviceSetupCode: string, entitlementId: number }
+   */
+  async offlineProvision(ctx) {
+    const { mintLeaseToken } = require("../../../utils/lease-token");
+    const { getRS256PrivateKey } = require("../../../utils/jwt-keys");
+    const jwt = require("jsonwebtoken");
+    const {
+      parseDeviceSetupCode,
+      importEd25519PublicKey,
+      computePublicKeyHash,
+      buildActivationPackage,
+      getOfflineActivationTtlSeconds,
+    } = require("../../../utils/offline-codes");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { deviceSetupCode, entitlementId } = ctx.request.body;
+
+      // Validate required fields
+      if (!deviceSetupCode || typeof deviceSetupCode !== "string") {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "missing_setup_code",
+          customerId: customer.id,
+          entitlementId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deviceSetupCode is required", {
+          field: "deviceSetupCode",
+        });
+      }
+
+      if (!entitlementId) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "missing_entitlement_id",
+          customerId: customer.id,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId is required", {
+          field: "entitlementId",
+        });
+      }
+
+      // Parse and validate setup code
+      const parseResult = parseDeviceSetupCode(deviceSetupCode);
+      if (!parseResult.ok) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "invalid_setup_code",
+          customerId: customer.id,
+          entitlementId,
+          error: parseResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_SETUP_CODE, parseResult.error);
+      }
+
+      const setupData = parseResult.data;
+      const { deviceId, deviceName, platform, publicKey: publicKeyBase64, createdAt } = setupData;
+
+      // Import and validate Ed25519 public key
+      const keyResult = importEd25519PublicKey(publicKeyBase64);
+      if (!keyResult.ok) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "invalid_public_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          error: keyResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_PUBLIC_KEY, keyResult.error);
+      }
+
+      // Compute public key hash for binding verification
+      const devicePublicKeyHash = computePublicKeyHash(publicKeyBase64);
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer", "devices"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      // Verify ownership
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
+      }
+
+      // Check entitlement is active
+      if (entitlement.status !== "active") {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
+      }
+
+      // Offline provisioning is only for subscriptions, not lifetime
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          isLifetime: entitlement.isLifetime,
+        });
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline provisioning is only available for subscription entitlements. Lifetime licenses are online-only.");
+      }
+
+      // Check if device already exists
+      const existingDevices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      let device = null;
+
+      if (existingDevices.length > 0) {
+        const existingDevice = existingDevices[0];
+        const existingCustomerId = existingDevice.customer?.id || existingDevice.customer;
+
+        // If device belongs to another customer, reject
+        if (existingCustomerId && existingCustomerId !== customer.id) {
+          audit.offlineProvision(ctx, {
+            outcome: "failure",
+            reason: "device_owned_by_another",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+          });
+          return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Device is registered to another account");
+        }
+
+        // Update existing device with new public key and info
+        device = await strapi.entityService.update("api::device.device", existingDevice.id, {
+          data: {
+            publicKey: publicKeyBase64,
+            publicKeyHash: devicePublicKeyHash,
+            deviceName: deviceName || existingDevice.deviceName,
+            platform: platform || existingDevice.platform,
+            lastSeenAt: new Date(),
+          },
+        });
+        device = { ...device, customer: existingDevice.customer, entitlement: existingDevice.entitlement };
+      } else {
+        // Create new device
+        device = await strapi.entityService.create("api::device.device", {
+          data: {
+            deviceId,
+            deviceName: deviceName || null,
+            platform: platform || "unknown",
+            publicKey: publicKeyBase64,
+            publicKeyHash: devicePublicKeyHash,
+            customer: customer.id,
+            status: "active",
+            lastSeenAt: new Date(),
+          },
+        });
+      }
+
+      // Check if already bound to this entitlement (idempotent)
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      const alreadyBound = deviceEntitlementId === entitlement.id;
+
+      if (!alreadyBound) {
+        // Enforce maxDevices limit
+        const activeDevices = await strapi.entityService.findMany("api::device.device", {
+          filters: {
+            entitlement: entitlement.id,
+            status: "active",
+          },
+        });
+        const otherActiveDevices = activeDevices.filter(d => d.id !== device.id);
+
+        if (otherActiveDevices.length >= entitlement.maxDevices) {
+          audit.offlineProvision(ctx, {
+            outcome: "failure",
+            reason: "max_devices_exceeded",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+          });
+          return sendError(ctx, 409, ErrorCodes.MAX_DEVICES_EXCEEDED, "Maximum devices limit reached. Please deactivate another device first.", {
+            maxDevices: entitlement.maxDevices,
+            activeDevices: otherActiveDevices.length,
+          });
+        }
+
+        // Bind device to entitlement
+        const now = new Date();
+        await strapi.entityService.update("api::device.device", device.id, {
+          data: {
+            entitlement: entitlement.id,
+            status: "active",
+            boundAt: now,
+            lastSeenAt: now,
+            deactivatedAt: null,
+          },
+        });
+      }
+
+      // Create activation token (RS256 JWT)
+      const privateKey = getRS256PrivateKey();
+      if (!privateKey) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "jwt_key_not_configured",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "Server configuration error");
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const activationTtl = getOfflineActivationTtlSeconds();
+      const activationExp = now + activationTtl;
+      const activationJti = crypto.randomUUID();
+
+      const activationPayload = {
+        iss: process.env.JWT_ISSUER || "lightlane",
+        sub: `offline_activation:${entitlementId}:${deviceId}`,
+        jti: activationJti,
+        iat: now,
+        exp: activationExp,
+        typ: "offline_activation",
+        customerId: customer.id,
+        entitlementId: parseInt(entitlementId, 10),
+        deviceId,
+        devicePublicKeyHash,
+      };
+
+      const activationToken = jwt.sign(activationPayload, privateKey, { algorithm: "RS256" });
+
+      // Mint lease token
+      const lease = mintLeaseToken({
+        entitlementId: parseInt(entitlementId, 10),
+        customerId: customer.id,
+        deviceId,
+        tier: entitlement.tier,
+        isLifetime: false,
+      });
+
+      // Build activation package
+      const activationPackage = buildActivationPackage({
+        activationToken,
+        leaseToken: lease.token,
+        leaseExpiresAt: lease.expiresAt,
+      });
+
+      audit.offlineProvision(ctx, {
+        outcome: "success",
+        reason: "provisioned",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        jti: activationJti,
+      });
+
+      return sendOk(ctx, {
+        activationPackage,
+        leaseExpiresAt: lease.expiresAt,
+        serverTime: new Date().toISOString(),
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineProvision] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/offline-lease-refresh
+   * Refresh a lease for an air-gapped device using a signed request code.
+   * Verifies the device's Ed25519 signature and issues a new lease token.
+   *
+   * Auth: customer-auth required
+   * Body: { requestCode: string }
+   */
+  async offlineLeaseRefresh(ctx) {
+    const { mintLeaseToken } = require("../../../utils/lease-token");
+    const {
+      parseLeaseRefreshRequestCode,
+      importEd25519PublicKey,
+      buildLeaseRefreshSignatureMessage,
+      verifyEd25519Signature,
+      recordJtiOrReplay,
+      buildRefreshResponseCode,
+    } = require("../../../utils/offline-codes");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { requestCode } = ctx.request.body;
+
+      if (!requestCode || typeof requestCode !== "string") {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "missing_request_code",
+          customerId: customer.id,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "requestCode is required", {
+          field: "requestCode",
+        });
+      }
+
+      // Parse and validate request code
+      const parseResult = parseLeaseRefreshRequestCode(requestCode);
+      if (!parseResult.ok) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "invalid_request_code",
+          customerId: customer.id,
+          error: parseResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_REQUEST_CODE, parseResult.error);
+      }
+
+      const { deviceId, entitlementId, jti, iat, sig } = parseResult.data;
+
+      // Load device and verify ownership
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Load stored public key
+      if (!device.publicKey) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "no_public_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_PUBLIC_KEY, "Device does not have a stored public key. Re-provision the device.");
+      }
+
+      // Import public key
+      const keyResult = importEd25519PublicKey(device.publicKey);
+      if (!keyResult.ok) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "invalid_stored_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          error: keyResult.error,
+        });
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "Device public key is corrupted");
+      }
+
+      // Build and verify signature
+      const message = buildLeaseRefreshSignatureMessage({
+        deviceId,
+        entitlementId,
+        jti,
+        iat,
+      });
+
+      const sigValid = verifyEd25519Signature(message, sig, keyResult.publicKey);
+      if (!sigValid) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "signature_invalid",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          jti,
+        });
+        return sendError(ctx, 403, ErrorCodes.SIGNATURE_VERIFICATION_FAILED, "Signature verification failed");
+      }
+
+      // Verify device is bound to entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== entitlementId) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
+      }
+
+      // Load entitlement to verify it's active and subscription-based
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      if (entitlement.status !== "active") {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
+      }
+
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline lease refresh is only available for subscription entitlements.");
+      }
+
+      // Replay protection
+      const replayResult = await recordJtiOrReplay(strapi, {
+        jti,
+        kind: "LEASE_REFRESH_REQUEST",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      if (!replayResult.ok) {
+        if (replayResult.replay) {
+          audit.offlineLeaseRefresh(ctx, {
+            outcome: "failure",
+            reason: "replay_rejected",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+            jti,
+          });
+          return sendError(ctx, 409, ErrorCodes.REPLAY_REJECTED, "Request code has already been used (replay rejected)");
+        }
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, replayResult.error);
+      }
+
+      // Mint new lease token
+      const lease = mintLeaseToken({
+        entitlementId,
+        customerId: customer.id,
+        deviceId,
+        tier: entitlement.tier,
+        isLifetime: false,
+      });
+
+      // Update device lastSeenAt
+      await strapi.entityService.update("api::device.device", device.id, {
+        data: { lastSeenAt: new Date() },
+      });
+
+      // Build refresh response code
+      const refreshResponseCode = buildRefreshResponseCode({
+        leaseToken: lease.token,
+        leaseExpiresAt: lease.expiresAt,
+      });
+
+      audit.offlineLeaseRefresh(ctx, {
+        outcome: "success",
+        reason: "lease_issued",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        jti,
+        leaseJti: lease.jti,
+      });
+
+      return sendOk(ctx, {
+        refreshResponseCode,
+        leaseExpiresAt: lease.expiresAt,
+        serverTime: new Date().toISOString(),
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineLeaseRefresh] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/offline-deactivate
+   * Deactivate an air-gapped device using a signed deactivation code.
+   * Verifies the device's Ed25519 signature and unbinds the device.
+   *
+   * Auth: customer-auth required
+   * Body: { deactivationCode: string }
+   */
+  async offlineDeactivate(ctx) {
+    const {
+      parseDeactivationCode,
+      importEd25519PublicKey,
+      buildDeactivationSignatureMessage,
+      verifyEd25519Signature,
+      recordJtiOrReplay,
+    } = require("../../../utils/offline-codes");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { deactivationCode } = ctx.request.body;
+
+      if (!deactivationCode || typeof deactivationCode !== "string") {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "missing_deactivation_code",
+          customerId: customer.id,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deactivationCode is required", {
+          field: "deactivationCode",
+        });
+      }
+
+      // Parse and validate deactivation code
+      const parseResult = parseDeactivationCode(deactivationCode);
+      if (!parseResult.ok) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "invalid_deactivation_code",
+          customerId: customer.id,
+          error: parseResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_DEACTIVATION_CODE, parseResult.error);
+      }
+
+      const { deviceId, entitlementId, jti, iat, sig } = parseResult.data;
+
+      // Load device and verify ownership
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Load stored public key
+      if (!device.publicKey) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "no_public_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_PUBLIC_KEY, "Device does not have a stored public key.");
+      }
+
+      // Import public key
+      const keyResult = importEd25519PublicKey(device.publicKey);
+      if (!keyResult.ok) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "invalid_stored_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          error: keyResult.error,
+        });
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "Device public key is corrupted");
+      }
+
+      // Build and verify signature
+      const message = buildDeactivationSignatureMessage({
+        deviceId,
+        entitlementId,
+        jti,
+        iat,
+      });
+
+      const sigValid = verifyEd25519Signature(message, sig, keyResult.publicKey);
+      if (!sigValid) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "signature_invalid",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          jti,
+        });
+        return sendError(ctx, 403, ErrorCodes.SIGNATURE_VERIFICATION_FAILED, "Signature verification failed");
+      }
+
+      // Verify device is bound to entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== entitlementId) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
+      }
+
+      // Replay protection
+      const replayResult = await recordJtiOrReplay(strapi, {
+        jti,
+        kind: "DEACTIVATION_CODE",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      if (!replayResult.ok) {
+        if (replayResult.replay) {
+          audit.offlineDeactivate(ctx, {
+            outcome: "failure",
+            reason: "replay_rejected",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+            jti,
+          });
+          return sendError(ctx, 409, ErrorCodes.REPLAY_REJECTED, "Deactivation code has already been used (replay rejected)");
+        }
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, replayResult.error);
+      }
+
+      // Unbind device (same logic as online deactivate)
+      const now = new Date();
+      await strapi.entityService.update("api::device.device", device.id, {
+        data: {
+          entitlement: null,
+          status: "deactivated",
+          deactivatedAt: now,
+        },
+      });
+
+      audit.offlineDeactivate(ctx, {
+        outcome: "success",
+        reason: "deactivated",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        jti,
+      });
+
+      return sendOk(ctx, {
+        message: "Device deactivated",
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineDeactivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
 };

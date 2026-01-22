@@ -621,6 +621,552 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         </button>
       </div>
     </section>
+
+    <!-- Air-Gapped Device Activation Section (USB/Copy-Paste) -->
+    <section id="airgapped-section" class="surface rounded-xl p-5 hidden">
+      <div class="flex items-center gap-2 mb-4">
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <svg
+            class="w-5 h-5 text-accent"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            ></path>
+          </svg>
+          Air-Gapped Device Activation
+        </h2>
+        <span class="badge badge-accent badge-sm">Subscription Only</span>
+      </div>
+
+      <div class="alert alert-warning mb-4">
+        <svg
+          class="w-5 h-5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          ></path>
+        </svg>
+        <div class="text-sm">
+          <p class="font-medium">
+            For devices that are never connected to the internet
+          </p>
+          <p class="text-base-content/70">
+            <strong>Do not type these codes manually.</strong> They are long and
+            error-prone. Use USB drive or file transfer to move codes between machines.
+          </p>
+        </div>
+      </div>
+
+      <!-- Sub-tabs for different operations -->
+      <div role="tablist" class="tabs tabs-boxed mb-4">
+        <button
+          role="tab"
+          class="tab tab-active"
+          id="ag-tab-provision"
+          aria-controls="ag-panel-provision"
+        >
+          Provision Device
+        </button>
+        <button
+          role="tab"
+          class="tab"
+          id="ag-tab-refresh"
+          aria-controls="ag-panel-refresh"
+        >
+          Refresh Lease
+        </button>
+        <button
+          role="tab"
+          class="tab"
+          id="ag-tab-deactivate"
+          aria-controls="ag-panel-deactivate"
+        >
+          Deactivate
+        </button>
+      </div>
+
+      <!-- Provision Panel -->
+      <div id="ag-panel-provision" role="tabpanel" class="space-y-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Entitlement</span>
+          </label>
+          <select
+            id="ag-prov-entitlement"
+            class="select select-bordered w-full"
+          >
+            <option value="">Select subscription...</option>
+          </select>
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Device Setup Code</span>
+            <span class="label-text-alt text-base-content/50"
+              >From air-gapped machine</span
+            >
+          </label>
+          <div class="flex gap-2 mb-1">
+            <button
+              type="button"
+              id="ag-prov-load-file-btn"
+              class="btn btn-xs btn-outline gap-1"
+            >
+              <svg
+                class="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                ></path>
+              </svg>
+              Load from file
+            </button>
+            <input
+              type="file"
+              id="ag-prov-file-input"
+              class="hidden"
+              accept=".txt,.json"
+            />
+            <span class="text-xs text-base-content/50 self-center"
+              >Paste from file/clipboard (recommended)</span
+            >
+          </div>
+          <textarea
+            id="ag-prov-setup-code"
+            class="textarea textarea-bordered h-24 font-mono text-xs"
+            placeholder="Paste the device setup code from your air-gapped machine..."
+          ></textarea>
+        </div>
+
+        <div id="ag-prov-error" class="alert alert-error hidden">
+          <svg
+            class="w-5 h-5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="ag-prov-error-text"></span>
+        </div>
+
+        <button id="ag-prov-btn" class="btn btn-accent w-full" disabled>
+          <span id="ag-prov-btn-text">Generate Activation Package</span>
+          <span
+            id="ag-prov-btn-loading"
+            class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+
+        <!-- Provision Result -->
+        <div id="ag-prov-result" class="hidden space-y-4">
+          <div class="alert alert-success">
+            <svg
+              class="w-5 h-5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <p class="font-medium">Activation Package Ready</p>
+              <p class="text-sm text-base-content/70">
+                Copy and transfer to your air-gapped machine
+              </p>
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Activation Package</span>
+              <span class="label-text-alt text-warning" id="ag-prov-expiry"
+              ></span>
+            </label>
+            <p class="text-xs text-base-content/50 mb-1">
+              Copy to file and transfer via USB (recommended)
+            </p>
+            <div class="join w-full">
+              <textarea
+                id="ag-prov-output"
+                class="textarea textarea-bordered join-item flex-1 font-mono text-xs h-28"
+                readonly></textarea>
+              <div class="join join-vertical">
+                <button id="ag-prov-copy-btn" class="btn btn-accent join-item">
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                    ></path>
+                  </svg>
+                  <span>Copy</span>
+                </button>
+                <button
+                  id="ag-prov-download-btn"
+                  class="btn btn-outline join-item"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    ></path>
+                  </svg>
+                  <span>Download</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button id="ag-prov-reset-btn" class="btn btn-outline w-full"
+            >Provision Another Device</button
+          >
+        </div>
+      </div>
+
+      <!-- Refresh Panel -->
+      <div id="ag-panel-refresh" role="tabpanel" class="hidden space-y-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Lease Refresh Request Code</span>
+            <span class="label-text-alt text-base-content/50"
+              >From air-gapped machine</span
+            >
+          </label>
+          <div class="flex gap-2 mb-1">
+            <button
+              type="button"
+              id="ag-refresh-load-file-btn"
+              class="btn btn-xs btn-outline gap-1"
+            >
+              <svg
+                class="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                ></path>
+              </svg>
+              Load from file
+            </button>
+            <input
+              type="file"
+              id="ag-refresh-file-input"
+              class="hidden"
+              accept=".txt,.json"
+            />
+            <span class="text-xs text-base-content/50 self-center"
+              >Paste from file/clipboard (recommended)</span
+            >
+          </div>
+          <textarea
+            id="ag-refresh-request-code"
+            class="textarea textarea-bordered h-24 font-mono text-xs"
+            placeholder="Paste the lease refresh request code from your air-gapped machine..."
+          ></textarea>
+        </div>
+
+        <!-- Preview panel (shows decoded info if valid) -->
+        <div id="ag-refresh-preview" class="alert alert-info hidden">
+          <svg
+            class="w-5 h-5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <div class="text-sm">
+            <p class="font-medium">Code Preview</p>
+            <p
+              id="ag-refresh-preview-content"
+              class="text-xs font-mono opacity-80"
+            >
+            </p>
+          </div>
+        </div>
+
+        <div id="ag-refresh-error" class="alert alert-error hidden">
+          <svg
+            class="w-5 h-5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="ag-refresh-error-text"></span>
+        </div>
+
+        <button id="ag-refresh-btn" class="btn btn-accent w-full" disabled>
+          <span id="ag-refresh-btn-text">Refresh Lease</span>
+          <span
+            id="ag-refresh-btn-loading"
+            class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+
+        <!-- Refresh Result -->
+        <div id="ag-refresh-result" class="hidden space-y-4">
+          <div class="alert alert-success">
+            <svg
+              class="w-5 h-5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <p class="font-medium">New Lease Token Ready</p>
+              <p class="text-sm text-base-content/70">
+                Copy and transfer to your air-gapped machine
+              </p>
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Refresh Response Code</span>
+              <span class="label-text-alt text-warning" id="ag-refresh-expiry"
+              ></span>
+            </label>
+            <p class="text-xs text-base-content/50 mb-1">
+              Copy to file and transfer via USB (recommended)
+            </p>
+            <div class="join w-full">
+              <textarea
+                id="ag-refresh-output"
+                class="textarea textarea-bordered join-item flex-1 font-mono text-xs h-28"
+                readonly></textarea>
+              <div class="join join-vertical">
+                <button
+                  id="ag-refresh-copy-btn"
+                  class="btn btn-accent join-item"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                    ></path>
+                  </svg>
+                  <span>Copy</span>
+                </button>
+                <button
+                  id="ag-refresh-download-btn"
+                  class="btn btn-outline join-item"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    ></path>
+                  </svg>
+                  <span>Download</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button id="ag-refresh-reset-btn" class="btn btn-outline w-full"
+            >Refresh Another</button
+          >
+        </div>
+      </div>
+
+      <!-- Deactivate Panel -->
+      <div id="ag-panel-deactivate" role="tabpanel" class="hidden space-y-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Deactivation Code</span>
+            <span class="label-text-alt text-base-content/50"
+              >From air-gapped machine</span
+            >
+          </label>
+          <div class="flex gap-2 mb-1">
+            <button
+              type="button"
+              id="ag-deact-load-file-btn"
+              class="btn btn-xs btn-outline gap-1"
+            >
+              <svg
+                class="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                ></path>
+              </svg>
+              Load from file
+            </button>
+            <input
+              type="file"
+              id="ag-deact-file-input"
+              class="hidden"
+              accept=".txt,.json"
+            />
+            <span class="text-xs text-base-content/50 self-center"
+              >Paste from file/clipboard (recommended)</span
+            >
+          </div>
+          <textarea
+            id="ag-deact-code"
+            class="textarea textarea-bordered h-24 font-mono text-xs"
+            placeholder="Paste the deactivation code from your air-gapped machine..."
+          ></textarea>
+        </div>
+
+        <!-- Preview panel (shows decoded info if valid) -->
+        <div id="ag-deact-preview" class="alert alert-info hidden">
+          <svg
+            class="w-5 h-5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <div class="text-sm">
+            <p class="font-medium">Code Preview</p>
+            <p
+              id="ag-deact-preview-content"
+              class="text-xs font-mono opacity-80"
+            >
+            </p>
+          </div>
+        </div>
+
+        <div id="ag-deact-error" class="alert alert-error hidden">
+          <svg
+            class="w-5 h-5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="ag-deact-error-text"></span>
+        </div>
+
+        <button id="ag-deact-btn" class="btn btn-error w-full" disabled>
+          <span id="ag-deact-btn-text">Deactivate Device</span>
+          <span
+            id="ag-deact-btn-loading"
+            class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+
+        <!-- Deactivate Result -->
+        <div id="ag-deact-result" class="hidden">
+          <div class="alert alert-success">
+            <svg
+              class="w-5 h-5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <p class="font-medium">Device Deactivated</p>
+              <p class="text-sm text-base-content/70">
+                The device seat has been freed. You can now activate another
+                device.
+              </p>
+            </div>
+          </div>
+          <button id="ag-deact-reset-btn" class="btn btn-outline w-full mt-4"
+            >Deactivate Another</button
+          >
+        </div>
+      </div>
+    </section>
   </div>
 
   <!-- ========== MODALS ========== -->
@@ -1318,6 +1864,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
     renderDevicesOverview();
     renderDevicesTable();
     renderOfflineSection();
+    renderAirgappedSection();
   }
 
   // === Billing Portal ===
@@ -1849,6 +2396,810 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       ).value = "";
       document.getElementById("offline-error")!.classList.add("hidden");
       updateOfflineBtn();
+    });
+
+  // === Air-Gapped Device Activation Section ===
+  // Types for API responses
+  interface OfflineProvisionResponse {
+    activationPackage: string;
+    leaseExpiresAt: string;
+  }
+
+  interface OfflineLeaseRefreshResponse {
+    refreshResponseCode: string;
+    leaseExpiresAt: string;
+  }
+
+  interface OfflineDeactivateResponse {
+    deactivatedAt: string;
+  }
+
+  // === File handling utilities for air-gapped codes ===
+
+  // Load code from a file (supports .txt and .json with { value: "..." } format)
+  function loadCodeFromFile(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = (e.target?.result as string) || "";
+          // Try parsing as JSON first
+          try {
+            const json = JSON.parse(content);
+            if (json.value && typeof json.value === "string") {
+              resolve(json.value.trim());
+              return;
+            }
+          } catch {
+            // Not JSON, treat as plain text
+          }
+          // Plain text - trim and normalize
+          resolve(content.trim().replace(/\r\n/g, "\n").replace(/\n/g, ""));
+        } catch (err) {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsText(file);
+    });
+  }
+
+  // Download a code as a JSON file
+  function downloadCodeAsFile(
+    code: string,
+    type: "activation_package" | "lease_refresh_response",
+    deviceId?: string,
+  ) {
+    const now = new Date();
+    const timestamp = now
+      .toISOString()
+      .slice(0, 16)
+      .replace(/[-:T]/g, "")
+      .replace(/(\d{8})(\d{4})/, "$1-$2");
+    const devicePart = deviceId ? `-${deviceId.slice(0, 16)}` : "";
+    const filename =
+      type === "activation_package"
+        ? `lightlane-activation-package${devicePart}-${timestamp}.json`
+        : `lightlane-lease-response${devicePart}-${timestamp}.json`;
+
+    const data = {
+      type,
+      createdAt: now.toISOString(),
+      value: code,
+      notes:
+        type === "activation_package"
+          ? "Paste the 'value' field into the LightLane desktop app to complete activation"
+          : "Paste the 'value' field into the LightLane desktop app to refresh the lease",
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Setup file input handler for a textarea
+  function setupFileLoader(
+    buttonId: string,
+    inputId: string,
+    textareaId: string,
+    onLoad?: () => void,
+  ) {
+    const btn = document.getElementById(buttonId);
+    const input = document.getElementById(inputId) as HTMLInputElement;
+    const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
+
+    if (!btn || !input || !textarea) return;
+
+    btn.addEventListener("click", () => input.click());
+
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      try {
+        const code = await loadCodeFromFile(file);
+        textarea.value = code;
+        // Trigger input event to update validation/preview
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        if (onLoad) onLoad();
+      } catch (err) {
+        console.error("Failed to load file:", err);
+      }
+
+      // Reset input so same file can be loaded again
+      input.value = "";
+    });
+  }
+
+  // Show/hide section based on whether user has subscription entitlements
+  function renderAirgappedSection() {
+    const section = document.getElementById("airgapped-section");
+    if (!section) return;
+
+    // Only show for customers with active subscription entitlements (non-lifetime, lease-required)
+    const subscriptionEnts = entitlements.filter(
+      (e) => isActiveEntitlement(e) && !e.isLifetime && e.leaseRequired,
+    );
+
+    if (subscriptionEnts.length > 0) {
+      section.classList.remove("hidden");
+
+      // Populate entitlement dropdown for provision panel
+      const provSelect = document.getElementById(
+        "ag-prov-entitlement",
+      ) as HTMLSelectElement;
+      if (provSelect) {
+        provSelect.innerHTML =
+          '<option value="">Select subscription...</option>';
+        subscriptionEnts.forEach((ent) => {
+          const linkedCount = getLinkedDeviceCount(ent.id);
+          const opt = document.createElement("option");
+          opt.value = ent.id.toString();
+          opt.textContent = `${formatTier(ent.tier)} (${linkedCount}/${ent.maxDevices} devices)`;
+          provSelect.appendChild(opt);
+        });
+      }
+    } else {
+      section.classList.add("hidden");
+    }
+  }
+
+  // Tab switching
+  function setupAirgappedTabs() {
+    const tabs = ["provision", "refresh", "deactivate"];
+    tabs.forEach((tabName) => {
+      const tab = document.getElementById(`ag-tab-${tabName}`);
+      if (tab) {
+        tab.addEventListener("click", () => {
+          // Update tab states
+          tabs.forEach((t) => {
+            const tabEl = document.getElementById(`ag-tab-${t}`);
+            const panelEl = document.getElementById(`ag-panel-${t}`);
+            if (tabEl && panelEl) {
+              if (t === tabName) {
+                tabEl.classList.add("tab-active");
+                panelEl.classList.remove("hidden");
+              } else {
+                tabEl.classList.remove("tab-active");
+                panelEl.classList.add("hidden");
+              }
+            }
+          });
+        });
+      }
+    });
+  }
+
+  // Update provision button state
+  function updateAgProvBtn() {
+    const entId = (
+      document.getElementById("ag-prov-entitlement") as HTMLSelectElement
+    )?.value;
+    const setupCode = (
+      document.getElementById("ag-prov-setup-code") as HTMLTextAreaElement
+    )?.value.trim();
+    const btn = document.getElementById("ag-prov-btn") as HTMLButtonElement;
+    if (btn) {
+      btn.disabled = !entId || !setupCode;
+    }
+  }
+
+  // Update refresh button state
+  function updateAgRefreshBtn() {
+    const requestCode = (
+      document.getElementById("ag-refresh-request-code") as HTMLTextAreaElement
+    )?.value.trim();
+    const btn = document.getElementById("ag-refresh-btn") as HTMLButtonElement;
+    if (btn) {
+      btn.disabled = !requestCode;
+    }
+  }
+
+  // Update deactivate button state
+  function updateAgDeactBtn() {
+    const deactCode = (
+      document.getElementById("ag-deact-code") as HTMLTextAreaElement
+    )?.value.trim();
+    const btn = document.getElementById("ag-deact-btn") as HTMLButtonElement;
+    if (btn) {
+      btn.disabled = !deactCode;
+    }
+  }
+
+  // Setup event listeners for input changes
+  document
+    .getElementById("ag-prov-entitlement")
+    ?.addEventListener("change", updateAgProvBtn);
+  document
+    .getElementById("ag-prov-setup-code")
+    ?.addEventListener("input", updateAgProvBtn);
+  document
+    .getElementById("ag-refresh-request-code")
+    ?.addEventListener("input", () => {
+      updateAgRefreshBtn();
+      updateRefreshPreview();
+    });
+  document.getElementById("ag-deact-code")?.addEventListener("input", () => {
+    updateAgDeactBtn();
+    updateDeactivatePreview();
+  });
+
+  // Update refresh code preview panel
+  function updateRefreshPreview() {
+    const code = (
+      document.getElementById("ag-refresh-request-code") as HTMLTextAreaElement
+    )?.value.trim();
+    const previewEl = document.getElementById("ag-refresh-preview");
+    const contentEl = document.getElementById("ag-refresh-preview-content");
+    if (!previewEl || !contentEl) return;
+
+    if (!code) {
+      previewEl.classList.add("hidden");
+      return;
+    }
+
+    const decoded = tryDecodeCode(code);
+    if (decoded.ok) {
+      const data = decoded.data;
+      // Build preview string with available fields
+      const parts: string[] = [];
+      if (data.type) parts.push(`Type: ${data.type}`);
+      if (data.deviceId)
+        parts.push(`Device: ${String(data.deviceId).slice(0, 16)}...`);
+      if (data.entitlementId) parts.push(`Entitlement: ${data.entitlementId}`);
+      if (data.iat)
+        parts.push(`Issued: ${new Date(String(data.iat)).toLocaleString()}`);
+      contentEl.textContent = parts.join(" | ");
+      previewEl.classList.remove("hidden");
+    } else {
+      previewEl.classList.add("hidden");
+    }
+  }
+
+  // Update deactivation code preview panel
+  function updateDeactivatePreview() {
+    const code = (
+      document.getElementById("ag-deact-code") as HTMLTextAreaElement
+    )?.value.trim();
+    const previewEl = document.getElementById("ag-deact-preview");
+    const contentEl = document.getElementById("ag-deact-preview-content");
+    if (!previewEl || !contentEl) return;
+
+    if (!code) {
+      previewEl.classList.add("hidden");
+      return;
+    }
+
+    const decoded = tryDecodeCode(code);
+    if (decoded.ok) {
+      const data = decoded.data;
+      // Build preview string with available fields
+      const parts: string[] = [];
+      if (data.type) parts.push(`Type: ${data.type}`);
+      if (data.deviceId)
+        parts.push(`Device: ${String(data.deviceId).slice(0, 16)}...`);
+      if (data.entitlementId) parts.push(`Entitlement: ${data.entitlementId}`);
+      if (data.iat)
+        parts.push(`Issued: ${new Date(String(data.iat)).toLocaleString()}`);
+      contentEl.textContent = parts.join(" | ");
+      previewEl.classList.remove("hidden");
+    } else {
+      previewEl.classList.add("hidden");
+    }
+  }
+
+  // Base64URL validation regex (no padding, URL-safe chars only)
+  const BASE64URL_REGEX = /^[A-Za-z0-9_-]+$/;
+
+  // Validate a base64url code and return error message if invalid
+  function validateBase64UrlCode(
+    code: string,
+    fieldName: string,
+  ): string | null {
+    if (!code || !code.trim()) {
+      return `Please paste the ${fieldName} from your air-gapped machine`;
+    }
+    const trimmed = code.trim();
+    if (trimmed.length < 20) {
+      return `${fieldName} is too short - check you copied the complete code`;
+    }
+    if (trimmed.length > 50000) {
+      return `${fieldName} is too large`;
+    }
+    if (!BASE64URL_REGEX.test(trimmed)) {
+      return `Invalid ${fieldName} format - must be a base64url encoded string`;
+    }
+    return null;
+  }
+
+  // Try to decode and parse a base64url JSON code for preview
+  function tryDecodeCode(
+    code: string,
+  ): { ok: true; data: Record<string, unknown> } | { ok: false } {
+    try {
+      const trimmed = code.trim();
+      if (!BASE64URL_REGEX.test(trimmed)) return { ok: false };
+      // Decode base64url to string
+      const decoded = atob(trimmed.replace(/-/g, "+").replace(/_/g, "/"));
+      const data = JSON.parse(decoded);
+      if (typeof data !== "object" || data === null) return { ok: false };
+      return { ok: true, data };
+    } catch {
+      return { ok: false };
+    }
+  }
+
+  // Map backend error codes to user-friendly messages
+  function mapAirgapError(err: unknown): string {
+    const errObj = err as { code?: string; message?: string };
+    const code = errObj?.code || "";
+    const message = errObj?.message || "An error occurred";
+
+    // Map specific error codes to friendly messages
+    const errorMap: Record<string, string> = {
+      VALIDATION_ERROR: message.includes("required")
+        ? "Missing required field - please check your input"
+        : "Invalid input format",
+      INVALID_SETUP_CODE: "Invalid device setup code format or structure",
+      INVALID_REQUEST_CODE: "Invalid refresh request code format or structure",
+      INVALID_DEACTIVATION_CODE:
+        "Invalid deactivation code format or structure",
+      INVALID_PUBLIC_KEY:
+        "The device public key in the code is invalid or corrupted",
+      SIGNATURE_VERIFICATION_FAILED:
+        "Signature verification failed - the code may be corrupted or tampered",
+      REPLAY_REJECTED: "This code has already been used (replay rejected)",
+      DEVICE_NOT_FOUND: "Device not found - it may not be registered yet",
+      DEVICE_NOT_OWNED: "Device is not registered to your account",
+      DEVICE_NOT_BOUND:
+        "Device is not bound to this entitlement - provision it first",
+      ENTITLEMENT_NOT_FOUND: "Entitlement not found",
+      ENTITLEMENT_NOT_ACTIVE: "Entitlement is not active",
+      MAX_DEVICES_EXCEEDED:
+        "Maximum devices reached - deactivate another device first",
+      LIFETIME_NOT_SUPPORTED:
+        "Lifetime licenses do not support offline activation",
+    };
+
+    // Check if error message contains JSON parse garbage and sanitize
+    if (
+      message.includes("JSON") ||
+      message.includes("Unexpected token") ||
+      message.includes("SyntaxError")
+    ) {
+      return "Invalid code format - not a valid encoded code";
+    }
+
+    return errorMap[code] || message;
+  }
+
+  // Provision device handler
+  document
+    .getElementById("ag-prov-btn")
+    ?.addEventListener("click", async () => {
+      const entId = (
+        document.getElementById("ag-prov-entitlement") as HTMLSelectElement
+      ).value;
+      const setupCode = (
+        document.getElementById("ag-prov-setup-code") as HTMLTextAreaElement
+      ).value.trim();
+
+      const btn = document.getElementById("ag-prov-btn") as HTMLButtonElement;
+      const btnText = document.getElementById("ag-prov-btn-text")!;
+      const btnLoad = document.getElementById("ag-prov-btn-loading")!;
+      const errorEl = document.getElementById("ag-prov-error")!;
+      const errorText = document.getElementById("ag-prov-error-text")!;
+
+      // Client-side validation
+      if (!entId) {
+        errorText.textContent = "Please select an entitlement";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      const validationError = validateBase64UrlCode(
+        setupCode,
+        "Device Setup Code",
+      );
+      if (validationError) {
+        errorText.textContent = validationError;
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      errorEl.classList.add("hidden");
+      btnText.classList.add("hidden");
+      btnLoad.classList.remove("hidden");
+      btn.disabled = true;
+
+      try {
+        const data = await portalFetch<OfflineProvisionResponse>(
+          "/api/licence/offline-provision",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              entitlementId: parseInt(entId, 10),
+              deviceSetupCode: setupCode,
+            }),
+          },
+        );
+
+        // Show result
+        document.getElementById("ag-prov-result")!.classList.remove("hidden");
+        (
+          document.getElementById("ag-prov-output") as HTMLTextAreaElement
+        ).value = data.activationPackage;
+
+        // Show expiry
+        const expiry = new Date(data.leaseExpiresAt);
+        const daysLeft = Math.round(
+          (expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        );
+        document.getElementById("ag-prov-expiry")!.textContent =
+          `Valid for ${daysLeft} days`;
+
+        // Hide form elements
+        (document.getElementById("ag-prov-entitlement") as HTMLSelectElement)
+          .closest(".form-control")!
+          .classList.add("hidden");
+        (document.getElementById("ag-prov-setup-code") as HTMLTextAreaElement)
+          .closest(".form-control")!
+          .classList.add("hidden");
+        btn.classList.add("hidden");
+
+        // Reload data to show new device
+        await loadAllData();
+      } catch (err) {
+        errorText.textContent = mapAirgapError(err);
+        errorEl.classList.remove("hidden");
+      } finally {
+        btnText.classList.remove("hidden");
+        btnLoad.classList.add("hidden");
+        btn.disabled = false;
+      }
+    });
+
+  // Copy activation package
+  document
+    .getElementById("ag-prov-copy-btn")
+    ?.addEventListener("click", async () => {
+      const output = document.getElementById(
+        "ag-prov-output",
+      ) as HTMLTextAreaElement;
+      const btn = document.getElementById(
+        "ag-prov-copy-btn",
+      ) as HTMLButtonElement;
+      try {
+        await navigator.clipboard.writeText(output.value);
+        btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Copied!</span>`;
+        btn.classList.remove("btn-accent");
+        btn.classList.add("btn-success");
+        setTimeout(() => {
+          btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg><span>Copy</span>`;
+          btn.classList.remove("btn-success");
+          btn.classList.add("btn-accent");
+        }, 2000);
+      } catch {
+        output.select();
+        document.execCommand("copy");
+      }
+    });
+
+  // Reset provision panel
+  document
+    .getElementById("ag-prov-reset-btn")
+    ?.addEventListener("click", () => {
+      document.getElementById("ag-prov-result")!.classList.add("hidden");
+      (
+        document.getElementById("ag-prov-entitlement") as HTMLSelectElement
+      ).value = "";
+      (
+        document.getElementById("ag-prov-setup-code") as HTMLTextAreaElement
+      ).value = "";
+      (document.getElementById("ag-prov-output") as HTMLTextAreaElement).value =
+        "";
+
+      // Show form elements again
+      (document.getElementById("ag-prov-entitlement") as HTMLSelectElement)
+        .closest(".form-control")!
+        .classList.remove("hidden");
+      (document.getElementById("ag-prov-setup-code") as HTMLTextAreaElement)
+        .closest(".form-control")!
+        .classList.remove("hidden");
+      document.getElementById("ag-prov-btn")!.classList.remove("hidden");
+      document.getElementById("ag-prov-error")!.classList.add("hidden");
+      updateAgProvBtn();
+    });
+
+  // Lease refresh handler
+  document
+    .getElementById("ag-refresh-btn")
+    ?.addEventListener("click", async () => {
+      const requestCode = (
+        document.getElementById(
+          "ag-refresh-request-code",
+        ) as HTMLTextAreaElement
+      ).value.trim();
+
+      const btn = document.getElementById(
+        "ag-refresh-btn",
+      ) as HTMLButtonElement;
+      const btnText = document.getElementById("ag-refresh-btn-text")!;
+      const btnLoad = document.getElementById("ag-refresh-btn-loading")!;
+      const errorEl = document.getElementById("ag-refresh-error")!;
+      const errorText = document.getElementById("ag-refresh-error-text")!;
+
+      // Client-side validation
+      const validationError = validateBase64UrlCode(
+        requestCode,
+        "Lease Refresh Request Code",
+      );
+      if (validationError) {
+        errorText.textContent = validationError;
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      errorEl.classList.add("hidden");
+      btnText.classList.add("hidden");
+      btnLoad.classList.remove("hidden");
+      btn.disabled = true;
+
+      try {
+        const data = await portalFetch<OfflineLeaseRefreshResponse>(
+          "/api/licence/offline-lease-refresh",
+          {
+            method: "POST",
+            body: JSON.stringify({ requestCode }),
+          },
+        );
+
+        // Show result
+        document
+          .getElementById("ag-refresh-result")!
+          .classList.remove("hidden");
+        (
+          document.getElementById("ag-refresh-output") as HTMLTextAreaElement
+        ).value = data.refreshResponseCode;
+
+        // Show expiry
+        const expiry = new Date(data.leaseExpiresAt);
+        const daysLeft = Math.round(
+          (expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        );
+        document.getElementById("ag-refresh-expiry")!.textContent =
+          `Valid for ${daysLeft} days`;
+
+        // Hide form elements
+        (
+          document.getElementById(
+            "ag-refresh-request-code",
+          ) as HTMLTextAreaElement
+        )
+          .closest(".form-control")!
+          .classList.add("hidden");
+        btn.classList.add("hidden");
+      } catch (err) {
+        errorText.textContent = mapAirgapError(err);
+        errorEl.classList.remove("hidden");
+      } finally {
+        btnText.classList.remove("hidden");
+        btnLoad.classList.add("hidden");
+        btn.disabled = false;
+      }
+    });
+
+  // Copy refresh response code
+  document
+    .getElementById("ag-refresh-copy-btn")
+    ?.addEventListener("click", async () => {
+      const output = document.getElementById(
+        "ag-refresh-output",
+      ) as HTMLTextAreaElement;
+      const btn = document.getElementById(
+        "ag-refresh-copy-btn",
+      ) as HTMLButtonElement;
+      try {
+        await navigator.clipboard.writeText(output.value);
+        btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Copied!</span>`;
+        btn.classList.remove("btn-accent");
+        btn.classList.add("btn-success");
+        setTimeout(() => {
+          btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg><span>Copy</span>`;
+          btn.classList.remove("btn-success");
+          btn.classList.add("btn-accent");
+        }, 2000);
+      } catch {
+        output.select();
+        document.execCommand("copy");
+      }
+    });
+
+  // Reset refresh panel
+  document
+    .getElementById("ag-refresh-reset-btn")
+    ?.addEventListener("click", () => {
+      document.getElementById("ag-refresh-result")!.classList.add("hidden");
+      (
+        document.getElementById(
+          "ag-refresh-request-code",
+        ) as HTMLTextAreaElement
+      ).value = "";
+      (
+        document.getElementById("ag-refresh-output") as HTMLTextAreaElement
+      ).value = "";
+
+      // Show form elements again
+      (
+        document.getElementById(
+          "ag-refresh-request-code",
+        ) as HTMLTextAreaElement
+      )
+        .closest(".form-control")!
+        .classList.remove("hidden");
+      document.getElementById("ag-refresh-btn")!.classList.remove("hidden");
+      document.getElementById("ag-refresh-error")!.classList.add("hidden");
+      updateAgRefreshBtn();
+    });
+
+  // Deactivate handler
+  document
+    .getElementById("ag-deact-btn")
+    ?.addEventListener("click", async () => {
+      const deactCode = (
+        document.getElementById("ag-deact-code") as HTMLTextAreaElement
+      ).value.trim();
+
+      const btn = document.getElementById("ag-deact-btn") as HTMLButtonElement;
+      const btnText = document.getElementById("ag-deact-btn-text")!;
+      const btnLoad = document.getElementById("ag-deact-btn-loading")!;
+      const errorEl = document.getElementById("ag-deact-error")!;
+      const errorText = document.getElementById("ag-deact-error-text")!;
+
+      // Client-side validation
+      const validationError = validateBase64UrlCode(
+        deactCode,
+        "Deactivation Code",
+      );
+      if (validationError) {
+        errorText.textContent = validationError;
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      errorEl.classList.add("hidden");
+      btnText.classList.add("hidden");
+      btnLoad.classList.remove("hidden");
+      btn.disabled = true;
+
+      try {
+        await portalFetch<OfflineDeactivateResponse>(
+          "/api/licence/offline-deactivate",
+          {
+            method: "POST",
+            body: JSON.stringify({ deactivationCode: deactCode }),
+          },
+        );
+
+        // Show result
+        document.getElementById("ag-deact-result")!.classList.remove("hidden");
+
+        // Hide form elements
+        (document.getElementById("ag-deact-code") as HTMLTextAreaElement)
+          .closest(".form-control")!
+          .classList.add("hidden");
+        btn.classList.add("hidden");
+
+        // Reload data to reflect removed device
+        await loadAllData();
+      } catch (err) {
+        errorText.textContent = mapAirgapError(err);
+        errorEl.classList.remove("hidden");
+      } finally {
+        btnText.classList.remove("hidden");
+        btnLoad.classList.add("hidden");
+        btn.disabled = false;
+      }
+    });
+
+  // Reset deactivate panel
+  document
+    .getElementById("ag-deact-reset-btn")
+    ?.addEventListener("click", () => {
+      document.getElementById("ag-deact-result")!.classList.add("hidden");
+      (document.getElementById("ag-deact-code") as HTMLTextAreaElement).value =
+        "";
+
+      // Show form elements again
+      (document.getElementById("ag-deact-code") as HTMLTextAreaElement)
+        .closest(".form-control")!
+        .classList.remove("hidden");
+      document.getElementById("ag-deact-btn")!.classList.remove("hidden");
+      document.getElementById("ag-deact-error")!.classList.add("hidden");
+      updateAgDeactBtn();
+    });
+
+  // Initialize air-gapped tabs
+  setupAirgappedTabs();
+
+  // Setup file loaders for air-gapped code inputs
+  setupFileLoader(
+    "ag-prov-load-file-btn",
+    "ag-prov-file-input",
+    "ag-prov-setup-code",
+    updateAgProvBtn,
+  );
+  setupFileLoader(
+    "ag-refresh-load-file-btn",
+    "ag-refresh-file-input",
+    "ag-refresh-request-code",
+    () => {
+      updateAgRefreshBtn();
+      updateRefreshPreview();
+    },
+  );
+  setupFileLoader(
+    "ag-deact-load-file-btn",
+    "ag-deact-file-input",
+    "ag-deact-code",
+    () => {
+      updateAgDeactBtn();
+      updateDeactivatePreview();
+    },
+  );
+
+  // Download activation package handler
+  document
+    .getElementById("ag-prov-download-btn")
+    ?.addEventListener("click", () => {
+      const output = (
+        document.getElementById("ag-prov-output") as HTMLTextAreaElement
+      )?.value;
+      if (!output) return;
+      // Try to extract deviceId from the setup code input for filename
+      const setupCode = (
+        document.getElementById("ag-prov-setup-code") as HTMLTextAreaElement
+      )?.value;
+      let deviceId: string | undefined;
+      if (setupCode) {
+        const decoded = tryDecodeCode(setupCode);
+        if (decoded.ok && decoded.data.deviceId) {
+          deviceId = String(decoded.data.deviceId);
+        }
+      }
+      downloadCodeAsFile(output, "activation_package", deviceId);
+    });
+
+  // Download lease refresh response handler
+  document
+    .getElementById("ag-refresh-download-btn")
+    ?.addEventListener("click", () => {
+      const output = (
+        document.getElementById("ag-refresh-output") as HTMLTextAreaElement
+      )?.value;
+      if (!output) return;
+      // Try to extract deviceId from the request code for filename
+      const requestCode = (
+        document.getElementById(
+          "ag-refresh-request-code",
+        ) as HTMLTextAreaElement
+      )?.value;
+      let deviceId: string | undefined;
+      if (requestCode) {
+        const decoded = tryDecodeCode(requestCode);
+        if (decoded.ok && decoded.data.deviceId) {
+          deviceId = String(decoded.data.deviceId);
+        }
+      }
+      downloadCodeAsFile(output, "lease_refresh_response", deviceId);
     });
 
   // === Refresh button ===

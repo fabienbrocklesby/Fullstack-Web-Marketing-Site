@@ -288,5 +288,40 @@ module.exports = {
         middlewares: ["global::customer-auth", "global::license-rate-limit"],
       },
     },
+
+    // =========================================================================
+    // Air-Gapped Offline Activation Flow (USB/Copy-Paste Codes)
+    // =========================================================================
+
+    // Provision an air-gapped device with activation package
+    {
+      method: "POST",
+      path: "/licence/offline-provision",
+      handler: "custom.offlineProvision",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Refresh lease for air-gapped device using signed request code
+    {
+      method: "POST",
+      path: "/licence/offline-lease-refresh",
+      handler: "custom.offlineLeaseRefresh",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Deactivate air-gapped device using signed deactivation code
+    {
+      method: "POST",
+      path: "/licence/offline-deactivate",
+      handler: "custom.offlineDeactivate",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
   ],
 };

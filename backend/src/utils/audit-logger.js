@@ -322,6 +322,65 @@ const audit = {
     });
   },
 
+  // -------------------------------------------------------------------------
+  // Air-Gapped Offline Activation audit events
+  // -------------------------------------------------------------------------
+
+  /**
+   * Log offline provision attempt (air-gapped device activation)
+   */
+  offlineProvision(ctx, { outcome, reason, customerId, entitlementId, deviceId, jti, error }) {
+    return auditLog("offline_provision", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceId ? maskSensitive(deviceId, 8) : null,
+        activationJti: jti ? jti.slice(0, 8) + "..." : null,
+        error: error || null,
+      },
+    });
+  },
+
+  /**
+   * Log offline lease refresh attempt (air-gapped device refresh via signed request code)
+   */
+  offlineLeaseRefresh(ctx, { outcome, reason, customerId, entitlementId, deviceId, jti, leaseJti, error }) {
+    return auditLog("offline_lease_refresh", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceId ? maskSensitive(deviceId, 8) : null,
+        requestJti: jti ? jti.slice(0, 8) + "..." : null,
+        leaseJti: leaseJti ? leaseJti.slice(0, 8) + "..." : null,
+        error: error || null,
+      },
+    });
+  },
+
+  /**
+   * Log offline deactivation attempt (air-gapped device deactivation via signed code)
+   */
+  offlineDeactivate(ctx, { outcome, reason, customerId, entitlementId, deviceId, jti, error }) {
+    return auditLog("offline_deactivate", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId,
+        deviceId: deviceId ? maskSensitive(deviceId, 8) : null,
+        deactivationJti: jti ? jti.slice(0, 8) + "..." : null,
+        error: error || null,
+      },
+    });
+  },
+
   /**
    * Generic audit log
    */

@@ -1492,6 +1492,45 @@ export interface ApiOfflineChallengeOfflineChallenge
   };
 }
 
+export interface ApiOfflineCodeUseOfflineCodeUse extends Schema.CollectionType {
+  collectionName: 'offline_code_uses';
+  info: {
+    singularName: 'offline-code-use';
+    pluralName: 'offline-code-uses';
+    displayName: 'Offline Code Use';
+    description: 'Tracks used offline codes (lease refresh requests, deactivation codes) for replay protection';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    jti: Attribute.String & Attribute.Required & Attribute.Unique;
+    kind: Attribute.Enumeration<
+      ['LEASE_REFRESH_REQUEST', 'DEACTIVATION_CODE']
+    > &
+      Attribute.Required;
+    customerId: Attribute.Integer & Attribute.Required;
+    entitlementId: Attribute.Integer & Attribute.Required;
+    deviceId: Attribute.String & Attribute.Required;
+    usedAt: Attribute.DateTime & Attribute.Required;
+    expiresAt: Attribute.DateTime;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::offline-code-use.offline-code-use',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::offline-code-use.offline-code-use',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiPagePage extends Schema.CollectionType {
   collectionName: 'pages';
   info: {
@@ -1701,6 +1740,7 @@ declare module '@strapi/types' {
       'api::license-key.license-key': ApiLicenseKeyLicenseKey;
       'api::mailing-list-signup.mailing-list-signup': ApiMailingListSignupMailingListSignup;
       'api::offline-challenge.offline-challenge': ApiOfflineChallengeOfflineChallenge;
+      'api::offline-code-use.offline-code-use': ApiOfflineCodeUseOfflineCodeUse;
       'api::page.page': ApiPagePage;
       'api::purchase.purchase': ApiPurchasePurchase;
       'api::release.release': ApiReleaseRelease;

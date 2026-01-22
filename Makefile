@@ -234,3 +234,19 @@ clean:
 	@echo "🧹 Cleaning up containers and volumes..."
 	@$(DOCKER_COMPOSE) down --remove-orphans -v 2>/dev/null || true
 	@echo "✅ Cleanup complete"
+
+# ============================================================
+# Air-Gapped Test Code Generation
+# ============================================================
+
+# Generate Device Setup Code interactively (creates persistent device identity)
+# Usage: make airgap-setup
+# This is the first step for testing air-gapped flows.
+.PHONY: airgap-setup
+airgap-setup:
+	@cd backend && node scripts/generate-device-setup-code.js
+
+# Generate Refresh/Deactivation codes from an Activation Package
+# Extracts deviceId + entitlementId from the embedded lease token
+# Usage: make airgap-request-codes
+# Prerequisites: run `make airgap-setup` first, then provision in portal
