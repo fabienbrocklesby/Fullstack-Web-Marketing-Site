@@ -344,6 +344,7 @@ module.exports = createCoreController(
 
         // Fetch entitlements for this customer with linked license-key
         // Exclude archived entitlements from the list
+        // SECURITY: Filter strictly by customer relation (authoritative ownership)
         const entitlements = await strapi.entityService.findMany(
           "api::entitlement.entitlement",
           {
@@ -354,15 +355,27 @@ module.exports = createCoreController(
                 { isArchived: false },
               ],
             },
-            populate: ["licenseKey"],
+            populate: ["licenseKey", "customer"],
             // Sort: isLifetime desc, status active first, expiresAt desc, createdAt desc
             sort: { createdAt: "desc" },
           }
         );
 
+        // SECURITY ASSERTION: Verify each entitlement belongs to the authenticated customer
+        // This is a defense-in-depth check - the DB filter should already enforce this
+        const verifiedEntitlements = entitlements.filter((e) => {
+          const entCustomerId = e.customer?.id || e.customer;
+          if (entCustomerId !== customerId) {
+            // This should NEVER happen if DB filter is correct
+            console.error(`[Entitlements] SECURITY: Entitlement ${e.id} has customer=${entCustomerId}, expected ${customerId}. EXCLUDING from response.`);
+            return false;
+          }
+          return true;
+        });
+
         // Apply additional sorting in code for complex sort logic
         // Priority: isLifetime=true first, then active status, then by expiresAt, then createdAt
-        const sortedEntitlements = [...entitlements].sort((a, b) => {
+        const sortedEntitlements = [...verifiedEntitlements].sort((a, b) => {
           // 1. isLifetime: true comes first
           if (a.isLifetime && !b.isLifetime) return -1;
           if (!a.isLifetime && b.isLifetime) return 1;
@@ -384,19 +397,31 @@ module.exports = createCoreController(
           return bCreated - aCreated;
         });
 
-        // Temporary dedupe pass: keep first occurrence per unique key
-        // Key: tier|isLifetime|status|expiresAt
-        // This is a safety net - real cleanup should be done via dedupe script
-        const seen = new Set();
+        // Safety check: Dedupe ONLY by entitlement.id (in case Strapi returns true duplicates)
+        // This does NOT collapse different entitlements - customers CAN have multiple entitlements
+        const seenIds = new Set();
         const dedupedEntitlements = sortedEntitlements.filter((e) => {
-          const key = `${e.tier}|${e.isLifetime}|${e.status}|${e.expiresAt || ""}`;
-          if (seen.has(key)) {
-            console.log(`[Entitlements] Filtering duplicate: id=${e.id} key=${key}`);
+          if (seenIds.has(e.id)) {
+            // True duplicate row from DB - remove silently
             return false;
           }
-          seen.add(key);
+          seenIds.add(e.id);
           return true;
         });
+
+        // Safety warning: Log if multiple entitlements share the same stripeSubscriptionId
+        // This would indicate a data integrity issue (should not happen in normal operation)
+        const subIdCounts = new Map();
+        for (const e of dedupedEntitlements) {
+          if (e.stripeSubscriptionId) {
+            subIdCounts.set(e.stripeSubscriptionId, (subIdCounts.get(e.stripeSubscriptionId) || 0) + 1);
+          }
+        }
+        for (const [subId, count] of subIdCounts) {
+          if (count > 1) {
+            console.warn(`[Entitlements] WARNING: ${count} entitlements share stripeSubscriptionId=${subId} for customer ${customerId}. This may indicate data integrity issue.`);
+          }
+        }
 
         // Sanitize output - return only public-facing fields
         // In development, include additional debug fields

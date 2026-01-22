@@ -1,62 +1,170 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+/**
+ * Success Page - Stage 6A Redesign
+ *
+ * Post-purchase confirmation with Stripe webhook polling.
+ * Preserves all existing polling logic, refreshed styling.
+ */
+import PortalLayout from "../../layouts/PortalLayout.astro";
 import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
-<Layout
-  title="Welcome - Customer Portal"
-  description="Thank you for your purchase! Your license is ready."
->
-  <main>
-    <section class="py-20 min-h-screen bg-base-200">
-      <div class="container mx-auto px-4">
-        <div class="text-center max-w-2xl mx-auto">
-          <div class="text-6xl mb-8">🎉</div>
-          <h1 id="page-title" class="text-4xl font-bold mb-4">Processing...</h1>
-          <p id="page-subtitle" class="text-xl text-base-content/70 mb-8">
-            Please wait while we confirm your purchase...
-          </p>
+<PortalLayout title="Purchase Complete - Lightlane" activeTab="dashboard">
+  <div class="max-w-2xl mx-auto">
+    <!-- Hero Card -->
+    <section class="surface rounded-2xl p-8 text-center mb-6">
+      <div id="hero-loading">
+        <div class="flex justify-center mb-4">
+          <svg
+            class="w-12 h-12 text-primary animate-spin"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            ></path></svg
+          >
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold mb-2 text-ll-gradient">
+          Processing...
+        </h1>
+        <p class="text-base-content/60 mb-4">
+          Please wait while we confirm your purchase...
+        </p>
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+        <p class="text-sm text-base-content/50 mt-4" id="poll-status">
+          Waiting for confirmation...
+        </p>
+      </div>
 
-          <div id="purchase-details" class="card bg-base-100 shadow-xl mb-8">
-            <div class="card-body">
-              <h2 class="card-title">Purchase Details</h2>
-              <div id="details-content" class="text-left">
-                <div class="flex flex-col items-center gap-4">
-                  <div class="loading loading-spinner loading-lg"></div>
-                  <p class="text-center">Processing your purchase...</p>
-                  <p
-                    class="text-center text-sm text-base-content/60"
-                    id="poll-status"
-                  >
-                    Waiting for confirmation...
-                  </p>
-                </div>
-              </div>
-            </div>
+      <div id="hero-success" class="hidden">
+        <div class="flex justify-center mb-4">
+          <svg
+            class="w-12 h-12 text-success"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            ><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"
+            ></path></svg
+          >
+        </div>
+        <h1
+          id="success-title"
+          class="text-2xl md:text-3xl font-bold mb-2 text-ll-gradient"
+        >
+          Purchase Successful!
+        </h1>
+        <p id="success-subtitle" class="text-base-content/60">
+          Your license is ready.
+        </p>
+      </div>
+
+      <div id="hero-pending" class="hidden">
+        <div class="flex justify-center mb-4">
+          <svg
+            class="w-12 h-12 text-warning"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            ><path
+              d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+            ></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg
+          >
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold mb-2 text-warning">
+          Almost Done
+        </h1>
+        <p class="text-base-content/60">
+          Your payment was received. Finalizing your license...
+        </p>
+      </div>
+    </section>
+
+    <!-- Details Card -->
+    <section class="surface rounded-xl p-6 mb-6">
+      <h2 class="text-lg font-semibold mb-4">Purchase Details</h2>
+      <div id="details-content">
+        <div class="flex flex-col items-center gap-4 py-6">
+          <span class="loading loading-spinner loading-md"></span>
+          <p class="text-base-content/60 text-sm">Verifying purchase...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Next Steps -->
+    <section class="surface rounded-xl p-6 mb-6">
+      <h2 class="text-lg font-semibold mb-4">Next Steps</h2>
+      <div class="space-y-4">
+        <div class="flex items-start gap-3">
+          <div class="badge badge-primary badge-lg">1</div>
+          <div>
+            <p class="font-medium">Download Lightlane</p>
+            <p class="text-sm text-base-content/60">
+              Get the app for your platform
+            </p>
           </div>
-
-          <div class="space-y-6">
-            <DownloadButtons align="center" />
-            <div class="flex justify-center space-x-4">
-              <a href="/customer/dashboard" class="btn btn-primary"
-                >View Dashboard</a
-              >
-              <a href="/customer/profile" class="btn btn-outline"
-                >Manage Account</a
-              >
-            </div>
-            <p class="text-base-content/70 text-sm">
-              Your license key and purchase details are available in your
-              customer dashboard.
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="badge badge-primary badge-lg">2</div>
+          <div>
+            <p class="font-medium">Sign In to the App</p>
+            <p class="text-sm text-base-content/60">
+              Use your account email to sign in
+            </p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="badge badge-primary badge-lg">3</div>
+          <div>
+            <p class="font-medium">Link Your Device</p>
+            <p class="text-sm text-base-content/60">
+              The app will auto-link this device to your license
             </p>
           </div>
         </div>
       </div>
     </section>
-  </main>
-</Layout>
+
+    <!-- Download & Actions -->
+    <section class="surface rounded-xl p-6">
+      <div class="mb-6">
+        <DownloadButtons align="center" />
+      </div>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/customer/dashboard" class="btn btn-primary">
+          <svg
+            class="w-4 h-4 mr-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+            ></path>
+          </svg>
+          Go to Dashboard
+        </a>
+        <a href="/customer/profile" class="btn btn-ghost"> Manage Account</a>
+      </div>
+      <p class="text-center text-xs text-base-content/50 mt-4">
+        Your license details are available in your dashboard
+      </p>
+    </section>
+  </div>
+</PortalLayout>
 
 <script>
+  import { getAuthState } from "../../lib/portal/auth";
+  import { getCmsUrl } from "../../lib/portal/api";
+
   /**
    * Poll for purchase/subscription completion (webhook fulfillment)
    * Uses exponential backoff with max 60 second timeout
@@ -124,10 +232,10 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
   }
 
   // Main logic
-  document.addEventListener("DOMContentLoaded", async () => {
+  async function init() {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get("session_id");
-    const customerToken = localStorage.getItem("customerToken");
+    const auth = getAuthState();
 
     if (!sessionId) {
       console.log("ℹ️ No session_id in URL");
@@ -135,25 +243,32 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       return;
     }
 
-    if (!customerToken) {
+    if (!auth) {
       console.log("ℹ️ No customer token - redirecting to login");
       window.location.href =
         "/customer/login?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
 
-    const cmsUrl =
-      document.documentElement.getAttribute("data-cms-url") ||
-      "http://localhost:1337";
-
-    const detailsContent = document.getElementById("details-content");
+    const cmsUrl = getCmsUrl();
+    const detailsContent = document.getElementById("details-content")!;
+    const heroLoading = document.getElementById("hero-loading")!;
+    const heroSuccess = document.getElementById("hero-success")!;
+    const heroPending = document.getElementById("hero-pending")!;
 
     try {
       console.log("🔄 Polling for purchase completion:", sessionId);
 
-      const result = await pollPurchaseStatus(sessionId, customerToken, cmsUrl);
+      const result = await pollPurchaseStatus(sessionId, auth.token, cmsUrl);
 
       console.log("✅ Purchase confirmed:", result);
+
+      // Set flag so dashboard refreshes data when user navigates there
+      try {
+        localStorage.setItem("portalNeedsRefresh", "1");
+      } catch (e) {
+        // localStorage might be unavailable
+      }
 
       // Track successful purchase completion
       const getCookie = (name: string) => {
@@ -166,20 +281,21 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       if (affiliateCode && (window as any).journeyTracker) {
         await (window as any).journeyTracker.trackPurchaseComplete(
           result.purchaseId || sessionId,
-          0, // Amount not available in polling response
+          0,
           result.tier || "unknown",
         );
       }
 
-      // Update page title based on mode
-      const pageTitleEl = document.getElementById("page-title");
-      const pageSubtitleEl = document.getElementById("page-subtitle");
+      // Show success hero
+      heroLoading.classList.add("hidden");
+      heroSuccess.classList.remove("hidden");
+
+      // Update title based on mode
       const isSubscription = result.mode === "subscription";
       const tierLabel = result.tier
         ? result.tier.charAt(0).toUpperCase() + result.tier.slice(1)
         : "Pro";
 
-      // Use display labels from API response (based on isLifetime flag, NOT tier)
       const accessLabel =
         result.display?.accessLabel ||
         (result.isLifetime ? "Lifetime (Founders)" : "Subscription Active");
@@ -187,132 +303,83 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         result.display?.billingLabel ||
         (result.isLifetime ? "One-time (Founders)" : "Monthly Subscription");
 
-      if (pageTitleEl) {
-        pageTitleEl.textContent =
-          isSubscription && !result.isLifetime
-            ? "Subscription Active!"
-            : "Purchase Successful!";
-      }
-      if (pageSubtitleEl) {
-        if (isSubscription && !result.isLifetime) {
-          pageSubtitleEl.innerHTML = `
-            Thanks for subscribing to <strong>${tierLabel}</strong> (${billingLabel}). 
-            You can manage or cancel anytime in <a href="/customer/profile" class="link">Manage Account</a>.
-          `;
-        } else if (result.isLifetime) {
-          pageSubtitleEl.textContent = `Thank you for your Founders purchase! Your ${tierLabel} license is active forever.`;
-        } else {
-          pageSubtitleEl.textContent = `Thank you for your purchase! Your ${tierLabel} license is ready.`;
-        }
+      const successTitle = document.getElementById("success-title")!;
+      const successSubtitle = document.getElementById("success-subtitle")!;
+
+      if (isSubscription && !result.isLifetime) {
+        successTitle.textContent = "Subscription Active!";
+        successSubtitle.innerHTML = `Thanks for subscribing to <strong>${tierLabel}</strong>. Manage anytime in your account.`;
+      } else if (result.isLifetime) {
+        successTitle.textContent = "Purchase Successful!";
+        successSubtitle.textContent = `Your ${tierLabel} Founders license is active forever.`;
+      } else {
+        successTitle.textContent = "Purchase Successful!";
+        successSubtitle.textContent = `Your ${tierLabel} license is ready.`;
       }
 
-      // Display success details
-      if (detailsContent) {
-        // Build access badge based on isLifetime flag (NOT tier)
-        const accessBadge = result.isLifetime
-          ? `<span class="badge badge-warning">Lifetime (Founders)</span>`
-          : `<span class="badge badge-info">${accessLabel}</span>`;
+      // Render details
+      const accessBadge = result.isLifetime
+        ? `<span class="badge badge-warning">Lifetime (Founders)</span>`
+        : `<span class="badge badge-success">${accessLabel}</span>`;
 
-        // Build next action message based on mode
-        const nextActionHtml =
-          isSubscription && !result.isLifetime
-            ? `
-            <div class="alert alert-success">
-              <div class="flex items-start">
-                <svg class="w-6 h-6 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <div>
-                  <h3 class="font-semibold">Subscription Active</h3>
-                  <p class="text-sm">Your license is ready! Download the app and activate your license from the dashboard.</p>
-                </div>
-              </div>
-            </div>
-          `
-            : `
-            <div class="alert alert-info">
-              <div class="flex items-start">
-                <svg class="w-6 h-6 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2a2 2 0 00-2 2m0 0a2 2 0 01-2 2m2-2v10"></path>
-                </svg>
-                <div>
-                  <h3 class="font-semibold">License Ready</h3>
-                  <p class="text-sm">Your license is available in your dashboard. Download the app and activate your license.</p>
-                </div>
-              </div>
-            </div>
-          `;
-
-        detailsContent.innerHTML = `
-          <div class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <span class="font-semibold">Plan:</span>
-                <span class="ml-2 badge badge-primary">${tierLabel}</span>
-              </div>
-              <div>
-                <span class="font-semibold">Status:</span>
-                <span class="ml-2 badge badge-success">Active</span>
-              </div>
-              <div class="col-span-2">
-                <span class="font-semibold">Access:</span>
-                ${accessBadge}
-              </div>
-              ${
-                isSubscription && !result.isLifetime
-                  ? `
-              <div class="col-span-2">
-                <span class="font-semibold">Billing:</span>
-                <span class="ml-2">${billingLabel}</span>
-              </div>
-              `
-                  : ""
-              }
-            </div>
-            
-            <div class="divider"></div>
-            
-            ${nextActionHtml}
-            
-            <div class="flex flex-col sm:flex-row gap-2 justify-center mt-4">
-              <a href="/customer/dashboard" class="btn btn-primary">Go to Dashboard</a>
+      detailsContent.innerHTML = `
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span class="text-base-content/60">Plan</span>
+            <div class="font-medium mt-1">
+              <span class="badge badge-primary">${tierLabel}</span>
             </div>
           </div>
-        `;
-      }
+          <div>
+            <span class="text-base-content/60">Status</span>
+            <div class="font-medium mt-1">
+              <span class="badge badge-success">Active</span>
+            </div>
+          </div>
+          <div class="col-span-2">
+            <span class="text-base-content/60">Access</span>
+            <div class="font-medium mt-1">${accessBadge}</div>
+          </div>
+          ${
+            isSubscription && !result.isLifetime
+              ? `
+          <div class="col-span-2">
+            <span class="text-base-content/60">Billing</span>
+            <div class="font-medium mt-1">${billingLabel}</div>
+          </div>
+          `
+              : ""
+          }
+        </div>
+      `;
 
       // Clear selected product from localStorage
       localStorage.removeItem("selectedProduct");
     } catch (error) {
       console.error("❌ Error polling purchase status:", error);
 
-      // Update page title on error
-      const pageTitleEl = document.getElementById("page-title");
-      const pageSubtitleEl = document.getElementById("page-subtitle");
-      if (pageTitleEl) pageTitleEl.textContent = "Processing...";
-      if (pageSubtitleEl)
-        pageSubtitleEl.textContent =
-          "Your payment was received. Finalizing your license...";
+      // Show pending state
+      heroLoading.classList.add("hidden");
+      heroPending.classList.remove("hidden");
 
-      if (detailsContent) {
-        detailsContent.innerHTML = `
-          <div class="alert alert-warning">
-            <div class="w-full">
-              <h3 class="font-semibold">⚠️ Almost Done</h3>
-              <p>Your payment was successful! License activation is taking a bit longer than expected.</p>
-              <p class="mt-2 text-sm">This sometimes happens when our servers are busy. Your license will appear in your dashboard shortly.</p>
-              <div class="mt-4 flex flex-col sm:flex-row gap-2">
-                <a href="/customer/dashboard" class="btn btn-primary btn-sm">Go to Dashboard</a>
-                <button onclick="window.location.reload()" class="btn btn-outline btn-sm">Retry</button>
-              </div>
-              <details class="mt-4 text-xs">
-                <summary class="cursor-pointer opacity-60">Technical details</summary>
-                <code class="block mt-2 break-all">${sessionId}</code>
-              </details>
-            </div>
+      detailsContent.innerHTML = `
+        <div class="alert alert-warning">
+          <div>
+            <p class="font-medium">Payment received!</p>
+            <p class="text-sm mt-1">License activation is taking longer than expected. It will appear in your dashboard shortly.</p>
           </div>
-        `;
-      }
+        </div>
+        <div class="flex gap-2 mt-4">
+          <a href="/customer/dashboard" class="btn btn-primary btn-sm">Go to Dashboard</a>
+          <button onclick="window.location.reload()" class="btn btn-outline btn-sm">Retry</button>
+        </div>
+        <details class="mt-4 text-xs">
+          <summary class="cursor-pointer text-base-content/50">Technical details</summary>
+          <code class="block mt-2 break-all text-base-content/40">${sessionId}</code>
+        </details>
+      `;
     }
-  });
+  }
+
+  init();
 </script>

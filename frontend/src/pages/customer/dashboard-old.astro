@@ -1,0 +1,2552 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import DownloadButtons from "../../components/DownloadButtons.astro";
+---
+
+<Layout title="Customer Dashboard">
+  <main class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100 sticky top-0 z-40 shadow-sm">
+      <div class="navbar-start">
+        <div class="dropdown">
+          <label tabindex="0" class="btn btn-ghost lg:hidden">
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h8m-8 6h16"></path>
+            </svg>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 z-50 rounded-box w-52"
+          >
+            <li><a href="/customer/dashboard">Dashboard</a></li>
+            <li><a href="/customer/profile">Profile</a></li>
+          </ul>
+        </div>
+        <a href="/customer/dashboard" class="btn btn-ghost normal-case text-xl"
+          >Lightlane Portal</a
+        >
+      </div>
+      <div class="navbar-center hidden lg:flex">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/customer/dashboard">Dashboard</a></li>
+          <li><a href="/customer/profile">Profile</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end">
+        <div class="dropdown dropdown-end">
+          <label tabindex="0" class="gap-2">
+            <div
+              class="md:hidden avatar avatar-placeholder hover:cursor-pointer"
+            >
+              <div class="bg-neutral text-neutral-content rounded-full w-10">
+                <span id="nav-initials">CU</span>
+              </div>
+            </div>
+            <span
+              id="customer-name"
+              class="hidden md:inline max-w-[140px] truncate hover:cursor-pointer"
+              >Customer</span
+            >
+            <svg
+              class="w-4 h-4 ml-1 hidden md:inline"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-compact dropdown-content z-50 mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            <li class="md:hidden text-xs opacity-60">
+              <span id="customer-name-mobile">Customer</span>
+            </li>
+            <li><a href="/customer/profile">Profile</a></li>
+            <li><a id="logout-btn">Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+      <div role="alert" class="alert alert-info mb-6">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6 shrink-0"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          ><path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          ></path></svg
+        >
+        <div class="flex-1">
+          <p class="font-semibold">Download the app</p>
+          <p class="text-sm opacity-80">
+            Free trial is built in - download and activate your trial inside the
+            app.
+          </p>
+          <div class="mt-2">
+            <DownloadButtons />
+          </div>
+        </div>
+        <button
+          class="btn btn-primary btn-sm"
+          onclick="document.getElementById('open-purchase')?.click()"
+          >Buy a License</button
+        >
+      </div>
+      <!-- Hero Empty State (hidden until determined no licenses) -->
+      <section id="purchase-hero" class="hidden mb-10">
+        <div class="hero bg-base-100 rounded-2xl shadow-lg">
+          <div class="hero-content flex-col lg:flex-row gap-10">
+            <div class="max-w-xl">
+              <h1 class="text-3xl font-bold mb-4">Get Your First License</h1>
+              <p class="opacity-70 mb-6">
+                Choose a plan and checkout securely. Your license key appears
+                instantly and you can generate an offline activation code tied
+                to your machine.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-4 items-start">
+                <select
+                  id="hero-plan"
+                  class="select select-bordered w-full max-w-xs"
+                >
+                  <option value="maker">Maker - $12/mo</option>
+                  <option value="pro" selected>Pro - $24/mo</option>
+                </select>
+                <button id="hero-buy" class="btn btn-primary"
+                  >Subscribe with Stripe</button
+                >
+              </div>
+              <div class="mt-4 text-sm text-base-content/70">
+                Enterprise or Education plans require a conversation first. <a
+                  href="/contact?subject=Enterprise%20Enquiry#contact-form"
+                  class="link link-primary">Contact us</a
+                > for Enterprise, or <a
+                  href="/contact?subject=Education%20Access%20Enquiry#contact-form"
+                  class="link">Education</a
+                >.
+              </div>
+              <p class="mt-3 text-xs opacity-60">
+                One device per license • Instant key issuance • Offline
+                activation supported
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- My Licenses Card -->
+      <div class="card bg-base-100 shadow-xl mb-8" id="subscription-card">
+        <div class="card-body">
+          <h2 class="card-title">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+              ></path>
+            </svg>
+            My Licenses
+          </h2>
+
+          <!-- Loading State -->
+          <div id="subscription-loading" class="flex items-center gap-3 py-4">
+            <span class="loading loading-spinner loading-md"></span>
+            <span class="opacity-70">Loading licenses...</span>
+          </div>
+
+          <!-- Content (hidden until loaded) -->
+          <div id="subscription-content" class="hidden">
+            <!-- Will be populated by JavaScript -->
+          </div>
+
+          <!-- Error State (hidden by default) -->
+          <div id="subscription-error" class="hidden">
+            <div role="alert" class="alert alert-error">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <span id="subscription-error-text">Failed to load licenses</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Customer Info Card -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">
+              <div class="avatar placeholder">
+                <div
+                  class="bg-neutral-focus text-neutral-content rounded-full w-8 h-8 flex items-center justify-center"
+                >
+                  <span class="text-xs leading-none" id="customer-initials"
+                    >CU</span
+                  >
+                </div>
+              </div>
+              Account Info
+            </h2>
+            <div class="space-y-2">
+              <div>
+                <span class="text-sm opacity-70">Name:</span>
+                <span id="customer-full-name" class="ml-2">Loading...</span>
+              </div>
+              <div>
+                <span class="text-sm opacity-70">Email:</span>
+                <span id="customer-email" class="ml-2">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Quick Stats</h2>
+            <div class="stats stats-vertical">
+              <div class="stat">
+                <div class="stat-title">Total Licenses</div>
+                <div class="stat-value text-primary" id="total-licenses">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-title">Active Licenses</div>
+                <div class="stat-value text-success" id="active-licenses">
+                  0
+                </div>
+              </div>
+              <div class="stat">
+                <div class="stat-title">Available Licenses</div>
+                <div class="stat-value text-info" id="available-licenses">
+                  0
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Recent Activity</h2>
+            <div id="recent-activity" class="space-y-2">
+              <div class="text-sm opacity-70">Loading recent activity...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- Device Activations (New System) - Stage 4/5 Device-Based Activation -->
+      <!-- ===================================================================== -->
+      <div class="card bg-base-100 shadow-xl mt-8">
+        <div class="card-body">
+          <div
+            class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4"
+          >
+            <div>
+              <h2 class="card-title flex items-center gap-2">
+                Device Activations
+                <span class="badge badge-primary badge-sm">New System</span>
+              </h2>
+              <p class="text-sm text-base-content/60">
+                Register devices and manage entitlement activations
+              </p>
+            </div>
+            <button id="open-register-device" class="btn btn-primary btn-sm">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"></path>
+              </svg>
+              Register Device
+            </button>
+          </div>
+
+          <!-- Devices Loading State -->
+          <div
+            id="devices-loading"
+            class="flex items-center justify-center py-8"
+          >
+            <span class="loading loading-spinner loading-lg"></span>
+          </div>
+
+          <!-- Devices Error State -->
+          <div id="devices-error" class="hidden">
+            <div class="alert alert-error">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                class="stroke-current shrink-0 w-6 h-6"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path></svg
+              >
+              <span id="devices-error-text">Failed to load devices</span>
+            </div>
+          </div>
+
+          <!-- Devices Container -->
+          <div id="devices-container" class="hidden">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- Offline Refresh (Factory Machines) - Stage 5 Challenge/Response -->
+      <!-- ===================================================================== -->
+      <div id="offline-refresh-section" class="card bg-base-100 shadow-xl mt-8">
+        <div class="card-body">
+          <div
+            class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4"
+          >
+            <div>
+              <h2 class="card-title flex items-center gap-2">
+                Offline Refresh
+                <span class="badge badge-secondary badge-sm"
+                  >Factory Machines</span
+                >
+              </h2>
+              <p class="text-sm text-base-content/60">
+                Generate lease tokens for air-gapped/offline devices
+              </p>
+            </div>
+          </div>
+
+          <div class="alert alert-info mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              class="stroke-current shrink-0 w-6 h-6"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path></svg
+            >
+            <div>
+              <p class="font-semibold">
+                For offline/air-gapped machines (Subscription only)
+              </p>
+              <p class="text-sm">
+                Generate a challenge on the offline machine, bring it here to
+                redeem for a lease token, then carry the token back to the
+                offline machine.
+              </p>
+              <p class="text-sm text-base-content/70 mt-1">
+                <strong>Note:</strong> Lifetime/Founders licenses are online-only
+                and do not require lease tokens.
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 1: Select Entitlement & Device -->
+          <div id="offline-step-1" class="space-y-4">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Select Entitlement</span>
+              </label>
+              <select
+                id="offline-entitlement-select"
+                class="select select-bordered w-full"
+              >
+                <option value="">-- Select an entitlement --</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Select Device</span>
+              </label>
+              <select
+                id="offline-device-select"
+                class="select select-bordered w-full"
+              >
+                <option value="">-- Select a device --</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text"
+                  >Challenge Token (from offline machine)</span
+                >
+              </label>
+              <textarea
+                id="offline-challenge-input"
+                class="textarea textarea-bordered h-24 font-mono text-xs"
+                placeholder="Paste the challenge token generated by the offline application here..."
+              ></textarea>
+            </div>
+
+            <!-- Error display -->
+            <div id="offline-error" class="alert alert-error hidden">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                class="stroke-current shrink-0 w-6 h-6"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path></svg
+              >
+              <span id="offline-error-text"></span>
+            </div>
+
+            <button
+              id="offline-redeem-btn"
+              class="btn btn-primary w-full"
+              disabled
+            >
+              Redeem Challenge for Lease Token
+            </button>
+          </div>
+
+          <!-- Step 2: Show Lease Token -->
+          <div id="offline-step-2" class="hidden">
+            <div class="alert alert-success mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                class="stroke-current shrink-0 w-6 h-6"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg
+              >
+              <div>
+                <p class="font-semibold">Lease Token Generated!</p>
+                <p class="text-sm">
+                  Copy this token and bring it to the offline machine.
+                </p>
+              </div>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text font-semibold">Lease Token</span>
+                <span
+                  class="label-text-alt text-warning"
+                  id="lease-expiry-warning"></span>
+              </label>
+              <div class="join w-full">
+                <textarea
+                  id="lease-token-output"
+                  class="textarea textarea-bordered join-item flex-1 font-mono text-xs h-32"
+                  readonly></textarea>
+                <button
+                  id="copy-lease-token-btn"
+                  class="btn btn-secondary join-item"
+                  onclick="copyLeaseToken()">📋 Copy Token</button
+                >
+              </div>
+              <p class="text-xs text-base-content/60 mt-2">
+                Copy this token and transfer it to the offline machine. The
+                machine will use it to verify your license.
+              </p>
+            </div>
+
+            <div class="form-control mt-4">
+              <label class="label">
+                <span class="label-text">Token Details</span>
+              </label>
+              <div class="bg-base-200 rounded-lg p-4 space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-base-content/70">Entitlement:</span>
+                  <span id="lease-entitlement-display" class="font-medium"
+                  ></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-base-content/70">Device:</span>
+                  <span id="lease-device-display" class="font-medium"></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-base-content/70">Expires:</span>
+                  <span id="lease-expires-display" class="font-medium"></span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              class="btn btn-outline w-full mt-4"
+              onclick="resetOfflineRefresh()"
+            >
+              Generate Another
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legacy License Keys section removed - Stage 5.5 Cutover -->
+      <!-- All activation now uses device-based entitlements (Stage 4/5 system) -->
+    </div>
+  </main>
+
+  <dialog id="purchase_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-2">Subscribe to License</h3>
+      <form id="purchase-form" class="space-y-3">
+        <label class="label">Plan</label>
+        <select id="plan-select" class="select select-bordered w-full">
+          <option value="maker">Maker ($12/mo)</option>
+          <option value="pro" selected>Pro ($24/mo)</option>
+        </select>
+        <button class="btn btn-primary w-full">Subscribe</button>
+        <p id="purchase-error" class="text-error text-sm hidden"></p>
+      </form>
+      <div class="text-xs text-base-content/70 mt-3">
+        For Enterprise or Education plans, please <a
+          href="/contact?subject=Enterprise%20Enquiry#contact-form"
+          class="link link-primary">contact us</a
+        > to discuss.
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- Legacy Generate Activation Code and Deactivation modals removed - Stage 5.5 Cutover -->
+  <!-- All activation now uses device-based entitlements (Stage 4/5 system) -->
+
+  <!-- ===================================================================== -->
+  <!-- Register Device Modal (Stage 4) -->
+  <!-- ===================================================================== -->
+  <dialog id="register_device_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Register New Device</h3>
+      <p class="py-2 text-sm text-base-content/70">
+        Register a device to activate entitlements on it. The Device ID should
+        be a unique identifier for the machine.
+      </p>
+
+      <form id="register-device-form" class="space-y-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Device ID</span>
+            <span class="label-text-alt text-base-content/60">Required</span>
+          </label>
+          <input
+            type="text"
+            id="register-device-id"
+            placeholder="e.g., factory-cnc-01 or my-laptop"
+            class="input input-bordered w-full"
+            required
+          />
+          <div class="label">
+            <span class="label-text-alt"
+              >A unique identifier for this device (alphanumeric, dashes,
+              underscores)</span
+            >
+          </div>
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Device Name</span>
+            <span class="label-text-alt text-base-content/60">Optional</span>
+          </label>
+          <input
+            type="text"
+            id="register-device-name"
+            placeholder="e.g., Workshop CNC Machine"
+            class="input input-bordered w-full"
+          />
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Platform</span>
+            <span class="label-text-alt text-base-content/60">Optional</span>
+          </label>
+          <select
+            id="register-device-platform"
+            class="select select-bordered w-full"
+          >
+            <option value="">-- Select platform --</option>
+            <option value="windows">Windows</option>
+            <option value="macos">macOS</option>
+            <option value="linux">Linux</option>
+            <option value="embedded">Embedded/Industrial</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div id="register-device-error" class="alert alert-error hidden">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path></svg
+          >
+          <span id="register-device-error-text"></span>
+        </div>
+
+        <div class="modal-action">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            id="register-device-submit"
+          >
+            <span id="register-device-submit-text">Register Device</span>
+            <span
+              id="register-device-loading"
+              class="loading loading-spinner loading-sm hidden"></span>
+          </button>
+          <form method="dialog"><button class="btn">Cancel</button></form>
+        </div>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- ===================================================================== -->
+  <!-- Activate Entitlement on Device Modal (Stage 4) -->
+  <!-- ===================================================================== -->
+  <dialog id="activate_device_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Activate Entitlement on Device</h3>
+      <p class="py-2 text-sm text-base-content/70">
+        Select an entitlement to activate on this device.
+      </p>
+
+      <form id="activate-device-form" class="space-y-4">
+        <input type="hidden" id="activate-device-id-input" />
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Device</span>
+          </label>
+          <input
+            type="text"
+            id="activate-device-display"
+            class="input input-bordered w-full"
+            readonly
+          />
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Select Entitlement</span>
+          </label>
+          <select
+            id="activate-entitlement-select"
+            class="select select-bordered w-full"
+            required
+          >
+            <option value="">-- Select an entitlement --</option>
+          </select>
+        </div>
+
+        <div id="activate-device-error" class="alert alert-error hidden">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path></svg
+          >
+          <span id="activate-device-error-text"></span>
+        </div>
+
+        <div id="activate-device-success" class="alert alert-success hidden">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg
+          >
+          <div>
+            <p class="font-semibold">Activation Successful!</p>
+            <p class="text-sm" id="activate-device-success-text"></p>
+          </div>
+        </div>
+
+        <div class="modal-action">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            id="activate-device-submit"
+          >
+            <span id="activate-device-submit-text">Activate</span>
+            <span
+              id="activate-device-loading"
+              class="loading loading-spinner loading-sm hidden"></span>
+          </button>
+          <form method="dialog"><button class="btn">Close</button></form>
+        </div>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- ===================================================================== -->
+  <!-- Deactivate Device Modal (Stage 4) -->
+  <!-- ===================================================================== -->
+  <dialog id="deactivate_device_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Deactivate Device</h3>
+      <p class="py-2 text-sm text-base-content/70">
+        This will unbind the entitlement from this device, freeing up a device
+        slot.
+      </p>
+
+      <form id="deactivate-device-form" class="space-y-4">
+        <input type="hidden" id="deactivate-device-id-input" />
+        <input type="hidden" id="deactivate-entitlement-id-input" />
+
+        <div class="bg-base-200 rounded-lg p-4 space-y-2">
+          <div class="flex justify-between">
+            <span class="text-base-content/70">Device:</span>
+            <span id="deactivate-device-display" class="font-medium"></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-base-content/70">Entitlement:</span>
+            <span id="deactivate-entitlement-display" class="font-medium"
+            ></span>
+          </div>
+        </div>
+
+        <div id="deactivate-device-error" class="alert alert-error hidden">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path></svg
+          >
+          <span id="deactivate-device-error-text"></span>
+        </div>
+
+        <div class="modal-action">
+          <button
+            type="submit"
+            class="btn btn-error"
+            id="deactivate-device-submit"
+          >
+            <span id="deactivate-device-submit-text">Deactivate</span>
+            <span
+              id="deactivate-device-loading"
+              class="loading loading-spinner loading-sm hidden"></span>
+          </button>
+          <form method="dialog"><button class="btn">Cancel</button></form>
+        </div>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- ===================================================================== -->
+  <!-- Refresh Device (Heartbeat) Modal (Stage 4) -->
+  <!-- ===================================================================== -->
+  <dialog id="refresh_device_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Refresh Device Activation</h3>
+      <p class="py-2 text-sm text-base-content/70">
+        Manually trigger a refresh/heartbeat for this device's activation.
+      </p>
+
+      <form id="refresh-device-form" class="space-y-4">
+        <input type="hidden" id="refresh-device-id-input" />
+        <input type="hidden" id="refresh-entitlement-id-input" />
+
+        <div class="bg-base-200 rounded-lg p-4 space-y-2">
+          <div class="flex justify-between">
+            <span class="text-base-content/70">Device:</span>
+            <span id="refresh-device-display" class="font-medium"></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-base-content/70">Entitlement:</span>
+            <span id="refresh-entitlement-display" class="font-medium"></span>
+          </div>
+        </div>
+
+        <div id="refresh-device-error" class="alert alert-error hidden">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path></svg
+          >
+          <span id="refresh-device-error-text"></span>
+        </div>
+
+        <div id="refresh-device-success" class="alert alert-success hidden">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg
+          >
+          <div>
+            <p class="font-semibold">Refresh Successful!</p>
+            <p class="text-sm" id="refresh-device-success-text"></p>
+          </div>
+        </div>
+
+        <div class="modal-action">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            id="refresh-device-submit"
+          >
+            <span id="refresh-device-submit-text">Refresh</span>
+            <span
+              id="refresh-device-loading"
+              class="loading loading-spinner loading-sm hidden"></span>
+          </button>
+          <form method="dialog"><button class="btn">Close</button></form>
+        </div>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+</Layout>
+
+<script>
+  // Check if customer is logged in
+  const customerToken = localStorage.getItem("customerToken");
+  const customer = JSON.parse(localStorage.getItem("customer") || "{}");
+
+  if (!customerToken || !customer.id) {
+    window.location.href = "/customer/login";
+  } else {
+    // Customer info will be loaded from API, not localStorage
+
+    // Logout functionality
+    document.getElementById("logout-btn")?.addEventListener("click", () => {
+      localStorage.removeItem("customerToken");
+      localStorage.removeItem("customer");
+      window.location.href = "/customer/login";
+    });
+
+    // Load licenses/entitlements info (plural)
+    async function loadSubscriptionInfo() {
+      const loadingEl = document.getElementById("subscription-loading");
+      const contentEl = document.getElementById("subscription-content");
+      const errorEl = document.getElementById("subscription-error");
+      const errorTextEl = document.getElementById("subscription-error-text");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(
+          `${cmsUrl}/api/customers/me/entitlements`,
+          {
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("customerToken");
+            localStorage.removeItem("customer");
+            window.location.href = "/customer/login";
+            return;
+          }
+          // Include HTTP status in error for easier debugging
+          const errorBody = await response.text().catch(() => "");
+          throw new Error(
+            `HTTP ${response.status}: ${errorBody || response.statusText}`,
+          );
+        }
+
+        const data = await response.json();
+
+        // Hide loading, show content
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (contentEl) contentEl.classList.remove("hidden");
+
+        renderEntitlementsList(data, contentEl);
+      } catch (error) {
+        console.error("Error loading licenses:", error);
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (errorEl) errorEl.classList.remove("hidden");
+        if (errorTextEl)
+          errorTextEl.textContent =
+            error instanceof Error ? error.message : "Failed to load licenses";
+      }
+    }
+
+    // Helper: format date nicely (e.g., "20 Jan 2026")
+    function formatDate(dateStr: string | null | undefined): string | null {
+      if (!dateStr) return null;
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      } catch {
+        return null;
+      }
+    }
+
+    // Helper: get pricing display for tier
+    function getTierPricing(tier: string | null, isLifetime: boolean): string {
+      if (isLifetime) return "";
+      const lowerTier = tier?.toLowerCase();
+      if (lowerTier === "maker") return "$12/month";
+      if (lowerTier === "pro") return "$24/month";
+      return "";
+    }
+
+    // Render multiple entitlements as a list
+    function renderEntitlementsList(data: any, container: HTMLElement | null) {
+      if (!container) return;
+
+      const entitlements = data.entitlements || [];
+
+      // No entitlements
+      if (entitlements.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p class="text-lg">No licenses yet</p>
+              <p class="text-sm opacity-70">Purchase a license to get started</p>
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('open-purchase')?.click()">
+              Buy a License
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      // Render each entitlement as a row/card
+      const entitlementCards = entitlements
+        .map((ent: any, index: number) => {
+          const {
+            id: entitlementId,
+            tier,
+            status,
+            isLifetime,
+            expiresAt,
+            currentPeriodEnd,
+            cancelAtPeriodEnd,
+            maxDevices,
+            licenseKey,
+          } = ent;
+
+          // Format tier display
+          const tierDisplay = tier
+            ? tier.charAt(0).toUpperCase() + tier.slice(1)
+            : "License";
+
+          // Get pricing for subscription tiers
+          const pricingDisplay = getTierPricing(tier, isLifetime);
+
+          // Determine badge style based on status
+          let statusBadge = "";
+          let statusMessage = "";
+          let showBillingButton = false;
+
+          // ONLY show Lifetime (Founders) for isLifetime === true
+          if (isLifetime === true) {
+            statusBadge = `<span class="badge badge-accent">Lifetime (Founders)</span>`;
+            statusMessage = "No renewal needed";
+            showBillingButton = false;
+          } else if (status === "active") {
+            statusBadge = `<span class="badge badge-success">Active</span>`;
+            // Use currentPeriodEnd for subscriptions, fall back to expiresAt
+            const renewDateSource = currentPeriodEnd || expiresAt;
+            const renewDate = formatDate(renewDateSource);
+            if (cancelAtPeriodEnd && renewDate) {
+              statusMessage = `Cancels on ${renewDate}`;
+              statusBadge = `<span class="badge badge-warning">Canceling</span>`;
+            } else if (renewDate) {
+              statusMessage = `Renews on ${renewDate}`;
+            } else {
+              statusMessage = "Active subscription";
+            }
+            showBillingButton = true;
+          } else if (status === "past_due") {
+            statusBadge = `<span class="badge badge-error">Past Due</span>`;
+            statusMessage = "Payment required";
+            showBillingButton = true;
+          } else if (status === "canceled" || status === "expired") {
+            statusBadge = `<span class="badge badge-error">${status === "canceled" ? "Canceled" : "Expired"}</span>`;
+            const endDate = formatDate(currentPeriodEnd || expiresAt);
+            statusMessage = endDate ? `Ended ${endDate}` : "Subscription ended";
+            showBillingButton = true;
+          } else if (status === "inactive") {
+            statusBadge = `<span class="badge badge-neutral">Inactive</span>`;
+            statusMessage = "Currently inactive";
+            showBillingButton = true;
+          } else {
+            statusBadge = `<span class="badge badge-neutral">${status || "Unknown"}</span>`;
+            statusMessage = "";
+            showBillingButton = true;
+          }
+
+          // For Maker/Pro: show "One device per license" instead of count
+          // For other tiers (education, enterprise): show actual device count
+          const lowerTier = tier?.toLowerCase();
+          const devicesInfo =
+            lowerTier === "maker" || lowerTier === "pro"
+              ? `<span class="text-xs opacity-60">One device per license</span>`
+              : maxDevices
+                ? `<span class="text-xs opacity-60">${maxDevices} device${maxDevices > 1 ? "s" : ""}</span>`
+                : "";
+          const licenseKeyInfo = licenseKey?.key
+            ? `<span class="font-mono text-xs opacity-50">${licenseKey.key.substring(0, 8)}...</span>`
+            : "";
+
+          // Show billing button for each non-lifetime subscription
+          const billingButton = showBillingButton
+            ? `<button class="btn btn-outline btn-sm manage-billing-btn" data-entitlement-id="${entitlementId}" onclick="openBillingPortal(this)">Manage Billing</button>`
+            : "";
+
+          return `
+          <div class="entitlement-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-base-200 rounded-lg ${index > 0 ? "mt-3" : ""}" data-entitlement-id="${entitlementId}">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-semibold text-lg">${tierDisplay}</span>
+                ${pricingDisplay ? `<span class="text-sm opacity-70">${pricingDisplay}</span>` : ""}
+                ${statusBadge}
+              </div>
+              <div class="flex items-center gap-2 mt-1 flex-wrap">
+                <span class="text-sm opacity-70">${statusMessage}</span>
+                ${devicesInfo}
+                ${licenseKeyInfo}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${billingButton}
+            </div>
+            <p class="billing-error text-error text-sm hidden w-full mt-2"></p>
+          </div>
+        `;
+        })
+        .join("");
+
+      // Add summary section
+      const hasAnySubscription = entitlements.some(
+        (e: any) => !e.isLifetime && e.status === "active",
+      );
+
+      container.innerHTML = `
+        <div class="space-y-2">
+          ${entitlementCards}
+          <p id="billing-error" class="text-error text-sm hidden mt-2"></p>
+          ${
+            !hasAnySubscription
+              ? `
+            <div class="mt-4 pt-4 border-t border-base-300">
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('open-purchase')?.click()">
+                Add Another License
+              </button>
+            </div>
+          `
+              : ""
+          }
+        </div>
+      `;
+    }
+
+    // Global function to open billing portal (now accepts button element for per-card error display)
+    (window as any).openBillingPortal = async function (
+      btnElement?: HTMLButtonElement,
+    ) {
+      const btn =
+        btnElement ||
+        (document.querySelector(".manage-billing-btn") as HTMLButtonElement);
+      // Find the error element within the same card, or fall back to global
+      const card = btn?.closest(".entitlement-card");
+      const errorEl =
+        card?.querySelector(".billing-error") ||
+        document.getElementById("billing-error");
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="loading loading-spinner loading-sm"></span> Opening...`;
+      }
+      if (errorEl) errorEl.classList.add("hidden");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(`${cmsUrl}/api/customers/billing-portal`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${customerToken}`,
+          },
+          body: JSON.stringify({
+            returnUrl: window.location.href,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || data.error || "Failed to open billing portal",
+          );
+        }
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error("No billing portal URL returned");
+        }
+      } catch (error) {
+        console.error("Billing portal error:", error);
+        if (errorEl) {
+          errorEl.textContent =
+            error instanceof Error
+              ? error.message
+              : "Failed to open billing portal";
+          errorEl.classList.remove("hidden");
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `Manage Billing`;
+        }
+      }
+    };
+
+    // Load subscription info on page load
+    loadSubscriptionInfo();
+
+    // Load dashboard data - Stage 5.5: Only fetch profile data
+    // Legacy license keys API removed - all activation via device-based entitlements
+    async function loadDashboardData() {
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        // Get customer profile
+        const profileResponse = await fetch(`${cmsUrl}/api/customers/me`, {
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+          },
+        });
+
+        if (!profileResponse.ok) {
+          if (profileResponse.status === 401) {
+            localStorage.removeItem("customerToken");
+            localStorage.removeItem("customer");
+            window.location.href = "/customer/login";
+            return;
+          }
+          throw new Error("Failed to fetch profile");
+        }
+
+        const profileData = await profileResponse.json();
+        const customerData = profileData.customer;
+
+        // Update customer info in UI
+        updateCustomerInfo(customerData);
+
+        // Note: Legacy license keys fetching removed (Stage 5.5 cutover)
+        // All activation now uses device-based entitlements system
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      }
+    }
+
+    function updateCustomerInfo(customerData) {
+      const customerNameElement = document.getElementById("customer-name");
+      const customerNameMobileElement = document.getElementById(
+        "customer-name-mobile",
+      );
+      const customerInitialsElement =
+        document.getElementById("customer-initials");
+      const navInitialsElement = document.getElementById("nav-initials");
+      const customerFullNameElement =
+        document.getElementById("customer-full-name");
+      const customerEmailElement = document.getElementById("customer-email");
+
+      const fullName =
+        `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+        "Customer";
+      if (customerNameElement) customerNameElement.textContent = fullName;
+      if (customerNameMobileElement)
+        customerNameMobileElement.textContent = fullName;
+
+      const initials =
+        `${customerData.firstName?.[0] || ""}${customerData.lastName?.[0] || ""}` ||
+        "CU";
+      if (customerInitialsElement)
+        customerInitialsElement.textContent = initials || "CU";
+      if (navInitialsElement) navInitialsElement.textContent = initials || "CU";
+
+      if (customerFullNameElement) {
+        customerFullNameElement.textContent =
+          `${customerData.firstName || ""} ${customerData.lastName || ""}`.trim() ||
+          "Customer";
+      }
+
+      if (customerEmailElement) {
+        customerEmailElement.textContent = customerData.email || "No email";
+      }
+
+      // Update localStorage with fresh data
+      localStorage.setItem("customer", JSON.stringify(customerData));
+    }
+
+    const purchaseBtn = document.getElementById(
+      "open-purchase",
+    ) as HTMLButtonElement | null;
+    const purchaseModal = document.getElementById(
+      "purchase_modal",
+    ) as HTMLDialogElement | null;
+    const purchaseForm = document.getElementById(
+      "purchase-form",
+    ) as HTMLFormElement | null;
+    const planSelect = document.getElementById(
+      "plan-select",
+    ) as HTMLSelectElement | null;
+    const purchaseError = document.getElementById(
+      "purchase-error",
+    ) as HTMLElement | null;
+    const heroPlan = document.getElementById(
+      "hero-plan",
+    ) as HTMLSelectElement | null;
+    const heroBuy = document.getElementById(
+      "hero-buy",
+    ) as HTMLButtonElement | null;
+    purchaseBtn?.addEventListener("click", () => purchaseModal?.showModal());
+    purchaseForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      purchaseError?.classList.add("hidden");
+      const tier = planSelect?.value;
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      if (!tier) {
+        if (purchaseError) {
+          purchaseError.textContent = "Please select a plan";
+          purchaseError.classList.remove("hidden");
+        }
+        return;
+      }
+      try {
+        const res = await fetch(
+          `${cmsUrl}/api/customer-checkout-subscription`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${customerToken}`,
+            },
+            body: JSON.stringify({
+              tier,
+              successPath: "/customer/success",
+              cancelPath: "/customer/dashboard",
+            }),
+          },
+        );
+        const out = await res.json();
+        if (!res.ok) {
+          // Display the most informative error message available
+          const errorMessage =
+            out?.message || out?.error || res.statusText || "Checkout failed";
+          throw new Error(errorMessage);
+        }
+        if (out.url) {
+          window.location.href = out.url;
+        } else {
+          throw new Error("No checkout URL returned");
+        }
+      } catch (err) {
+        console.error("Checkout initiation failed:", err);
+        if (purchaseError) {
+          purchaseError.textContent =
+            err instanceof Error ? err.message : "Failed to initiate checkout";
+          purchaseError.classList.remove("hidden");
+        }
+      }
+    });
+    heroBuy?.addEventListener("click", () => {
+      if (heroPlan && planSelect) {
+        planSelect.value = heroPlan.value;
+        purchaseModal?.showModal();
+      } else {
+        purchaseModal?.showModal();
+      }
+    });
+
+    // Stage 5.5 Cutover: Legacy license key functions removed
+    // All activation now uses device-based entitlements (Stage 4/5 system)
+    // - displayLicenseKeys() - removed
+    // - updateStats() - removed
+    // - openGenerateActivationModal() - removed
+    // - showMacInstructions() - removed
+    // - showMacTopTab() - removed
+    // - copyCommand() - removed (generic copyToClipboard remains)
+    // - proceedToActivation() - removed
+    // - resetActivationModal() - removed
+    // - generateActivationCodeWithMac() - removed
+    // - confirmActivation() - removed
+    // - copyActivationCode() - removed
+    // - copyFromDisplay() - removed
+    // - openDeactivationModal() - removed
+    // - submitDeactivation() - removed
+    // - getCurrentLicenseKeys() - removed
+
+    function updateRecentActivity(purchases, licenseKeys) {
+      const container = document.getElementById("recent-activity");
+      if (!container) return;
+
+      // Combine purchases and license activations into a single activity feed
+      const activities = [
+        // Sample object to help TypeScript infer the type
+        ...(purchases && purchases.length > 0
+          ? purchases.map((purchase) => ({
+              type: "purchase",
+              date: new Date(purchase.createdAt),
+              text: `Purchased ${purchase.metadata?.product || "product"}`,
+              amount: `$${purchase.amount}`,
+              icon: "💳",
+            }))
+          : []),
+        ...(licenseKeys && licenseKeys.length > 0
+          ? licenseKeys
+              .filter((license) => license.isUsed && license.activatedAt)
+              .map((license) => ({
+                type: "activation",
+                date: new Date(license.activatedAt),
+                text: `Activated ${license.productName} license`,
+                icon: "🔑",
+              }))
+          : []),
+      ];
+
+      // Sort activities by date (most recent first)
+      activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+      // Take only the 5 most recent activities
+      const recentActivities = activities.slice(0, 5);
+
+      if (recentActivities.length === 0) {
+        container.innerHTML = `
+        <div class="text-center py-4">
+          <div class="text-4xl mb-2">📋</div>
+          <p class="text-sm opacity-70">No recent activity</p>
+        </div>
+      `;
+        return;
+      }
+
+      let activitiesHTML = "";
+      for (const activity of recentActivities) {
+        const dateStr = new Date(activity.date).toLocaleDateString();
+        const timeStr = new Date(activity.date).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const amountStr = activity.amount
+          ? `<div class="text-sm font-semibold text-primary">${activity.amount}</div>`
+          : "";
+
+        activitiesHTML += `
+        <div class="flex items-center space-x-3 py-2">
+          <div class="text-lg">${activity.icon}</div>
+          <div class="flex-1">
+            <p class="text-sm font-medium">${activity.text}</p>
+            <p class="text-xs opacity-70">${dateStr} ${timeStr}</p>
+          </div>
+          ${amountStr}
+        </div>
+      `;
+      }
+
+      container.innerHTML = activitiesHTML;
+    }
+
+    // Global functions for license management
+    (window as any).copyToClipboard = function (text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("License key copied to clipboard!");
+      });
+    };
+
+    // Legacy activateLicense/deactivateLicense removed in Stage 5.5
+    // All activation now uses Stage 4/5 device-based endpoints
+
+    // =========================================================================
+    // Stage 4/5: Device Activations & Offline Refresh
+    // =========================================================================
+
+    // Store loaded entitlements and devices for reuse
+    let cachedEntitlements: any[] = [];
+    let cachedDevices: any[] = [];
+
+    // Load entitlements for Stage 4/5 dropdowns (robust version)
+    async function loadEntitlementsForStage45() {
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        const response = await fetch(
+          `${cmsUrl}/api/customers/me/entitlements`,
+          {
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          console.error(
+            "Failed to load entitlements for Stage 4/5:",
+            response.status,
+          );
+          return;
+        }
+
+        const data = await response.json();
+
+        // Parse defensively - handle various response shapes
+        let entitlements: any[] = [];
+        if (data.entitlements && Array.isArray(data.entitlements)) {
+          entitlements = data.entitlements;
+        } else if (
+          data.data?.entitlements &&
+          Array.isArray(data.data.entitlements)
+        ) {
+          entitlements = data.data.entitlements;
+        } else if (data.data && Array.isArray(data.data)) {
+          entitlements = data.data;
+        } else if (Array.isArray(data)) {
+          entitlements = data;
+        }
+
+        // Filter to valid statuses for activation
+        const validStatuses = ["active", "canceling", "trialing", "past_due"];
+        cachedEntitlements = entitlements.filter((e: any) =>
+          validStatuses.includes(e.status),
+        );
+
+        console.debug(
+          "Cached entitlements for Stage 4/5:",
+          cachedEntitlements.length,
+          cachedEntitlements,
+        );
+
+        // Populate dropdowns now that we have data
+        populateOfflineDropdowns();
+      } catch (error) {
+        console.error("Error loading entitlements for Stage 4/5:", error);
+      }
+    }
+
+    // Load customer's registered devices
+    async function loadDevices() {
+      const loadingEl = document.getElementById("devices-loading");
+      const containerEl = document.getElementById("devices-container");
+      const errorEl = document.getElementById("devices-error");
+      const errorTextEl = document.getElementById("devices-error-text");
+
+      try {
+        const cmsUrl =
+          document.documentElement.getAttribute("data-cms-url") ||
+          "http://localhost:1337";
+
+        // First, ensure we have entitlements loaded for dropdowns
+        if (cachedEntitlements.length === 0) {
+          await loadEntitlementsForStage45();
+        }
+
+        const response = await fetch(`${cmsUrl}/api/customers/me/devices`, {
+          headers: {
+            Authorization: `Bearer ${customerToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("customerToken");
+            localStorage.removeItem("customer");
+            window.location.href = "/customer/login";
+            return;
+          }
+          const errorBody = await response.text().catch(() => "");
+          throw new Error(
+            `HTTP ${response.status}: ${errorBody || response.statusText}`,
+          );
+        }
+
+        const data = await response.json();
+        cachedDevices = data.devices || [];
+
+        // Hide loading, show container
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (containerEl) containerEl.classList.remove("hidden");
+        if (errorEl) errorEl.classList.add("hidden");
+
+        renderDevicesList(cachedDevices, containerEl);
+
+        // Also populate offline refresh dropdowns
+        populateOfflineDropdowns();
+      } catch (error) {
+        console.error("Error loading devices:", error);
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (errorEl) errorEl.classList.remove("hidden");
+        if (errorTextEl) {
+          errorTextEl.textContent =
+            error instanceof Error ? error.message : "Failed to load devices";
+        }
+      }
+    }
+
+    // Render devices list
+    function renderDevicesList(devices: any[], container: HTMLElement | null) {
+      if (!container) return;
+
+      if (devices.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8">
+            <div class="text-5xl mb-4">💻</div>
+            <p class="text-lg font-medium">No devices registered yet</p>
+            <p class="text-sm text-base-content/60 mb-4">Register a device to activate your entitlements</p>
+            <button class="btn btn-primary" onclick="document.getElementById('register_device_modal')?.showModal()">
+              Register Your First Device
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Device</th>
+                <th>Platform</th>
+                <th>Status</th>
+                <th>Last Seen</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      for (const device of devices) {
+        const platformIcon = getPlatformIcon(device.platform);
+        const statusBadge = device.isActivated
+          ? `<span class="badge badge-success badge-sm">Activated</span>`
+          : `<span class="badge badge-ghost badge-sm">Not Activated</span>`;
+        const lastSeen = device.lastSeen
+          ? new Date(device.lastSeen).toLocaleString()
+          : "Never";
+        const entitlementInfo = device.entitlement
+          ? `<span class="text-xs text-base-content/60 block">${device.entitlement.tier} (${device.entitlement.isLifetime ? "Lifetime" : "Subscription"})</span>`
+          : "";
+
+        html += `
+          <tr>
+            <td>
+              <div class="flex items-center gap-2">
+                <span class="text-lg">${platformIcon}</span>
+                <div>
+                  <div class="font-medium">${device.name || device.deviceId}</div>
+                  <div class="text-xs text-base-content/60 font-mono">${device.deviceId}</div>
+                </div>
+              </div>
+            </td>
+            <td>${device.platform || "-"}</td>
+            <td>
+              ${statusBadge}
+              ${entitlementInfo}
+            </td>
+            <td class="text-sm">${lastSeen}</td>
+            <td>
+              <div class="flex gap-1">
+        `;
+
+        if (device.isActivated) {
+          // Show refresh and deactivate buttons
+          html += `
+                <button class="btn btn-ghost btn-xs" onclick="openRefreshDeviceModal('${device.deviceId}', ${device.entitlement?.id || "null"}, '${device.name || device.deviceId}', '${device.entitlement?.tier || ""}')" title="Refresh">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                </button>
+                <button class="btn btn-ghost btn-xs text-error" onclick="openDeactivateDeviceModal('${device.deviceId}', ${device.entitlement?.id || "null"}, '${device.name || device.deviceId}', '${device.entitlement?.tier || ""}')" title="Deactivate">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                </button>
+          `;
+        } else {
+          // Show activate button
+          html += `
+                <button class="btn btn-primary btn-xs" onclick="openActivateDeviceModal('${device.deviceId}', '${device.name || device.deviceId}')" title="Activate">
+                  Activate
+                </button>
+          `;
+        }
+
+        html += `
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    // Get platform icon
+    function getPlatformIcon(platform: string | null): string {
+      switch (platform?.toLowerCase()) {
+        case "windows":
+          return "🪟";
+        case "macos":
+          return "🍎";
+        case "linux":
+          return "🐧";
+        case "embedded":
+          return "🔧";
+        default:
+          return "💻";
+      }
+    }
+
+    // Open register device modal
+    document
+      .getElementById("open-register-device")
+      ?.addEventListener("click", () => {
+        const modal = document.getElementById(
+          "register_device_modal",
+        ) as HTMLDialogElement;
+        if (modal) {
+          // Reset form
+          (
+            document.getElementById("register-device-form") as HTMLFormElement
+          )?.reset();
+          document
+            .getElementById("register-device-error")
+            ?.classList.add("hidden");
+          modal.showModal();
+        }
+      });
+
+    // Handle register device form submission
+    document
+      .getElementById("register-device-form")
+      ?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const deviceId = (
+          document.getElementById("register-device-id") as HTMLInputElement
+        )?.value?.trim();
+        const name = (
+          document.getElementById("register-device-name") as HTMLInputElement
+        )?.value?.trim();
+        const platform = (
+          document.getElementById(
+            "register-device-platform",
+          ) as HTMLSelectElement
+        )?.value;
+
+        if (!deviceId) {
+          showRegisterDeviceError("Device ID is required");
+          return;
+        }
+
+        const submitBtn = document.getElementById("register-device-submit");
+        const submitText = document.getElementById(
+          "register-device-submit-text",
+        );
+        const loadingSpinner = document.getElementById(
+          "register-device-loading",
+        );
+
+        try {
+          if (submitBtn) submitBtn.setAttribute("disabled", "true");
+          if (submitText) submitText.classList.add("hidden");
+          if (loadingSpinner) loadingSpinner.classList.remove("hidden");
+
+          const cmsUrl =
+            document.documentElement.getAttribute("data-cms-url") ||
+            "http://localhost:1337";
+
+          const response = await fetch(`${cmsUrl}/api/device/register`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              deviceId,
+              deviceName: name || undefined,
+              platform: platform || undefined,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error?.message || data.error || "Failed to register device",
+            );
+          }
+
+          // Success - close modal and reload devices
+          (
+            document.getElementById(
+              "register_device_modal",
+            ) as HTMLDialogElement
+          )?.close();
+          loadDevices();
+        } catch (error) {
+          showRegisterDeviceError(
+            error instanceof Error
+              ? error.message
+              : "Failed to register device",
+          );
+        } finally {
+          if (submitBtn) submitBtn.removeAttribute("disabled");
+          if (submitText) submitText.classList.remove("hidden");
+          if (loadingSpinner) loadingSpinner.classList.add("hidden");
+        }
+      });
+
+    function showRegisterDeviceError(message: string) {
+      const errorEl = document.getElementById("register-device-error");
+      const errorTextEl = document.getElementById("register-device-error-text");
+      if (errorEl) errorEl.classList.remove("hidden");
+      if (errorTextEl) errorTextEl.textContent = message;
+    }
+
+    // Open activate device modal
+    (window as any).openActivateDeviceModal = async function (
+      deviceId: string,
+      deviceName: string,
+    ) {
+      const modal = document.getElementById(
+        "activate_device_modal",
+      ) as HTMLDialogElement;
+      if (!modal) return;
+
+      // Reset form state
+      document.getElementById("activate-device-error")?.classList.add("hidden");
+      document
+        .getElementById("activate-device-success")
+        ?.classList.add("hidden");
+
+      // Set device info
+      (
+        document.getElementById("activate-device-id-input") as HTMLInputElement
+      ).value = deviceId;
+      (
+        document.getElementById("activate-device-display") as HTMLInputElement
+      ).value = deviceName;
+
+      // Populate entitlements dropdown
+      const select = document.getElementById(
+        "activate-entitlement-select",
+      ) as HTMLSelectElement;
+      select.innerHTML =
+        '<option value="">-- Select an entitlement --</option>';
+
+      for (const ent of cachedEntitlements) {
+        if (ent.status === "active") {
+          const label = `${ent.tier} (${ent.isLifetime ? "Lifetime" : "Subscription"})`;
+          select.innerHTML += `<option value="${ent.id}">${label}</option>`;
+        }
+      }
+
+      modal.showModal();
+    };
+
+    // Handle activate device form submission
+    document
+      .getElementById("activate-device-form")
+      ?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const deviceId = (
+          document.getElementById(
+            "activate-device-id-input",
+          ) as HTMLInputElement
+        )?.value;
+        const entitlementId = (
+          document.getElementById(
+            "activate-entitlement-select",
+          ) as HTMLSelectElement
+        )?.value;
+
+        if (!deviceId || !entitlementId) {
+          showActivateDeviceError("Please select an entitlement");
+          return;
+        }
+
+        const submitBtn = document.getElementById("activate-device-submit");
+        const submitText = document.getElementById(
+          "activate-device-submit-text",
+        );
+        const loadingSpinner = document.getElementById(
+          "activate-device-loading",
+        );
+
+        try {
+          if (submitBtn) submitBtn.setAttribute("disabled", "true");
+          if (submitText) submitText.classList.add("hidden");
+          if (loadingSpinner) loadingSpinner.classList.remove("hidden");
+
+          const cmsUrl =
+            document.documentElement.getAttribute("data-cms-url") ||
+            "http://localhost:1337";
+
+          const response = await fetch(`${cmsUrl}/api/licence/activate`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              deviceId,
+              entitlementId: parseInt(entitlementId, 10),
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error?.message || data.error || "Failed to activate",
+            );
+          }
+
+          // Success
+          document
+            .getElementById("activate-device-error")
+            ?.classList.add("hidden");
+          const successEl = document.getElementById("activate-device-success");
+          const successTextEl = document.getElementById(
+            "activate-device-success-text",
+          );
+          if (successEl) successEl.classList.remove("hidden");
+          if (successTextEl)
+            successTextEl.textContent = `Device activated until ${new Date(data.binding?.expiresAt || data.expiresAt).toLocaleString()}`;
+
+          // Reload devices after a short delay
+          setTimeout(() => {
+            (
+              document.getElementById(
+                "activate_device_modal",
+              ) as HTMLDialogElement
+            )?.close();
+            loadDevices();
+          }, 1500);
+        } catch (error) {
+          showActivateDeviceError(
+            error instanceof Error ? error.message : "Failed to activate",
+          );
+        } finally {
+          if (submitBtn) submitBtn.removeAttribute("disabled");
+          if (submitText) submitText.classList.remove("hidden");
+          if (loadingSpinner) loadingSpinner.classList.add("hidden");
+        }
+      });
+
+    function showActivateDeviceError(message: string) {
+      const errorEl = document.getElementById("activate-device-error");
+      const errorTextEl = document.getElementById("activate-device-error-text");
+      if (errorEl) errorEl.classList.remove("hidden");
+      if (errorTextEl) errorTextEl.textContent = message;
+    }
+
+    // Open deactivate device modal
+    (window as any).openDeactivateDeviceModal = function (
+      deviceId: string,
+      entitlementId: number,
+      deviceName: string,
+      tier: string,
+    ) {
+      const modal = document.getElementById(
+        "deactivate_device_modal",
+      ) as HTMLDialogElement;
+      if (!modal) return;
+
+      // Reset form state
+      document
+        .getElementById("deactivate-device-error")
+        ?.classList.add("hidden");
+
+      // Set values
+      (
+        document.getElementById(
+          "deactivate-device-id-input",
+        ) as HTMLInputElement
+      ).value = deviceId;
+      (
+        document.getElementById(
+          "deactivate-entitlement-id-input",
+        ) as HTMLInputElement
+      ).value = String(entitlementId);
+      (
+        document.getElementById("deactivate-device-display") as HTMLElement
+      ).textContent = deviceName;
+      (
+        document.getElementById("deactivate-entitlement-display") as HTMLElement
+      ).textContent = tier || "Unknown";
+
+      modal.showModal();
+    };
+
+    // Handle deactivate device form submission
+    document
+      .getElementById("deactivate-device-form")
+      ?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const deviceId = (
+          document.getElementById(
+            "deactivate-device-id-input",
+          ) as HTMLInputElement
+        )?.value;
+        const entitlementId = (
+          document.getElementById(
+            "deactivate-entitlement-id-input",
+          ) as HTMLInputElement
+        )?.value;
+
+        if (!deviceId || !entitlementId) {
+          showDeactivateDeviceError(
+            "Missing device or entitlement information",
+          );
+          return;
+        }
+
+        const submitBtn = document.getElementById("deactivate-device-submit");
+        const submitText = document.getElementById(
+          "deactivate-device-submit-text",
+        );
+        const loadingSpinner = document.getElementById(
+          "deactivate-device-loading",
+        );
+
+        try {
+          if (submitBtn) submitBtn.setAttribute("disabled", "true");
+          if (submitText) submitText.classList.add("hidden");
+          if (loadingSpinner) loadingSpinner.classList.remove("hidden");
+
+          const cmsUrl =
+            document.documentElement.getAttribute("data-cms-url") ||
+            "http://localhost:1337";
+
+          const response = await fetch(`${cmsUrl}/api/licence/deactivate`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              deviceId,
+              entitlementId: parseInt(entitlementId, 10),
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error?.message || data.error || "Failed to deactivate",
+            );
+          }
+
+          // Success - close modal and reload devices
+          (
+            document.getElementById(
+              "deactivate_device_modal",
+            ) as HTMLDialogElement
+          )?.close();
+          loadDevices();
+        } catch (error) {
+          showDeactivateDeviceError(
+            error instanceof Error ? error.message : "Failed to deactivate",
+          );
+        } finally {
+          if (submitBtn) submitBtn.removeAttribute("disabled");
+          if (submitText) submitText.classList.remove("hidden");
+          if (loadingSpinner) loadingSpinner.classList.add("hidden");
+        }
+      });
+
+    function showDeactivateDeviceError(message: string) {
+      const errorEl = document.getElementById("deactivate-device-error");
+      const errorTextEl = document.getElementById(
+        "deactivate-device-error-text",
+      );
+      if (errorEl) errorEl.classList.remove("hidden");
+      if (errorTextEl) errorTextEl.textContent = message;
+    }
+
+    // Open refresh device modal
+    (window as any).openRefreshDeviceModal = function (
+      deviceId: string,
+      entitlementId: number,
+      deviceName: string,
+      tier: string,
+    ) {
+      const modal = document.getElementById(
+        "refresh_device_modal",
+      ) as HTMLDialogElement;
+      if (!modal) return;
+
+      // Reset form state
+      document.getElementById("refresh-device-error")?.classList.add("hidden");
+      document
+        .getElementById("refresh-device-success")
+        ?.classList.add("hidden");
+
+      // Set values
+      (
+        document.getElementById("refresh-device-id-input") as HTMLInputElement
+      ).value = deviceId;
+      (
+        document.getElementById(
+          "refresh-entitlement-id-input",
+        ) as HTMLInputElement
+      ).value = String(entitlementId);
+      (
+        document.getElementById("refresh-device-display") as HTMLElement
+      ).textContent = deviceName;
+      (
+        document.getElementById("refresh-entitlement-display") as HTMLElement
+      ).textContent = tier || "Unknown";
+
+      modal.showModal();
+    };
+
+    // Handle refresh device form submission
+    document
+      .getElementById("refresh-device-form")
+      ?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const deviceId = (
+          document.getElementById("refresh-device-id-input") as HTMLInputElement
+        )?.value;
+        const entitlementId = (
+          document.getElementById(
+            "refresh-entitlement-id-input",
+          ) as HTMLInputElement
+        )?.value;
+
+        if (!deviceId || !entitlementId) {
+          showRefreshDeviceError("Missing device or entitlement information");
+          return;
+        }
+
+        const submitBtn = document.getElementById("refresh-device-submit");
+        const submitText = document.getElementById(
+          "refresh-device-submit-text",
+        );
+        const loadingSpinner = document.getElementById(
+          "refresh-device-loading",
+        );
+
+        try {
+          if (submitBtn) submitBtn.setAttribute("disabled", "true");
+          if (submitText) submitText.classList.add("hidden");
+          if (loadingSpinner) loadingSpinner.classList.remove("hidden");
+
+          const cmsUrl =
+            document.documentElement.getAttribute("data-cms-url") ||
+            "http://localhost:1337";
+
+          const response = await fetch(`${cmsUrl}/api/licence/refresh`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              deviceId,
+              entitlementId: parseInt(entitlementId, 10),
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error?.message || data.error || "Failed to refresh",
+            );
+          }
+
+          // Success
+          document
+            .getElementById("refresh-device-error")
+            ?.classList.add("hidden");
+          const successEl = document.getElementById("refresh-device-success");
+          const successTextEl = document.getElementById(
+            "refresh-device-success-text",
+          );
+          if (successEl) successEl.classList.remove("hidden");
+
+          let successMsg = "Activation refreshed successfully";
+          if (data.leaseToken) {
+            const payload = JSON.parse(atob(data.leaseToken.split(".")[1]));
+            const expiry = new Date(payload.exp * 1000);
+            successMsg = `Lease token generated, expires ${expiry.toLocaleString()}`;
+          }
+          if (successTextEl) successTextEl.textContent = successMsg;
+
+          // Reload devices after a short delay
+          setTimeout(() => {
+            (
+              document.getElementById(
+                "refresh_device_modal",
+              ) as HTMLDialogElement
+            )?.close();
+            loadDevices();
+          }, 1500);
+        } catch (error) {
+          showRefreshDeviceError(
+            error instanceof Error ? error.message : "Failed to refresh",
+          );
+        } finally {
+          if (submitBtn) submitBtn.removeAttribute("disabled");
+          if (submitText) submitText.classList.remove("hidden");
+          if (loadingSpinner) loadingSpinner.classList.add("hidden");
+        }
+      });
+
+    function showRefreshDeviceError(message: string) {
+      const errorEl = document.getElementById("refresh-device-error");
+      const errorTextEl = document.getElementById("refresh-device-error-text");
+      if (errorEl) errorEl.classList.remove("hidden");
+      if (errorTextEl) errorTextEl.textContent = message;
+    }
+
+    // =========================================================================
+    // Offline Refresh (Stage 5)
+    // =========================================================================
+
+    // Populate offline refresh dropdowns
+    function populateOfflineDropdowns() {
+      const entitlementSelect = document.getElementById(
+        "offline-entitlement-select",
+      ) as HTMLSelectElement;
+      const deviceSelect = document.getElementById(
+        "offline-device-select",
+      ) as HTMLSelectElement;
+      const offlineSection = document.getElementById("offline-refresh-section");
+
+      if (entitlementSelect) {
+        entitlementSelect.innerHTML =
+          '<option value="">-- Select an entitlement --</option>';
+
+        // Only show subscription entitlements that require lease tokens
+        // Lifetime/Founders entitlements (leaseRequired=false or isLifetime=true) are online-only
+        let subscriptionCount = 0;
+        for (const ent of cachedEntitlements) {
+          // Strictly check leaseRequired === true (subscription entitlements only)
+          const requiresLease = ent.leaseRequired === true;
+          const validStatuses = ["active", "canceling", "trialing", "past_due"];
+
+          if (requiresLease && validStatuses.includes(ent.status)) {
+            const statusLabel =
+              ent.status === "active" ? "" : ` (${ent.status})`;
+            const label = `${(ent.tier || "Unknown").toUpperCase()} • Subscription${statusLabel}`;
+            entitlementSelect.innerHTML += `<option value="${ent.id}">${label}</option>`;
+            subscriptionCount++;
+          }
+        }
+
+        // Hide the offline refresh section entirely if no subscription entitlements
+        if (offlineSection) {
+          if (subscriptionCount === 0) {
+            offlineSection.classList.add("hidden");
+          } else {
+            offlineSection.classList.remove("hidden");
+          }
+        }
+      }
+
+      if (deviceSelect) {
+        deviceSelect.innerHTML =
+          '<option value="">-- Select a device --</option>';
+        for (const device of cachedDevices) {
+          const label = device.name || device.deviceId;
+          deviceSelect.innerHTML += `<option value="${device.deviceId}">${label}</option>`;
+        }
+      }
+
+      updateOfflineRedeemButton();
+    }
+
+    // Update redeem button state
+    function updateOfflineRedeemButton() {
+      const entitlementSelect = document.getElementById(
+        "offline-entitlement-select",
+      ) as HTMLSelectElement;
+      const deviceSelect = document.getElementById(
+        "offline-device-select",
+      ) as HTMLSelectElement;
+      const challengeInput = document.getElementById(
+        "offline-challenge-input",
+      ) as HTMLTextAreaElement;
+      const redeemBtn = document.getElementById(
+        "offline-redeem-btn",
+      ) as HTMLButtonElement;
+
+      const hasEntitlement = entitlementSelect?.value;
+      const hasDevice = deviceSelect?.value;
+      const hasChallenge = challengeInput?.value?.trim();
+
+      if (redeemBtn) {
+        redeemBtn.disabled = !(hasEntitlement && hasDevice && hasChallenge);
+      }
+    }
+
+    // Add event listeners for offline refresh inputs
+    document
+      .getElementById("offline-entitlement-select")
+      ?.addEventListener("change", updateOfflineRedeemButton);
+    document
+      .getElementById("offline-device-select")
+      ?.addEventListener("change", updateOfflineRedeemButton);
+    document
+      .getElementById("offline-challenge-input")
+      ?.addEventListener("input", updateOfflineRedeemButton);
+
+    // Handle offline redeem button click
+    document
+      .getElementById("offline-redeem-btn")
+      ?.addEventListener("click", async () => {
+        const entitlementId = (
+          document.getElementById(
+            "offline-entitlement-select",
+          ) as HTMLSelectElement
+        )?.value;
+        const deviceId = (
+          document.getElementById("offline-device-select") as HTMLSelectElement
+        )?.value;
+        const challengeToken = (
+          document.getElementById(
+            "offline-challenge-input",
+          ) as HTMLTextAreaElement
+        )?.value?.trim();
+
+        if (!entitlementId || !deviceId || !challengeToken) {
+          showOfflineError("Please fill in all fields");
+          return;
+        }
+
+        // Basic validation of challenge token format
+        if (!challengeToken.includes(".")) {
+          showOfflineError(
+            "Invalid challenge token format. Please paste the full token from the offline machine.",
+          );
+          return;
+        }
+
+        const redeemBtn = document.getElementById(
+          "offline-redeem-btn",
+        ) as HTMLButtonElement;
+        const errorEl = document.getElementById("offline-error");
+
+        // Hide any previous errors
+        if (errorEl) errorEl.classList.add("hidden");
+
+        try {
+          redeemBtn.disabled = true;
+          redeemBtn.innerHTML =
+            '<span class="loading loading-spinner loading-sm"></span> Redeeming...';
+
+          const cmsUrl =
+            document.documentElement.getAttribute("data-cms-url") ||
+            "http://localhost:1337";
+
+          const response = await fetch(
+            `${cmsUrl}/api/licence/offline-refresh`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${customerToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                challenge: challengeToken,
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            // Handle specific error codes
+            if (response.status === 401) {
+              localStorage.removeItem("customerToken");
+              localStorage.removeItem("customer");
+              window.location.href = "/customer/login";
+              return;
+            }
+            if (response.status === 403) {
+              throw new Error(
+                "Access denied. This entitlement may not be assigned to you or the device.",
+              );
+            }
+            if (response.status === 409) {
+              throw new Error(
+                "Challenge token has already been redeemed. Generate a new challenge on the offline machine.",
+              );
+            }
+            if (response.status === 400) {
+              throw new Error(
+                data.error?.message ||
+                  "Invalid challenge token. Please check it was copied correctly.",
+              );
+            }
+            throw new Error(
+              data.error?.message || data.error || "Failed to redeem challenge",
+            );
+          }
+
+          // Success - show the lease token
+          showLeaseTokenResult(data, entitlementId, deviceId);
+        } catch (error) {
+          const errorMsg =
+            error instanceof Error
+              ? error.message
+              : "Failed to redeem challenge";
+          showOfflineError(errorMsg);
+        } finally {
+          redeemBtn.disabled = false;
+          redeemBtn.innerHTML = "Redeem Challenge for Lease Token";
+          updateOfflineRedeemButton();
+        }
+      });
+
+    // Show error in offline refresh section
+    function showOfflineError(message: string) {
+      const errorEl = document.getElementById("offline-error");
+      const errorTextEl = document.getElementById("offline-error-text");
+      if (errorEl) errorEl.classList.remove("hidden");
+      if (errorTextEl) errorTextEl.textContent = message;
+    }
+
+    // Show lease token result
+    function showLeaseTokenResult(
+      data: any,
+      entitlementId: string,
+      deviceId: string,
+    ) {
+      const step1 = document.getElementById("offline-step-1");
+      const step2 = document.getElementById("offline-step-2");
+
+      if (step1) step1.classList.add("hidden");
+      if (step2) step2.classList.remove("hidden");
+
+      // Set lease token
+      const tokenOutput = document.getElementById(
+        "lease-token-output",
+      ) as HTMLTextAreaElement;
+      if (tokenOutput) tokenOutput.value = data.leaseToken;
+
+      // Set details
+      const entitlement = cachedEntitlements.find(
+        (e) => e.id === parseInt(entitlementId),
+      );
+      const device = cachedDevices.find((d) => d.deviceId === deviceId);
+
+      const entDisplay = document.getElementById("lease-entitlement-display");
+      const devDisplay = document.getElementById("lease-device-display");
+      const expDisplay = document.getElementById("lease-expires-display");
+      const expWarning = document.getElementById("lease-expiry-warning");
+
+      if (entDisplay)
+        entDisplay.textContent = entitlement
+          ? `${entitlement.tier} (${entitlement.isLifetime ? "Lifetime" : "Subscription"})`
+          : `ID: ${entitlementId}`;
+      if (devDisplay)
+        devDisplay.textContent = device
+          ? device.name || device.deviceId
+          : deviceId;
+
+      // Parse lease token to get expiry
+      try {
+        const payload = JSON.parse(atob(data.leaseToken.split(".")[1]));
+        const expiry = new Date(payload.exp * 1000);
+        if (expDisplay) expDisplay.textContent = expiry.toLocaleString();
+        if (expWarning)
+          expWarning.textContent = `Valid for ${Math.round((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days`;
+      } catch {
+        if (expDisplay) expDisplay.textContent = "Unknown";
+        if (expWarning) expWarning.textContent = "";
+      }
+    }
+
+    // Copy lease token with visual feedback
+    (window as any).copyLeaseToken = function () {
+      const tokenOutput = document.getElementById(
+        "lease-token-output",
+      ) as HTMLTextAreaElement;
+      const copyBtn = document.getElementById(
+        "copy-lease-token-btn",
+      ) as HTMLButtonElement;
+
+      if (tokenOutput && tokenOutput.value) {
+        navigator.clipboard
+          .writeText(tokenOutput.value)
+          .then(() => {
+            // Visual feedback
+            if (copyBtn) {
+              const originalHtml = copyBtn.innerHTML;
+              copyBtn.innerHTML = "✓ Copied!";
+              copyBtn.classList.remove("btn-secondary");
+              copyBtn.classList.add("btn-success");
+              setTimeout(() => {
+                copyBtn.innerHTML = originalHtml;
+                copyBtn.classList.remove("btn-success");
+                copyBtn.classList.add("btn-secondary");
+              }, 2000);
+            }
+          })
+          .catch(() => {
+            // Fallback - select the text
+            tokenOutput.select();
+            document.execCommand("copy");
+            alert("Lease token copied to clipboard!");
+          });
+      }
+    };
+
+    // Reset offline refresh
+    (window as any).resetOfflineRefresh = function () {
+      const step1 = document.getElementById("offline-step-1");
+      const step2 = document.getElementById("offline-step-2");
+
+      if (step1) step1.classList.remove("hidden");
+      if (step2) step2.classList.add("hidden");
+
+      // Clear inputs
+      (
+        document.getElementById(
+          "offline-entitlement-select",
+        ) as HTMLSelectElement
+      ).value = "";
+      (
+        document.getElementById("offline-device-select") as HTMLSelectElement
+      ).value = "";
+      (
+        document.getElementById(
+          "offline-challenge-input",
+        ) as HTMLTextAreaElement
+      ).value = "";
+
+      // Clear any errors
+      document.getElementById("offline-error")?.classList.add("hidden");
+
+      updateOfflineRedeemButton();
+    };
+
+    // Load devices after subscription info is loaded
+    loadDevices();
+
+    // Load dashboard data on page load
+    loadDashboardData();
+  } // End of login check
+</script>

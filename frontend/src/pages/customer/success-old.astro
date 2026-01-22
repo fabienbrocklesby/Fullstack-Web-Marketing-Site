@@ -1,0 +1,318 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import DownloadButtons from "../../components/DownloadButtons.astro";
+---
+
+<Layout
+  title="Welcome - Customer Portal"
+  description="Thank you for your purchase! Your license is ready."
+>
+  <main>
+    <section class="py-20 min-h-screen bg-base-200">
+      <div class="container mx-auto px-4">
+        <div class="text-center max-w-2xl mx-auto">
+          <div class="text-6xl mb-8">🎉</div>
+          <h1 id="page-title" class="text-4xl font-bold mb-4">Processing...</h1>
+          <p id="page-subtitle" class="text-xl text-base-content/70 mb-8">
+            Please wait while we confirm your purchase...
+          </p>
+
+          <div id="purchase-details" class="card bg-base-100 shadow-xl mb-8">
+            <div class="card-body">
+              <h2 class="card-title">Purchase Details</h2>
+              <div id="details-content" class="text-left">
+                <div class="flex flex-col items-center gap-4">
+                  <div class="loading loading-spinner loading-lg"></div>
+                  <p class="text-center">Processing your purchase...</p>
+                  <p
+                    class="text-center text-sm text-base-content/60"
+                    id="poll-status"
+                  >
+                    Waiting for confirmation...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <DownloadButtons align="center" />
+            <div class="flex justify-center space-x-4">
+              <a href="/customer/dashboard" class="btn btn-primary"
+                >View Dashboard</a
+              >
+              <a href="/customer/profile" class="btn btn-outline"
+                >Manage Account</a
+              >
+            </div>
+            <p class="text-base-content/70 text-sm">
+              Your license key and purchase details are available in your
+              customer dashboard.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<script>
+  /**
+   * Poll for purchase/subscription completion (webhook fulfillment)
+   * Uses exponential backoff with max 60 second timeout
+   */
+  async function pollPurchaseStatus(
+    sessionId: string,
+    customerToken: string,
+    cmsUrl: string,
+    maxAttempts = 20,
+    initialDelay = 1000,
+  ): Promise<any> {
+    let attempt = 0;
+    let delay = initialDelay;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      const statusEl = document.getElementById("poll-status");
+      if (statusEl) {
+        statusEl.textContent = `Checking status (attempt ${attempt}/${maxAttempts})...`;
+      }
+
+      try {
+        const response = await fetch(
+          `${cmsUrl}/api/customer/purchase-status?session_id=${encodeURIComponent(sessionId)}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${customerToken}`,
+            },
+          },
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+
+          if (result.status === "complete") {
+            return result;
+          }
+
+          // Still pending - log every 3rd attempt to reduce spam
+          if (attempt % 3 === 0) {
+            console.log(
+              `[Poll] Attempt ${attempt}: pending (mode: ${result.mode || "unknown"})`,
+            );
+          }
+        } else {
+          // Log HTTP errors (less frequently)
+          if (attempt % 3 === 0) {
+            console.warn(`[Poll] Attempt ${attempt}: HTTP ${response.status}`);
+          }
+        }
+      } catch (err) {
+        // Log network errors (less frequently)
+        if (attempt % 3 === 0) {
+          console.warn(`[Poll] Attempt ${attempt}: error`, err);
+        }
+      }
+
+      // Wait before next attempt with exponential backoff (max 5s)
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay = Math.min(delay * 1.5, 5000);
+    }
+
+    throw new Error("Purchase confirmation timeout");
+  }
+
+  // Main logic
+  document.addEventListener("DOMContentLoaded", async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session_id");
+    const customerToken = localStorage.getItem("customerToken");
+
+    if (!sessionId) {
+      console.log("ℹ️ No session_id in URL");
+      window.location.href = "/customer/dashboard";
+      return;
+    }
+
+    if (!customerToken) {
+      console.log("ℹ️ No customer token - redirecting to login");
+      window.location.href =
+        "/customer/login?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+
+    const cmsUrl =
+      document.documentElement.getAttribute("data-cms-url") ||
+      "http://localhost:1337";
+
+    const detailsContent = document.getElementById("details-content");
+
+    try {
+      console.log("🔄 Polling for purchase completion:", sessionId);
+
+      const result = await pollPurchaseStatus(sessionId, customerToken, cmsUrl);
+
+      console.log("✅ Purchase confirmed:", result);
+
+      // Track successful purchase completion
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(";").shift();
+      };
+      const affiliateCode = getCookie("affiliate_code");
+
+      if (affiliateCode && (window as any).journeyTracker) {
+        await (window as any).journeyTracker.trackPurchaseComplete(
+          result.purchaseId || sessionId,
+          0, // Amount not available in polling response
+          result.tier || "unknown",
+        );
+      }
+
+      // Update page title based on mode
+      const pageTitleEl = document.getElementById("page-title");
+      const pageSubtitleEl = document.getElementById("page-subtitle");
+      const isSubscription = result.mode === "subscription";
+      const tierLabel = result.tier
+        ? result.tier.charAt(0).toUpperCase() + result.tier.slice(1)
+        : "Pro";
+
+      // Use display labels from API response (based on isLifetime flag, NOT tier)
+      const accessLabel =
+        result.display?.accessLabel ||
+        (result.isLifetime ? "Lifetime (Founders)" : "Subscription Active");
+      const billingLabel =
+        result.display?.billingLabel ||
+        (result.isLifetime ? "One-time (Founders)" : "Monthly Subscription");
+
+      if (pageTitleEl) {
+        pageTitleEl.textContent =
+          isSubscription && !result.isLifetime
+            ? "Subscription Active!"
+            : "Purchase Successful!";
+      }
+      if (pageSubtitleEl) {
+        if (isSubscription && !result.isLifetime) {
+          pageSubtitleEl.innerHTML = `
+            Thanks for subscribing to <strong>${tierLabel}</strong> (${billingLabel}). 
+            You can manage or cancel anytime in <a href="/customer/profile" class="link">Manage Account</a>.
+          `;
+        } else if (result.isLifetime) {
+          pageSubtitleEl.textContent = `Thank you for your Founders purchase! Your ${tierLabel} license is active forever.`;
+        } else {
+          pageSubtitleEl.textContent = `Thank you for your purchase! Your ${tierLabel} license is ready.`;
+        }
+      }
+
+      // Display success details
+      if (detailsContent) {
+        // Build access badge based on isLifetime flag (NOT tier)
+        const accessBadge = result.isLifetime
+          ? `<span class="badge badge-warning">Lifetime (Founders)</span>`
+          : `<span class="badge badge-info">${accessLabel}</span>`;
+
+        // Build next action message based on mode
+        const nextActionHtml =
+          isSubscription && !result.isLifetime
+            ? `
+            <div class="alert alert-success">
+              <div class="flex items-start">
+                <svg class="w-6 h-6 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                  <h3 class="font-semibold">Subscription Active</h3>
+                  <p class="text-sm">Your license is ready! Download the app and activate your license from the dashboard.</p>
+                </div>
+              </div>
+            </div>
+          `
+            : `
+            <div class="alert alert-info">
+              <div class="flex items-start">
+                <svg class="w-6 h-6 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2a2 2 0 00-2 2m0 0a2 2 0 01-2 2m2-2v10"></path>
+                </svg>
+                <div>
+                  <h3 class="font-semibold">License Ready</h3>
+                  <p class="text-sm">Your license is available in your dashboard. Download the app and activate your license.</p>
+                </div>
+              </div>
+            </div>
+          `;
+
+        detailsContent.innerHTML = `
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <span class="font-semibold">Plan:</span>
+                <span class="ml-2 badge badge-primary">${tierLabel}</span>
+              </div>
+              <div>
+                <span class="font-semibold">Status:</span>
+                <span class="ml-2 badge badge-success">Active</span>
+              </div>
+              <div class="col-span-2">
+                <span class="font-semibold">Access:</span>
+                ${accessBadge}
+              </div>
+              ${
+                isSubscription && !result.isLifetime
+                  ? `
+              <div class="col-span-2">
+                <span class="font-semibold">Billing:</span>
+                <span class="ml-2">${billingLabel}</span>
+              </div>
+              `
+                  : ""
+              }
+            </div>
+            
+            <div class="divider"></div>
+            
+            ${nextActionHtml}
+            
+            <div class="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+              <a href="/customer/dashboard" class="btn btn-primary">Go to Dashboard</a>
+            </div>
+          </div>
+        `;
+      }
+
+      // Clear selected product from localStorage
+      localStorage.removeItem("selectedProduct");
+    } catch (error) {
+      console.error("❌ Error polling purchase status:", error);
+
+      // Update page title on error
+      const pageTitleEl = document.getElementById("page-title");
+      const pageSubtitleEl = document.getElementById("page-subtitle");
+      if (pageTitleEl) pageTitleEl.textContent = "Processing...";
+      if (pageSubtitleEl)
+        pageSubtitleEl.textContent =
+          "Your payment was received. Finalizing your license...";
+
+      if (detailsContent) {
+        detailsContent.innerHTML = `
+          <div class="alert alert-warning">
+            <div class="w-full">
+              <h3 class="font-semibold">⚠️ Almost Done</h3>
+              <p>Your payment was successful! License activation is taking a bit longer than expected.</p>
+              <p class="mt-2 text-sm">This sometimes happens when our servers are busy. Your license will appear in your dashboard shortly.</p>
+              <div class="mt-4 flex flex-col sm:flex-row gap-2">
+                <a href="/customer/dashboard" class="btn btn-primary btn-sm">Go to Dashboard</a>
+                <button onclick="window.location.reload()" class="btn btn-outline btn-sm">Retry</button>
+              </div>
+              <details class="mt-4 text-xs">
+                <summary class="cursor-pointer opacity-60">Technical details</summary>
+                <code class="block mt-2 break-all">${sessionId}</code>
+              </details>
+            </div>
+          </div>
+        `;
+      }
+    }
+  });
+</script>

@@ -55,6 +55,183 @@ portal: POST /licence/offline-challenge → copy token to air-gapped machine →
 
 ---
 
+## Changelog (2026-01-22 Remove Email Ownership Fallback)
+
+### 🎯 Purpose
+
+Remove email-based ownership verification from `GET /api/customer/purchase-status`. Ownership must now be proven via strong identifiers only: `metadata.customerId` (authoritative) or `stripeCustomerId` match (fallback). Email matching is considered too weak for production security.
+
+### ✅ Changes
+
+**1. Removed email fallback from purchase-status ownership check**
+
+- **Before:** Session matched by `metadata.customerId` → `stripeCustomerId` → `email` (OR chain)
+- **After:** Session matched by `metadata.customerId` → `stripeCustomerId` only (no email)
+- Returns 403 if neither strong identifier matches
+
+**2. Consistent strong-identifier policy**
+
+- Purchase-status ownership check now matches repair logic (already email-free)
+- Checkout session creation already includes `metadata.customerId` - verified
+- Webhook handler already links `stripeCustomerId` - verified
+
+### 📁 Files Changed
+
+```
+backend/src/api/custom/controllers/custom.js  - Removed email from ownership check
+docs/licensing-portal-current-state.md        - This changelog + corrected prior entry
+```
+
+### 🧪 Verification
+
+```bash
+# Verify no email matching in purchase-status ownership check
+rg -n "sessionEmail|customer_email.*ownership|email.*toLowerCase.*owner" backend/src/api/custom/controllers/custom.js
+# Should return no matches
+
+# Verify strong identifiers are used
+rg -n "metadataCustomerId|sessionStripeCustomerId" backend/src/api/custom/controllers/custom.js
+# Should return matches for ownership check and repair logic
+```
+
+### `git diff --stat`
+
+```
+backend/src/api/custom/controllers/custom.js | 17 ++++++++---------
+docs/licensing-portal-current-state.md       |  1 +
+```
+
+---
+
+## Changelog (2026-01-22 Ownership Security Audit)
+
+### 🎯 Purpose
+
+Audit and harden `GET /api/customers/me/entitlements` to guarantee no data leakage between portal customers, and strengthen purchase-status session ownership verification.
+
+### 🔐 Security Findings
+
+**Ownership Model (Verified):**
+
+- `entitlement.customer` (manyToOne relation) is the **authoritative ownership field**
+- `customer.stripeCustomerId` is unique per customer
+- `customer.email` is unique per customer
+- `entitlement.stripeCustomerId` is a denormalized copy, NOT authoritative
+
+**Endpoint Implementation (Verified):**
+
+- `GET /api/customers/me/entitlements` uses strict filter `{ customer: customerId }` - ✅ SECURE
+- No fallback to broader queries exists
+- No `stripeCustomerId: null` OR conditions exist
+
+### ✅ Changes
+
+**1. Added defense-in-depth ownership assertion (`GET /api/customers/me/entitlements`)**
+
+- After DB query, verify each entitlement's `customer.id === authenticated customerId`
+- If any mismatch found (should never happen), log security error and exclude from response
+- Now populates `customer` relation to enable verification
+
+**2. Strengthened purchase-status session ownership check**
+
+- **Before:** Matched by `stripeCustomerId` or `email` only
+- **After:** Uses only strong identifiers (no email fallback)
+- Order: `metadata.customerId` (authoritative) → `stripeCustomerId` (fallback)
+- Enhanced warning log includes all verification data on failure
+
+### 📁 Files Changed
+
+```
+backend/src/api/customer/controllers/customer.js  - Added ownership assertion
+backend/src/api/custom/controllers/custom.js      - Improved session ownership check
+```
+
+### 🧪 Verification
+
+Two-customer isolation is guaranteed by:
+
+1. Strict DB filter `{ customer: customerId }` in Strapi query
+2. Post-query assertion verifying `entitlement.customer.id === customerId`
+3. Unique constraints on `customer.email` and `customer.stripeCustomerId`
+
+### `git diff --stat`
+
+```
+backend/src/api/custom/controllers/custom.js     | 57 ++++++++-
+backend/src/api/customer/controllers/customer.js | 45 +++++--
+```
+
+---
+
+## Changelog (2026-01-22 Entitlement Dedupe + Repair Hardening)
+
+### 🎯 Purpose
+
+Fix incorrect entitlement filtering that was hiding legitimate multiple purchases from customers, clean up verbose debug logging, and harden the purchase-status "repair orphan entitlement" logic to prevent abuse.
+
+### ✅ Changes
+
+**1. Fixed entitlement deduplication logic (`GET /api/customers/me/entitlements`)**
+
+- **Before:** Deduplicated by `tier|isLifetime|status|expiresAt` which incorrectly collapsed multiple valid entitlements
+- **After:** Deduplicate ONLY by `entitlement.id` (true duplicates from DB query, if any)
+- Customers can now have multiple entitlements of the same tier (e.g., buying maker twice shows both)
+- Added safety warning log if multiple entitlements share the same `stripeSubscriptionId` (data integrity check)
+
+**2. Hardened purchase-status repair logic (`GET /api/customer/purchase-status`)**
+
+- **Before:** Would repair orphaned entitlements for any authenticated customer with matching session
+- **After:** Requires explicit ownership verification before repair:
+  - `session.metadata.customerId` must match authenticated customer ID, OR
+  - Session's Stripe customer ID must match customer's stored `stripeCustomerId`
+- If ownership cannot be verified, repair is blocked with warning log
+- If entitlement belongs to a different customer, returns 403 instead of silently continuing
+- New env var `ENABLE_PURCHASE_REPAIR` (default: `true`) can disable repair entirely
+
+**3. Cleaned up verbose debug logging**
+
+- Removed per-request entitlement fetch logs
+- Removed raw metadata JSON dump
+- Removed verbose customer lookup cascade logs
+- Removed post-creation verification query
+- Kept essential logs: session processed, entitlement created, errors/warnings
+
+### 📁 Files Changed
+
+```
+backend/src/api/customer/controllers/customer.js  - Entitlement dedupe fix
+backend/src/api/custom/controllers/custom.js      - Purchase-status repair hardening
+backend/src/utils/stripe-webhook-handler.js       - Log cleanup, email case-insensitive fix
+```
+
+### 🔧 New Environment Variable
+
+| Variable                 | Default | Description                                                                         |
+| ------------------------ | ------- | ----------------------------------------------------------------------------------- |
+| `ENABLE_PURCHASE_REPAIR` | `true`  | Set to `"false"` to disable auto-repair of orphaned entitlements in purchase-status |
+
+### 🧪 Verification
+
+```bash
+# Verify no "Filtering duplicate" logs for same-tier entitlements
+rg -n "Filtering duplicate" backend/src
+# Should return no matches
+
+# Verify warning log for duplicate stripeSubscriptionIds exists
+rg -n "WARNING.*share stripeSubscriptionId" backend/src
+# Should return 1 match in customer.js
+```
+
+### `git diff --stat`
+
+```
+backend/src/api/custom/controllers/custom.js     |   49 +-
+backend/src/api/customer/controllers/customer.js |   28 +-
+backend/src/utils/stripe-webhook-handler.js      |   44 +-
+```
+
+---
+
 ## Changelog (2026-01-23 Stage 6A API Hardening)
 
 ### 🎯 Purpose
@@ -262,14 +439,14 @@ Final proof pass confirming API response standard implementation, smoke test val
 
 ### ✅ Results
 
-| Check                                           | Result       |
-| ----------------------------------------------- | ------------ |
-| Backend unit tests                              | 6/6 passed   |
-| Smoke tests (25 total)                          | 25/25 passed |
-| `success: true` drift in API                    | Fixed → None |
-| Legacy endpoints thin (no DB)                   | Confirmed    |
-| Old response patterns in docs                   | All updated  |
-| Doc expiry field consistency                    | Fixed        |
+| Check                         | Result       |
+| ----------------------------- | ------------ |
+| Backend unit tests            | 6/6 passed   |
+| Smoke tests (25 total)        | 25/25 passed |
+| `success: true` drift in API  | Fixed → None |
+| Legacy endpoints thin (no DB) | Confirmed    |
+| Old response patterns in docs | All updated  |
+| Doc expiry field consistency  | Fixed        |
 
 ### 🔧 Fixes Applied
 

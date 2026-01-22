@@ -883,19 +883,23 @@ module.exports = {
       }
 
       // ============================================================
-      // Step 2: Verify session belongs to this customer
+      // Step 2: Verify session belongs to this customer (strong identifiers only)
       // ============================================================
       if (stripeSession) {
-        const sessionCustomerId = stripeSession.customer?.id || stripeSession.customer;
-        const sessionEmail = stripeSession.customer_email || stripeSession.customer_details?.email;
+        const sessionStripeCustomerId = stripeSession.customer?.id || stripeSession.customer;
+        const metadataCustomerId = stripeSession.metadata?.customerId;
 
-        // Match by stripeCustomerId or email
+        // SECURITY: Only accept strong identifiers - no email fallback
+        // 1. metadata.customerId (authoritative - set during checkout)
+        // 2. stripeCustomerId match (fallback for existing Stripe customers)
         const isOwner = 
-          (customer.stripeCustomerId && customer.stripeCustomerId === sessionCustomerId) ||
-          (customer.email && sessionEmail && customer.email.toLowerCase() === sessionEmail.toLowerCase());
+          (metadataCustomerId && String(metadataCustomerId) === String(customerId)) ||
+          (sessionStripeCustomerId && customer.stripeCustomerId && sessionStripeCustomerId === customer.stripeCustomerId);
 
         if (!isOwner) {
-          console.warn(`[PurchaseStatus] Session ${sessionId} does not belong to customer ${customerId}`);
+          console.warn(`[PurchaseStatus] Ownership check failed for session ${sessionId}: ` +
+            `metadata.customerId=${metadataCustomerId || "none"}, authCustomerId=${customerId}, ` +
+            `sessionStripeId=${sessionStripeCustomerId || "none"}, customerStripeId=${customer.stripeCustomerId || "none"}`);
           ctx.status = 403;
           ctx.body = { error: "Access denied" };
           return;
@@ -939,14 +943,59 @@ module.exports = {
                 { isArchived: false },
               ],
             },
-            populate: ["licenseKey"],
+            populate: ["licenseKey", "customer"],
           }
         );
 
         const matchingEntitlement = entitlements[0] || null;
 
         if (matchingEntitlement) {
-          console.log(`[PurchaseStatus] Subscription complete: entitlement ${matchingEntitlement.id}, tier=${matchingEntitlement.tier}, isLifetime=${matchingEntitlement.isLifetime}, subscriptionId=${subscriptionId}`);
+          console.log(`[PurchaseStatus] Subscription complete: entitlement ${matchingEntitlement.id}, tier=${matchingEntitlement.tier}, subscriptionId=${subscriptionId}`);
+          
+          // Verify entitlement is linked to the authenticated customer
+          const entitlementCustomerId = matchingEntitlement.customer?.id || matchingEntitlement.customer;
+          
+          // REPAIR LOGIC: Link orphaned entitlement to customer IF ownership is proven
+          // This handles cases where the webhook failed to associate the customer
+          // Gated behind ENABLE_PURCHASE_REPAIR env var for safety (default: enabled)
+          const repairEnabled = process.env.ENABLE_PURCHASE_REPAIR !== "false";
+          
+          if (!entitlementCustomerId && repairEnabled) {
+            // Strict ownership verification before repair:
+            // 1. session.metadata.customerId must match authenticated customer id, OR
+            // 2. Stripe customer from session must match customer's stored stripeCustomerId
+            const metadataCustomerId = stripeSession.metadata?.customerId;
+            const sessionStripeCustomerId = stripeSession.customer?.id || stripeSession.customer;
+            
+            const ownershipProven = 
+              (metadataCustomerId && String(metadataCustomerId) === String(customerId)) ||
+              (sessionStripeCustomerId && customer.stripeCustomerId && sessionStripeCustomerId === customer.stripeCustomerId);
+            
+            if (ownershipProven) {
+              console.log(`[PurchaseStatus] REPAIR: Linking orphaned entitlement ${matchingEntitlement.id} to customer ${customerId} (ownership verified)`);
+              try {
+                await strapi.entityService.update(
+                  "api::entitlement.entitlement",
+                  matchingEntitlement.id,
+                  { data: { customer: customerId } }
+                );
+                console.log(`[PurchaseStatus] REPAIR SUCCESS: Entitlement ${matchingEntitlement.id} now linked to customer ${customerId}`);
+              } catch (repairErr) {
+                console.error(`[PurchaseStatus] REPAIR FAILED: Could not link entitlement ${matchingEntitlement.id}:`, repairErr.message);
+              }
+            } else {
+              // Ownership cannot be verified - do NOT repair
+              console.warn(`[PurchaseStatus] REPAIR BLOCKED: Cannot verify ownership for entitlement ${matchingEntitlement.id}. ` +
+                `metadataCustomerId=${metadataCustomerId}, authCustomerId=${customerId}, ` +
+                `sessionStripeId=${sessionStripeCustomerId}, customerStripeId=${customer.stripeCustomerId || "none"}`);
+            }
+          } else if (entitlementCustomerId && entitlementCustomerId !== customerId) {
+            // Different customer - this is a security concern, log and return 403
+            console.error(`[PurchaseStatus] SECURITY: Entitlement ${matchingEntitlement.id} belongs to customer ${entitlementCustomerId}, not authenticated customer ${customerId}.`);
+            ctx.status = 403;
+            ctx.body = { error: "Access denied" };
+            return;
+          }
           
           // Build display labels based on entitlement flags (NOT tier)
           // IMPORTANT: Pro/Maker does NOT imply lifetime - only isLifetime flag does

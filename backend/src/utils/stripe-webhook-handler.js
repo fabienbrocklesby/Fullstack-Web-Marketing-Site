@@ -139,16 +139,19 @@ async function findCustomerByStripeId(stripeCustomerId) {
 }
 
 /**
- * Find Strapi customer by email
+ * Find Strapi customer by email (case-insensitive)
  * @param {string} email
  * @returns {Promise<object|null>}
  */
 async function findCustomerByEmail(email) {
   if (!email) return null;
 
+  // Normalize email to lowercase for case-insensitive matching
+  // This matches how customer registration stores emails
+  const normalizedEmail = email.toLowerCase();
   const customers = await strapi.entityService.findMany(
     "api::customer.customer",
-    { filters: { email } }
+    { filters: { email: normalizedEmail } }
   );
   return customers[0] || null;
 }
@@ -341,13 +344,24 @@ async function handleCheckoutSessionCompleted(session) {
 
   // Get metadata we passed when creating the session
   const metadata = session.metadata || {};
-  const strapiCustomerId = metadata.customerId ? parseInt(metadata.customerId, 10) : null;
+  
+  // Parse strapiCustomerId with explicit NaN handling
+  let strapiCustomerId = null;
+  if (metadata.customerId) {
+    const parsed = parseInt(metadata.customerId, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      strapiCustomerId = parsed;
+    } else {
+      strapi.log.warn(`[Webhook] Invalid customerId in metadata: "${metadata.customerId}"`);
+    }
+  }
+  
   const affiliateCode = metadata.affiliateCode;
   const tier = metadata.tier || getTierFromPriceId(metadata.priceId);
 
   strapi.log.info(
     `[Webhook] checkout.session.completed: sessionId=${sessionId}, mode=${mode}, tier=${tier}, ` +
-    `email=${customerEmail}, strapiCustomerId=${strapiCustomerId}, subscriptionId=${subscriptionId || "none"}`
+    `email=${customerEmail}, customerId=${strapiCustomerId || "none"}, subscriptionId=${subscriptionId || "none"}`
   );
 
   // Check if purchase already exists (idempotency at purchase level)
@@ -361,7 +375,7 @@ async function handleCheckoutSessionCompleted(session) {
     return { alreadyProcessed: true, purchaseId: existingPurchases[0].id };
   }
 
-  // Find or identify customer
+  // Find or identify customer via cascade: strapiCustomerId → stripeCustomerId → email
   let customer = null;
   if (strapiCustomerId) {
     customer = await strapi.entityService.findOne(
@@ -377,9 +391,10 @@ async function handleCheckoutSessionCompleted(session) {
   }
 
   if (!customer) {
-    strapi.log.warn(
-      `[Webhook] No customer found for session ${sessionId}. ` +
-        `Email: ${customerEmail}, StripeCustomerId: ${stripeCustomerId}`
+    strapi.log.error(
+      `[Webhook] CRITICAL: No customer found for session ${sessionId}. ` +
+        `strapiCustomerId=${strapiCustomerId}, stripeCustomerId=${stripeCustomerId}, email=${customerEmail}. ` +
+        `Entitlement will be orphaned!`
     );
     // We still create the purchase but without customer link
   }
@@ -412,11 +427,17 @@ async function handleCheckoutSessionCompleted(session) {
   const commissionAmount = affiliate ? (amount / 100) * commissionRate : 0;
 
   // Determine if this is a founders purchase (lifetime)
+  // NOTE: For subscriptions, we trust metadata.tier from the checkout session
+  // since it was explicitly set. tierMapping is only used for isLifetime and maxDevices.
   const tierMapping = determineEntitlementTier({
     priceId: priceId || `price_${tier}`,
     amount: amount / 100,
     createdAt: new Date(),
   });
+
+  // Use metadata tier when available (subscription checkout sets this explicitly)
+  // Fall back to tierMapping.tier for legacy one-time purchases
+  const finalTier = tier || tierMapping.tier;
 
   // For subscriptions, fetch subscription object to get period details
   let subscriptionDetails = null;
@@ -500,7 +521,7 @@ async function handleCheckoutSessionCompleted(session) {
         customer: customer?.id || null,
         licenseKey: licenseKeyRecord.id,
         purchase: purchase.id,
-        tier: tierMapping.tier,
+        tier: finalTier,
         status: "active",
         isLifetime: isSubscription ? false : tierMapping.isLifetime,
         expiresAt: null,
@@ -523,9 +544,8 @@ async function handleCheckoutSessionCompleted(session) {
   );
 
   strapi.log.info(
-    `[Webhook] Created entitlement ${entitlement.id}, tier=${tierMapping.tier}, ` +
-      `lifetime=${entitlement.isLifetime}, source=${entitlement.source}` +
-      (isSubscription ? `, subscription=${subscriptionId}` : "")
+    `[Webhook] Created entitlement ${entitlement.id}: tier=${finalTier}, customer=${customer?.id || "NULL"}, ` +
+      `lifetime=${entitlement.isLifetime}` + (isSubscription ? `, subscription=${subscriptionId}` : "")
   );
 
   // Update affiliate earnings
