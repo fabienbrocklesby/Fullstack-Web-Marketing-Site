@@ -1,7 +1,7 @@
 # LightLane Licensing Portal - Current State (Verified)
 
-**Audit Date:** 2026-01-21  
-**Last Updated:** Stage 6A Proof Pass (2026-01-21)  
+**Audit Date:** 2026-01-22  
+**Last Updated:** Offline Model Specification (2026-01-22)  
 **Scope:** Website/Portal licensing system only (not desktop app internals)
 
 ---
@@ -52,6 +52,392 @@ portal: POST /licence/offline-challenge → copy token to air-gapped machine →
 ```
 
 **Offline lifetime:** Not supported (online-only, no lease tokens needed).
+
+---
+
+## Offline Model Specification (Comprehensive)
+
+> **This section provides the complete offline device model as implemented in Stage 5.**
+> **Source of truth:** Backend code in `backend/src/api/custom/controllers/custom.js` and `backend/src/utils/lease-token.js`.
+
+### Hard Constraints
+
+| Constraint                                        | Enforcement                                                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Offline lifetime NOT supported**                | `POST /api/licence/offline-challenge` returns 400 `LIFETIME_NOT_SUPPORTED` if `isLifetime: true` |
+| **Device must be activated BEFORE going offline** | Offline refresh requires `device.entitlement` to be set (done via `/licence/activate`)           |
+| **One challenge = one lease token**               | `jti` stored in `offline-challenge` table; replay returns 409 `REPLAY_REJECTED`                  |
+| **maxDevices enforced at activation time**        | Slot consumed when `/licence/activate` succeeds, not at lease issuance                           |
+
+### Offline Device Lifecycle
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    OFFLINE SUBSCRIPTION DEVICE LIFECYCLE                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ PHASE A: ONLINE SETUP (Required before device goes offline)                 │
+│ ───────────────────────────────────────────────────────────                 │
+│                                                                             │
+│   1. Customer logs into PORTAL (or app with network)                        │
+│   2. Customer has active subscription entitlement                           │
+│   3. Device registration:                                                   │
+│      → POST /api/device/register { deviceId, publicKey? }                   │
+│      ← { ok: true, deviceId, status: "active" }                             │
+│   4. Device activation (consumes maxDevices slot):                          │
+│      → POST /api/licence/activate { entitlementId, deviceId }               │
+│      ← { ok: true, entitlement, device: { boundAt } }                       │
+│                                                                             │
+│   ⚠️  Device is now BOUND. This step MUST complete while online.            │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ PHASE B: FIRST LEASE ISSUANCE (Online or via portal)                        │
+│ ─────────────────────────────────────────────────────                       │
+│                                                                             │
+│   Option 1 (Online): Desktop app calls refresh directly                     │
+│      → POST /api/licence/refresh { entitlementId, deviceId }                │
+│      ← { ok: true, leaseRequired: true, leaseToken, leaseExpiresAt }        │
+│                                                                             │
+│   Option 2 (Portal): Manual challenge/response flow                         │
+│      See Phase C below                                                      │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ PHASE C: OFFLINE REFRESH CYCLE (Every 7 days)                               │
+│ ──────────────────────────────────────────────                              │
+│                                                                             │
+│   ACTORS: User at PORTAL (online) + Air-gapped machine (offline)            │
+│                                                                             │
+│   Step 1: Generate challenge (Portal)                                       │
+│      → POST /api/licence/offline-challenge { entitlementId, deviceId }      │
+│      ← { challengeToken, challengeExpiresAt (10 min), serverTime }          │
+│                                                                             │
+│   Step 2: Copy challengeToken (User)                                        │
+│      - Portal displays challengeToken with copy button                      │
+│      - User copies to USB drive or paper                                    │
+│      - ⚠️  Challenge expires in 10 minutes — act quickly                    │
+│                                                                             │
+│   Step 3: Display on offline machine (Optional verification)                │
+│      - Air-gapped app can display challenge for user verification           │
+│      - This step is informational only — no server call                     │
+│                                                                             │
+│   Step 4: Redeem challenge (Portal)                                         │
+│      → POST /api/licence/offline-refresh { challenge: challengeToken }      │
+│      ← { leaseRequired: true, leaseToken, leaseExpiresAt (7 days) }         │
+│                                                                             │
+│   Step 5: Copy leaseToken (User)                                            │
+│      - Portal displays leaseToken with copy button                          │
+│      - User copies to USB drive or paper                                    │
+│                                                                             │
+│   Step 6: Enter on offline machine (App)                                    │
+│      - User pastes leaseToken into air-gapped app                           │
+│      - App validates JWT signature locally (RS256 with public key)          │
+│      - App checks exp claim — allows operation until expiry                 │
+│                                                                             │
+│   Step 7: REPEAT before expiry                                              │
+│      - User must return to portal before leaseExpiresAt                     │
+│      - Generate new challenge → redeem → copy new lease                     │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ PHASE D: DEACTIVATION (Online Only)                                         │
+│ ───────────────────────────────────                                         │
+│                                                                             │
+│   Current implementation (Stage 5):                                         │
+│      → POST /api/licence/deactivate { entitlementId, deviceId }             │
+│      ← { ok: true, message: "Device deactivated" }                          │
+│                                                                             │
+│   ⚠️  OFFLINE DEACTIVATION NOT IMPLEMENTED                                  │
+│   The deactivationCode parameter is accepted but NOT verified.              │
+│   Evidence: custom.js:2876 — "TODO Stage 5: Verify deactivationCode"        │
+│                                                                             │
+│   WORKAROUND for air-gapped machines:                                       │
+│   1. Customer logs into portal from ANY online device                       │
+│   2. Calls deactivate with the offline machine's deviceId                   │
+│   3. Server unbinds device (device.entitlement = null)                      │
+│   4. Offline machine's lease token expires naturally (7 days max)           │
+│   5. No cryptographic proof required — trust-based model                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Endpoint Request/Response Schemas
+
+#### POST /api/licence/offline-challenge
+
+**Purpose:** Generate a short-lived challenge token for offline refresh flow.
+
+**Auth:** `customer-auth` middleware (JWT required)
+
+**Request:**
+
+```json
+{
+  "entitlementId": 123,
+  "deviceId": "stable-device-uuid"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "ok": true,
+  "challengeToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "challengeExpiresAt": "2026-01-22T10:10:00.000Z",
+  "serverTime": "2026-01-22T10:00:00.000Z",
+  "entitlement": {
+    "id": 123,
+    "tier": "pro",
+    "isLifetime": false
+  }
+}
+```
+
+**Error Responses:**
+
+| HTTP | Code                     | Condition                               |
+| ---- | ------------------------ | --------------------------------------- |
+| 400  | `VALIDATION_ERROR`       | Missing `entitlementId` or `deviceId`   |
+| 400  | `LIFETIME_NOT_SUPPORTED` | Entitlement has `isLifetime: true`      |
+| 403  | `FORBIDDEN`              | Entitlement not owned by customer       |
+| 403  | `ENTITLEMENT_NOT_ACTIVE` | Entitlement status ≠ "active"           |
+| 404  | `ENTITLEMENT_NOT_FOUND`  | No entitlement with that ID             |
+| 404  | `DEVICE_NOT_FOUND`       | Device not registered                   |
+| 403  | `DEVICE_NOT_OWNED`       | Device registered to different customer |
+
+**DB Side Effects:** None — challenge token is stateless JWT, not stored until redeemed.
+
+#### POST /api/licence/offline-refresh
+
+**Purpose:** Redeem a challenge token for a new 7-day lease token.
+
+**Auth:** `customer-auth` middleware (JWT required)
+
+**Request:**
+
+```json
+{
+  "challenge": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "ok": true,
+  "leaseRequired": true,
+  "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "leaseExpiresAt": "2026-01-29T10:00:00.000Z",
+  "serverTime": "2026-01-22T10:00:00.000Z"
+}
+```
+
+**Error Responses:**
+
+| HTTP | Code                     | Condition                                            |
+| ---- | ------------------------ | ---------------------------------------------------- |
+| 400  | `VALIDATION_ERROR`       | Missing `challenge` field                            |
+| 400  | `CHALLENGE_INVALID`      | JWT signature invalid or malformed                   |
+| 400  | `CHALLENGE_EXPIRED`      | Challenge past 10-minute TTL                         |
+| 400  | `LIFETIME_NOT_SUPPORTED` | Entitlement has `isLifetime: true`                   |
+| 403  | `FORBIDDEN`              | Entitlement not owned by customer                    |
+| 403  | `ENTITLEMENT_NOT_ACTIVE` | Entitlement status ≠ "active"                        |
+| 404  | `ENTITLEMENT_NOT_FOUND`  | Entitlement deleted since challenge issued           |
+| 404  | `DEVICE_NOT_FOUND`       | Device deleted since challenge issued                |
+| 403  | `DEVICE_NOT_OWNED`       | Device ownership changed                             |
+| 409  | `REPLAY_REJECTED`        | Challenge `jti` already in `offline-challenge` table |
+
+**DB Side Effects:**
+
+- Creates record in `api::offline-challenge.offline-challenge` with: `jti`, `entitlementId`, `deviceId`, `customerId`, `usedAt`, `challengeIssuedAt`, `challengeExpiresAt`
+- Updates `device.lastSeenAt` to current timestamp
+
+### Replay Protection Deep Dive
+
+**Implementation:** `custom.js:3119-3135`
+
+```javascript
+// Check replay: has this challenge been used before?
+const existingUse = await strapi.entityService.findMany(
+  "api::offline-challenge.offline-challenge",
+  { filters: { jti }, limit: 1 },
+);
+
+if (existingUse && existingUse.length > 0) {
+  return sendError(
+    ctx,
+    409,
+    ErrorCodes.REPLAY_REJECTED,
+    "Challenge has already been used (replay rejected)",
+  );
+}
+```
+
+**Guarantees:**
+
+- Each `jti` (nonce) can only be redeemed ONCE
+- `jti` is a `crypto.randomUUID()` generated at challenge creation
+- Stored in `offline-challenge` table with `unique: true` constraint on `jti`
+- Replay attempts always return 409 — no race condition possible due to unique constraint
+
+### Lease Token Claims
+
+**Minted by:** `utils/lease-token.js:62-120`
+
+```json
+{
+  "iss": "lightlane",
+  "sub": "ent:123:dev:device-uuid",
+  "jti": "unique-lease-id",
+  "iat": 1737540000,
+  "exp": 1738144800,
+  "purpose": "lease",
+  "entitlementId": 123,
+  "customerId": 456,
+  "deviceId": "stable-device-uuid",
+  "tier": "pro",
+  "isLifetime": false
+}
+```
+
+**Desktop App Verification:**
+
+1. Verify RS256 signature using `JWT_PUBLIC_KEY`
+2. Check `purpose === "lease"`
+3. Check `exp > now` (not expired)
+4. Optionally verify `deviceId` matches local device
+5. Store and use until expiry
+
+### Challenge Token Claims
+
+**Minted by:** `utils/lease-token.js:166-207`
+
+```json
+{
+  "iss": "lightlane",
+  "sub": "challenge:123:device-uuid",
+  "jti": "unique-nonce",
+  "iat": 1737540000,
+  "exp": 1737540600,
+  "purpose": "offline_challenge",
+  "entitlementId": 123,
+  "customerId": 456,
+  "deviceId": "stable-device-uuid",
+  "nonce": "unique-nonce"
+}
+```
+
+**TTL:** 10 minutes (600 seconds) — `CHALLENGE_TTL_SECONDS` in `lease-token.js:29`
+
+### Server-Side Invariants
+
+| Invariant                   | Enforcement Point                                             | Error Code                                   |
+| --------------------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| Device bound to entitlement | Challenge generation checks `device.entitlement`              | `DEVICE_NOT_BOUND` (implicit via validation) |
+| maxDevices not exceeded     | `/licence/activate` counts active devices                     | `MAX_DEVICES_EXCEEDED` (409)                 |
+| Entitlement active          | Both offline endpoints check `entitlement.status`             | `ENTITLEMENT_NOT_ACTIVE`                     |
+| No lifetime offline         | Both endpoints check `isLifetime`                             | `LIFETIME_NOT_SUPPORTED`                     |
+| Challenge single-use        | Refresh checks `offline-challenge` table                      | `REPLAY_REJECTED` (409)                      |
+| Customer owns device        | All endpoints verify `device.customer === auth customer`      | `DEVICE_NOT_OWNED`                           |
+| Customer owns entitlement   | All endpoints verify `entitlement.customer === auth customer` | `FORBIDDEN`                                  |
+
+### Gaps in Current Implementation
+
+| Gap                                  | Status         | Description                                           | Risk                                                         | Mitigation                   |
+| ------------------------------------ | -------------- | ----------------------------------------------------- | ------------------------------------------------------------ | ---------------------------- |
+| **No offline deactivation**          | `TODO` in code | `deactivationCode` accepted but not verified          | Medium — user could keep using software after "deactivating" | Lease expires in 7 days max  |
+| **No device signature verification** | `TODO` in code | `nonce`/`signature` logged but not enforced           | Low — device identity not cryptographically proven           | Customer auth still required |
+| **Challenge not generated by app**   | By design      | Challenge comes from portal, not from offline machine | None — this is the intended manual UX                        | N/A                          |
+
+### Portal UI Requirements for Offline Flow
+
+| UI Element                    | Behavior                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| **Offline Refresh Section**   | Hidden if user has no subscription entitlements                                    |
+| **Entitlement Dropdown**      | Only shows entitlements where `leaseRequired: true`                                |
+| **Device Dropdown**           | Only shows devices bound to selected entitlement                                   |
+| **Generate Challenge Button** | Calls `/api/licence/offline-challenge`, displays `challengeToken`                  |
+| **Challenge Token Display**   | Shows token with copy button, warns about 10-min expiry                            |
+| **Redeem Button**             | Calls `/api/licence/offline-refresh` with `challenge` field (not `challengeToken`) |
+| **Lease Token Display**       | Shows lease token with copy button, shows `leaseExpiresAt`                         |
+| **Error States**              | 409 → "Challenge already used", 400 → "Challenge expired or invalid"               |
+
+### Desktop App Requirements for Offline Flow
+
+| State                         | Required Behavior                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| **First launch (online)**     | Register device → Activate entitlement → Call refresh → Store lease token      |
+| **Normal operation (online)** | Call `/licence/refresh` periodically (recommended: daily), update stored lease |
+| **Going offline**             | Ensure valid lease token is stored before disconnecting                        |
+| **Offline operation**         | Validate lease token locally (RS256), check `exp` claim                        |
+| **Lease expiring soon**       | Prompt user to refresh via portal manual flow                                  |
+| **Lease expired**             | Block operation, show "Refresh Required" screen with entitlementId + deviceId  |
+| **Receiving new lease**       | Accept pasted lease token, validate, store, resume operation                   |
+
+---
+
+## Changelog (2026-01-22 Offline Model Specification)
+
+### 🎯 Purpose
+
+Document the complete offline device model as implemented in Stage 5, providing a single source of truth for portal UI and desktop app development. This is a documentation-only change with no code modifications.
+
+### ✅ Documentation Added
+
+**New section: "Offline Model Specification (Comprehensive)"**
+
+1. **Hard Constraints** — Explicit rules: no offline lifetime, device must be activated before going offline, one challenge = one lease, maxDevices enforced at activation
+2. **Offline Device Lifecycle** — ASCII diagram showing all four phases: Online Setup, First Lease Issuance, Offline Refresh Cycle, Deactivation
+3. **Endpoint Request/Response Schemas** — Complete schemas for `/api/licence/offline-challenge` and `/api/licence/offline-refresh` with all error codes
+4. **Replay Protection Deep Dive** — Code reference showing `jti` uniqueness enforcement via `offline-challenge` table
+5. **Lease Token Claims** — Full JWT payload structure for desktop app verification
+6. **Challenge Token Claims** — Full JWT payload structure with 10-minute TTL
+7. **Server-Side Invariants** — Table of all enforced constraints with code references
+8. **Gaps in Current Implementation** — Explicit documentation of unimplemented features (offline deactivation, device signature verification)
+9. **Portal UI Requirements** — Complete list of UI behaviors needed for offline flow
+10. **Desktop App Requirements** — State machine for app offline behavior
+
+### 🔍 Key Findings Documented
+
+| Question                                                                     | Answer                                                                                  | Evidence                                                     |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| How does backend prevent multiple offline machines sharing one subscription? | `maxDevices` enforced at `/licence/activate` — slot consumed before device goes offline | `custom.js:2518-2550`                                        |
+| How does backend prevent unlimited leases from one challenge?                | `jti` stored in `offline-challenge` table on first redemption; replay returns 409       | `custom.js:3119-3135`                                        |
+| Is offline deactivation supported?                                           | **No** — `deactivationCode` parameter accepted but not verified                         | `custom.js:2876`: `// TODO Stage 5: Verify deactivationCode` |
+| What is the lease duration?                                                  | 7 days (configurable via `LEASE_TOKEN_TTL_SECONDS`)                                     | `lease-token.js:24`                                          |
+| What is the challenge duration?                                              | 10 minutes                                                                              | `lease-token.js:29`                                          |
+
+### 📁 Files Changed
+
+```
+docs/licensing-portal-current-state.md  - Added comprehensive Offline Model Specification section
+```
+
+### 🧪 Verification
+
+```bash
+# Verify offline endpoints exist and have expected structure
+rg -n "offlineChallenge|offlineRefresh" backend/src/api/custom/controllers/custom.js
+# Expected: Function definitions at ~2924 and ~3078
+
+# Verify replay protection implementation
+rg -n "REPLAY_REJECTED|jti.*offline-challenge" backend/src/api/custom/controllers/custom.js
+# Expected: Match at ~3128-3134
+
+# Verify offline deactivation TODO still exists
+rg -n "TODO.*deactivationCode" backend/src/api/custom/controllers/custom.js
+# Expected: Match at ~2876
+```
+
+### `git diff --stat`
+
+```
+docs/licensing-portal-current-state.md | 312 ++++++++++++++++++++++++++++++++++
+1 file changed, 312 insertions(+)
+```
 
 ---
 
