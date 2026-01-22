@@ -143,6 +143,42 @@ export interface OfflineRefreshResponse {
   message: string;
 }
 
+// === Offline Provision (Air-gapped) ===
+
+export interface OfflineProvisionRequest {
+  entitlementId: number;
+  deviceSetupCode: string;
+}
+
+export interface OfflineProvisionResponse {
+  ok: true;
+  activationPackage: string;
+  leaseExpiresAt: string;
+}
+
+// === Offline Lease Refresh (Air-gapped) ===
+
+export interface OfflineLeaseRefreshRequest {
+  requestCode: string;
+}
+
+export interface OfflineLeaseRefreshResponse {
+  ok: true;
+  refreshResponseCode: string;
+  leaseExpiresAt: string;
+}
+
+// === Offline Deactivate (Air-gapped) ===
+
+export interface OfflineDeactivateRequest {
+  deactivationCode: string;
+}
+
+export interface OfflineDeactivateResponse {
+  ok: true;
+  message: string;
+}
+
 // === Checkout ===
 
 export interface CheckoutSubscriptionRequest {

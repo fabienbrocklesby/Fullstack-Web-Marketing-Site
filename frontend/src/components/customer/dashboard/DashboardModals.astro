@@ -1,0 +1,295 @@
+---
+/**
+ * Dashboard Modals - Collection of modals used in the customer dashboard
+ *
+ * Includes:
+ * - Purchase Modal (subscribe to a plan)
+ * - Register Device Modal
+ * - Activate Device Modal
+ * - Deactivate Device Modal
+ * - Refresh Activation Modal
+ * - How to Activate Modal
+ */
+import DashboardIcon from "./DashboardIcon.astro";
+---
+
+<!-- Purchase Modal -->
+<dialog id="purchase-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">Subscribe to Lightlane</h3>
+    <form id="purchase-form" class="space-y-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text">Plan</span></label>
+        <select id="purchase-tier" class="select select-bordered w-full">
+          <option value="maker">Maker — $12/month</option>
+          <option value="pro" selected>Pro — $24/month</option>
+        </select>
+      </div>
+      <div id="purchase-error" class="alert alert-error hidden text-sm">
+        <span id="purchase-error-text"></span>
+      </div>
+      <button type="submit" class="btn btn-primary w-full">
+        <span id="purchase-btn-text">Continue to Checkout</span>
+        <span
+          id="purchase-btn-loading"
+          class="loading loading-spinner loading-sm hidden"></span>
+      </button>
+    </form>
+    <p class="text-xs text-base-content/50 mt-4">
+      For Enterprise or Education, <a href="/contact" class="link link-primary"
+        >contact us</a
+      >.
+    </p>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Register Device Modal -->
+<dialog id="register-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-2">Register Device</h3>
+    <p class="text-sm text-base-content/60 mb-4">
+      Register a machine to activate your license on it.
+    </p>
+    <form id="register-form" class="space-y-4">
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Device ID</span>
+          <span class="label-text-alt text-error">Required</span>
+        </label>
+        <input
+          type="text"
+          id="register-device-id"
+          class="input input-bordered w-full"
+          placeholder="e.g., factory-cnc-01"
+          required
+        />
+        <label class="label">
+          <span class="label-text-alt"
+            >Unique identifier (alphanumeric, dashes, underscores)</span
+          >
+        </label>
+      </div>
+      <div class="form-control">
+        <label class="label"
+          ><span class="label-text">Name (optional)</span></label
+        >
+        <input
+          type="text"
+          id="register-device-name"
+          class="input input-bordered w-full"
+          placeholder="My Workstation"
+        />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Platform</span></label>
+        <select
+          id="register-device-platform"
+          class="select select-bordered w-full"
+        >
+          <option value="">Unknown</option>
+          <option value="windows">Windows</option>
+          <option value="macos">macOS</option>
+          <option value="linux">Linux</option>
+          <option value="embedded">Embedded</option>
+        </select>
+      </div>
+      <div id="register-error" class="alert alert-error hidden text-sm">
+        <span id="register-error-text"></span>
+      </div>
+      <div class="modal-action">
+        <button type="submit" class="btn btn-primary">
+          <span id="register-btn-text">Register Device</span>
+          <span
+            id="register-btn-loading"
+            class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+        <form method="dialog"><button class="btn">Cancel</button></form>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Activate Device Modal -->
+<dialog id="activate-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-2">Activate Device</h3>
+    <p class="text-sm text-base-content/60 mb-4">
+      Link this device to an entitlement to use Lightlane on it.
+    </p>
+    <form id="activate-form" class="space-y-4">
+      <input type="hidden" id="activate-device-id" />
+      <div class="bg-base-200 rounded-lg p-3 text-sm">
+        <span class="text-base-content/60">Device:</span>
+        <span id="activate-device-name" class="font-medium ml-2"></span>
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Entitlement</span></label>
+        <select id="activate-entitlement" class="select select-bordered w-full">
+          <option value="">Select entitlement...</option>
+        </select>
+      </div>
+      <div id="activate-error" class="alert alert-error hidden text-sm">
+        <span id="activate-error-text"></span>
+      </div>
+      <div id="activate-success" class="alert alert-success hidden text-sm">
+        <span id="activate-success-text"></span>
+      </div>
+      <div class="modal-action">
+        <button type="submit" class="btn btn-primary">
+          <span id="activate-btn-text">Activate</span>
+          <span
+            id="activate-btn-loading"
+            class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+        <form method="dialog"><button class="btn">Close</button></form>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Deactivate Device Modal -->
+<dialog id="deactivate-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-2">Deactivate Device</h3>
+    <p class="text-sm text-base-content/60 mb-4">
+      This will unbind the entitlement from this device, freeing up a slot.
+    </p>
+    <form id="deactivate-form" class="space-y-4">
+      <input type="hidden" id="deactivate-device-id" />
+      <input type="hidden" id="deactivate-entitlement-id" />
+      <div class="bg-base-200 rounded-lg p-4 space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-base-content/60">Device:</span>
+          <span id="deactivate-device-name" class="font-medium"></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-base-content/60">Entitlement:</span>
+          <span id="deactivate-ent-name" class="font-medium"></span>
+        </div>
+      </div>
+      <div id="deactivate-error" class="alert alert-error hidden text-sm">
+        <span id="deactivate-error-text"></span>
+      </div>
+      <div class="modal-action">
+        <button type="submit" class="btn btn-error">
+          <span id="deactivate-btn-text">Deactivate</span>
+          <span
+            id="deactivate-btn-loading"
+            class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+        <form method="dialog"><button class="btn">Cancel</button></form>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Refresh Device Modal -->
+<dialog id="refresh-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-2">Refresh Activation</h3>
+    <p class="text-sm text-base-content/60 mb-4">
+      Manually trigger a heartbeat refresh for this device.
+    </p>
+    <form id="refresh-form" class="space-y-4">
+      <input type="hidden" id="refresh-device-id" />
+      <input type="hidden" id="refresh-entitlement-id" />
+      <div class="bg-base-200 rounded-lg p-4 space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-base-content/60">Device:</span>
+          <span id="refresh-device-name" class="font-medium"></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-base-content/60">Entitlement:</span>
+          <span id="refresh-ent-name" class="font-medium"></span>
+        </div>
+      </div>
+      <div id="refresh-error" class="alert alert-error hidden text-sm">
+        <span id="refresh-error-text"></span>
+      </div>
+      <div id="refresh-success" class="alert alert-success hidden text-sm">
+        <span id="refresh-success-text"></span>
+      </div>
+      <div class="modal-action">
+        <button type="submit" class="btn btn-primary">
+          <span id="refresh-btn-text">Refresh</span>
+          <span
+            id="refresh-btn-loading"
+            class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+        <form method="dialog"><button class="btn">Close</button></form>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- How to Activate Modal -->
+<dialog id="how-to-activate-modal" class="modal">
+  <div class="modal-box max-w-md">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+        >✕</button
+      >
+    </form>
+    <h3 class="font-bold text-lg mb-4">How to activate a plan</h3>
+    <p class="text-sm text-base-content/70 mb-4">
+      Activation happens in the <strong>Lightlane desktop app</strong>, not in
+      this portal. Follow these steps:
+    </p>
+    <ol class="space-y-3 mb-6">
+      <li class="flex items-start gap-3">
+        <span
+          class="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-content text-xs font-bold shrink-0"
+          >1</span
+        >
+        <div>
+          <span class="font-medium">Download the app</span>
+          <p class="text-xs text-base-content/60">
+            Install Lightlane on your computer
+          </p>
+        </div>
+      </li>
+      <li class="flex items-start gap-3">
+        <span
+          class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0"
+          >2</span
+        >
+        <div>
+          <span class="font-medium">Sign in</span>
+          <p class="text-xs text-base-content/60">
+            Use your account email in the app
+          </p>
+        </div>
+      </li>
+      <li class="flex items-start gap-3">
+        <span
+          class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0"
+          >3</span
+        >
+        <div>
+          <span class="font-medium">Choose a plan & activate</span>
+          <p class="text-xs text-base-content/60">
+            Select from your available subscriptions
+          </p>
+        </div>
+      </li>
+    </ol>
+    <div class="flex flex-col sm:flex-row gap-2">
+      <a href="/customer/download" class="btn btn-primary flex-1">
+        <DashboardIcon name="download" class="w-4 h-4 mr-1" />
+        Download app
+      </a>
+      <button id="hta-advanced-btn" class="btn btn-ghost flex-1">
+        Air-gapped activation →
+      </button>
+    </div>
+    <p class="text-xs text-base-content/50 mt-4 text-center">
+      Air-gapped machines can be activated via the Advanced tab.
+    </p>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>

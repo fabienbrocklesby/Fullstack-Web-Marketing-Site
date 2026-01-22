@@ -845,6 +845,295 @@ The portal supports:
 
 ## 10. Changelog
 
+### 2026-01-23: Badge Helper for TypeScript Modules + CSS Fix
+
+**Summary:** Extended badge consistency to TypeScript modules by creating a `badge.ts` helper, and fixed "hidden flex" CSS class contradictions in pagination components.
+
+**Changes:**
+
+1. **New `badge.ts` helper (`frontend/src/lib/customer/dashboard/badge.ts`):**
+   - `badge({ text, variant, size, outline })` — Returns badge HTML string
+   - `badges` object with shortcuts: `badges.success()`, `badges.warning()`, `badges.ghost()`, `badges.outlineSuccess()`, `badges.outlineInfo()`, etc.
+   - Mirrors `ResponsiveBadge.astro` safety classes for consistency
+
+2. **Updated TypeScript modules to use badge helper:**
+   - `plans.ts` — Status badges, device badges, type labels
+   - `devicesOverview.ts` — Device status badges
+   - `devicesTable.ts` — Status badges (already partially updated)
+
+3. **Fixed "hidden flex" CSS contradiction in pagination:**
+   - Issue: `hidden` and `flex` both set CSS `display` property, causing conflicts
+   - Solution: Separated into wrapper div (handles `hidden`) and inner div (handles `flex`)
+   - Applied to: `DevicesCard.astro`, `AdvancedDevicesTable.astro`, `PlansCard.astro`
+
+**Files touched:**
+
+- `frontend/src/lib/customer/dashboard/badge.ts` (new)
+- `frontend/src/lib/customer/dashboard/plans.ts`
+- `frontend/src/lib/customer/dashboard/devicesOverview.ts`
+- `frontend/src/lib/customer/dashboard/devicesTable.ts`
+- `frontend/src/components/customer/dashboard/DevicesCard.astro`
+- `frontend/src/components/customer/dashboard/AdvancedDevicesTable.astro`
+- `frontend/src/components/customer/dashboard/PlansCard.astro`
+
+**API/Backend impact:** None. UI consistency and CSS fixes only.
+
+**Tests/Scripts run:**
+
+- `npm run build` (frontend) — ✅ Success
+
+---
+
+### 2026-01-23: Dashboard Badge Responsiveness
+
+**Summary:** Fixed badge clipping issues on narrow viewports, especially in the Air-Gapped section header. Created a reusable `ResponsiveBadge` component and standardized badge behavior across customer dashboard components.
+
+**Changes:**
+
+1. **New `ResponsiveBadge` component (`frontend/src/components/customer/shared/ResponsiveBadge.astro`):**
+   - Reusable badge that never clips on narrow screens
+   - Props: `text` (string), `variant` (accent/success/warning/neutral/ghost/primary), `size` (xs/sm/md), `id`, `class`
+   - Built-in safety classes: `whitespace-nowrap`, `h-auto`, `py-0.5`, `leading-tight`, `max-w-full`, `shrink-0`
+
+2. **Air-Gapped section header layout fix:**
+   - Moved badge outside `<h2>` to be a sibling element
+   - Header container now uses `flex flex-wrap items-start justify-between gap-3`
+   - Badge cleanly wraps to next line on narrow viewports
+   - Added `overflow-x-auto` to tab container for small screens
+   - Warning alert uses lighter styling: `bg-warning/15 border border-warning/25`
+   - Section uses `space-y-5` for consistent vertical rhythm
+
+3. **Updated dashboard components to use ResponsiveBadge:**
+   - `HeroSection.astro` — Status pills ("Subscription active", "Activated")
+   - `PlansCard.astro` — Plans count badge
+   - `DevicesCard.astro` — Devices count badge
+   - `AirGappedSection.astro` — "Subscription Only" badge
+
+**Files touched:**
+
+- `frontend/src/components/customer/shared/ResponsiveBadge.astro` (new)
+- `frontend/src/components/customer/dashboard/AirGappedSection.astro`
+- `frontend/src/components/customer/dashboard/HeroSection.astro`
+- `frontend/src/components/customer/dashboard/PlansCard.astro`
+- `frontend/src/components/customer/dashboard/DevicesCard.astro`
+
+**API/Backend impact:** None. UI/styling changes only; no endpoint or logic changes.
+
+**Tests/Scripts run:**
+
+- `npm run build` (frontend) — ✅ Success
+
+**Files created/modified:**
+
+```
+frontend/src/components/customer/shared/ResponsiveBadge.astro   | 37 +++
+frontend/src/components/customer/dashboard/AirGappedSection.astro | ~15 +-
+frontend/src/components/customer/dashboard/HeroSection.astro      | ~10 +-
+frontend/src/components/customer/dashboard/PlansCard.astro        | ~5 +-
+frontend/src/components/customer/dashboard/DevicesCard.astro      | ~5 +-
+docs/licensing-portal-current-state.md                            | ~45 +
+```
+
+---
+
+### 2026-01-23: Dashboard Script Modularization
+
+**Summary:** Refactored the customer dashboard client-side JavaScript from a ~1,260-line inline script block into a clean, maintainable TypeScript module structure.
+
+**Changes:**
+
+1. **New module structure in `frontend/src/lib/customer/dashboard/`:**
+   - `index.ts` — Barrel exports for `initCustomerDashboard()`
+   - `init.ts` — Main orchestrator: initializes all modules, handles initial data load
+   - `state.ts` — Entitlements/devices arrays + pagination state with getters/setters
+   - `dom.ts` — DOM helpers: `byId`, `maybeById`, `setHidden`, `setText`, `setHTML`, `setDisabled`, `addClass`, `removeClass`, `toggleClass`
+   - `icons.ts` — Platform icon SVG generator
+   - `tabs.ts` — Tab switching, URL sync, `initTabs()`, `switchTab()`
+   - `checklist.ts` — LocalStorage persistence for activation checklist state
+   - `data.ts` — API data loading functions (`loadEntitlements`, `loadDevices`, `loadAllData`)
+   - `hero.ts` — Hero section state management (`updateHeroState`, `initHero`)
+   - `billing.ts` — Billing portal navigation
+   - `plans.ts` — Plans list rendering with pagination
+   - `devicesOverview.ts` — Devices overview card rendering with pagination
+   - `devicesTable.ts` — Advanced devices table with all action buttons
+   - `modals.ts` — All 6 modal handlers (purchase, register, activate, deactivate, refresh, how-to-activate)
+   - `airgapped.ts` — All air-gapped logic: tab switching, validation, file loaders, provision/refresh/deactivate handlers
+
+2. **Added missing TypeScript types to `frontend/src/lib/portal/types.ts`:**
+   - `OfflineProvisionResponse`
+   - `OfflineLeaseRefreshResponse`
+   - `OfflineDeactivateResponse`
+
+3. **Slimmed `dashboard.astro` from ~1,320 lines to 64 lines:**
+   - Markup unchanged (uses extracted Astro components from prior refactor)
+   - Script block reduced to single import + init call
+
+4. **Deleted legacy file:**
+   - Removed `frontend/src/pages/customer/success-old.astro` (no references found)
+
+**Architecture notes:**
+
+- Each module has an explicit `initX()` function — no code runs on import
+- State is centralized in `state.ts` with getters/setters; modules read state as needed
+- Module inter-dependencies handled via explicit setter functions (e.g., `setModalOpeners`) rather than circular imports
+- DOM elements are cached inside each module's `init()` function for performance
+
+**Files touched:**
+
+- `frontend/src/lib/customer/dashboard/*.ts` (14 new files)
+- `frontend/src/lib/portal/types.ts` (added 3 response types)
+- `frontend/src/pages/customer/dashboard.astro` (1,320→64 lines)
+- `frontend/src/pages/customer/success-old.astro` (deleted)
+
+**API/Backend impact:** None. Client-side refactor only; no endpoint changes.
+
+**Tests/Scripts run:**
+
+- `npm run build` (frontend) — ✅ Success
+
+---
+
+### 2026-01-23: Dashboard UX Improvements & Download Page
+
+**Summary:** Made the Overview dashboard "bulletproof" by ensuring every click gives feedback, Download buttons always work, activation steps are interactive with localStorage persistence, and users can always find instructions instantly.
+
+**Changes:**
+
+1. **New dedicated Download page (`/customer/download`):**
+   - Contains DownloadButtons component with macOS/Windows download links
+   - Platform-specific installation instructions (drag-to-Applications for Mac, run installer for Windows)
+   - Link back to dashboard and link to Advanced tab for air-gapped activation
+   - Uses PortalLayout for consistent authenticated experience
+
+2. **DownloadModal now works everywhere in portal:**
+   - Added `DownloadModal` import and trigger script to `PortalLayout.astro`
+   - `data-download-modal-trigger` buttons now function correctly on all portal pages
+   - Previously only worked on main site pages using `Layout.astro`
+
+3. **Tab switching with URL params and anchor scrolling:**
+   - `switchTab()` function now accepts optional `scrollToId` parameter
+   - Updates URL query params (`?tab=overview` or `?tab=advanced`)
+   - On page load, `initTabFromUrl()` reads query params and initializes correct tab
+   - Scrolls to target element with brief ring highlight animation
+   - "Need manual or air-gapped activation?" links now scroll to `#airgapped-section` in Advanced tab
+
+4. **"How to activate a plan" modal in Plans section:**
+   - New help button (`?`) in Plans header opens instruction modal
+   - 3-step activation guide: Sign in → Choose plan → Activate
+   - Download button links to new Download page
+   - "Advanced/Air-gapped" button switches to Advanced tab
+
+5. **Interactive activation checklists with localStorage:**
+   - Steps 2 and 3 in hero checklists (states 1 & 2) are now clickable toggle buttons
+   - Click toggles between numbered step (uncompleted) and checkmark (completed)
+   - Strikethrough text indicates completed steps
+   - State persists in localStorage (`ll_activation_checklist` key)
+   - Reset button clears checklist state
+   - Synced across both hero states (toggling in state 1 updates state 2 and vice versa)
+
+6. **Loading states for async buttons:**
+   - "Manage" subscription button now shows spinner during billing portal redirect
+   - "Refresh" data button shows spinner while reloading data
+   - Buttons disabled during async operations to prevent double-clicks
+
+**Files touched:**
+
+- `frontend/src/pages/customer/download.astro` (new file)
+- `frontend/src/layouts/PortalLayout.astro` (added DownloadModal + trigger)
+- `frontend/src/pages/customer/dashboard.astro` (multiple changes: tab URL params, how-to-activate modal, interactive checklists, loading states)
+
+**API/Backend impact:** None. These are UI-only changes; no endpoint contracts or schemas were modified.
+
+**Tests/Scripts run:**
+
+- `pnpm build` (frontend) — ✅ Success
+
+---
+
+### 2026-01-23: Checklist UX & Download Modal Footer Fix
+
+**Summary:** Improved activation checklist UX by making the entire step row clickable (not just the number badge), and fixed the Download modal footer to hide "Already purchased? Sign in..." when the user is already authenticated.
+
+**Changes:**
+
+1. **Activation checklist rows are now fully clickable:**
+   - Each toggleable step (2 & 3) is wrapped in a `<button>` element that spans both the number badge and text
+   - Hover shows pointer cursor and subtle background highlight (`hover:bg-base-200/60`)
+   - Clicking anywhere on the row toggles the step's checked/unchecked state
+   - Added `aria-pressed` attribute for accessibility
+   - Number badge span no longer has its own cursor/hover styles (parent button handles it)
+
+2. **Download modal hides "Already purchased?" footer when logged in:**
+   - Added `id="download-modal-signin-footer"` to the footer div
+   - Client-side script checks `localStorage.getItem("customerToken")`
+   - Footer is hidden (`classList.toggle("hidden", !!customerToken)`) when user is authenticated
+   - Footer remains visible for logged-out users (e.g., on marketing pages)
+   - Listens for `storage` events to handle login state changes in other tabs
+
+**Files touched:**
+
+- `frontend/src/components/DownloadModal.astro` (added ID, script for auth-aware footer visibility)
+- `frontend/src/pages/customer/dashboard.astro` (refactored checklist HTML and JS for full-row clickability)
+
+**API/Backend impact:** None. UI-only changes.
+
+**Tests/Scripts run:**
+
+- `pnpm build` (frontend) — ✅ Success
+
+**git diff --stat:**
+
+```
+docs/licensing-portal-current-state.md       |  98 +
+frontend/src/components/DownloadModal.astro  |  32 +-
+frontend/src/layouts/PortalLayout.astro      |  23 +
+frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
+4 files changed, 743 insertions(+), 107 deletions(-)
+```
+
+---
+
+### 2026-01-22: Customer Dashboard Hero Redesign & Vocabulary Clarification
+
+**Summary:** Redesigned the Overview dashboard hero section to clearly communicate the activation flow: Buy subscription → Download app → Sign in → Choose plan → Activate. Simplified from 4 hero states to 3, and replaced confusing "Not linked" vocabulary with clearer labels.
+
+**Changes:**
+
+- **Hero section redesigned with 3 clear states:**
+  - **State 1 (No subscriptions):** "Get a subscription to activate Lightlane" — Buy subscription primary CTA
+  - **State 2 (Has subscriptions, no activated devices):** "Activate your first device in the app" — Download app primary CTA (merged old "no-devices" and "not-activated" states)
+  - **State 3 (Has activated devices):** "You're activated" — Open Lightlane primary CTA with expandable instructions for adding another device
+
+- **Added activation checklist sidebar to each hero state:**
+  - Shows 3-step flow: Buy subscription → Download app → Sign in & activate
+  - Checklist items update based on current state (completed steps shown with checkmarks)
+  - Links to Advanced tab for manual/air-gapped activation
+
+- **Vocabulary improvements (removed "Not linked"):**
+  - Plans section: "Not linked" → "Available" (badge-info style)
+  - Plans section: "Linked to N devices" → "In use on N devices"
+  - Devices section (Overview): "Not linked" → "No plan active" (badge-warning style)
+  - Devices section (Overview): "Linked" → "Activated"
+  - Devices table (Advanced): "Not linked" → "No plan active" (badge-warning style)
+  - Devices table (Advanced): "Link" button → "Activate" button
+
+- **New hero button event handlers:**
+  - "Activate another device" toggle reveals expandable instructions panel
+  - "Buy another subscription" opens purchase modal
+  - "Need manual or air-gapped activation?" links switch to Advanced tab
+
+**Files touched:**
+
+- `frontend/src/pages/customer/dashboard.astro`
+
+**API/Backend impact:** None. This is a UI-only change; no endpoint contracts or schemas were modified.
+
+**Tests/Scripts run:**
+
+- `pnpm build` (frontend) — ✅ Success
+
+---
+
 ### 2026-01-22: Customer Dashboard UI Polish
 
 **Summary:** Improved spacing, typography, and DaisyUI component consistency across the customer dashboard, with particular focus on the air-gapped activation card.
@@ -934,6 +1223,37 @@ The portal supports:
 
 - `pnpm build` (frontend) — ✅ Success
 - `node --test tests/offline-codes.test.js` (backend) — ✅ 49/49 tests pass
+
+---
+
+### 2026-01-23: Dashboard Component Architecture Refactor
+
+**Summary:** Major refactor of the customer portal dashboard, splitting a 3,594-line monolithic file into modular, reusable components for better maintainability and scalability.
+
+**Changes:**
+
+- **New directory:** `frontend/src/components/customer/dashboard/` with 9 extracted components
+- **ActivationChecklist.astro:** Reusable 3-step checklist with configurable states (step1Complete, allComplete props)
+- **DashboardIcon.astro:** SVG icon library with 20+ icons for consistent iconography across the portal
+- **HeroSection.astro:** Three hero states (no-entitlements, no-activated, all-good) with embedded ActivationChecklist
+- **PlansCard.astro:** Plans summary card with pagination controls
+- **DevicesCard.astro:** Compact device overview with pagination
+- **AdvancedDevicesTable.astro:** Full device management table with pagination and action buttons
+- **AirGappedSection.astro:** Offline activation UI with 3 sub-tabs (provision, refresh, deactivate)
+- **DashboardModals.astro:** All 6 modals (purchase, register, activate, deactivate, refresh, how-to-activate)
+- **index.ts:** Barrel export for all dashboard components
+- **dashboard.astro:** Refactored to import components, now 1,319 lines (63% reduction), retains all client-side JavaScript logic
+
+**Files touched:**
+
+- `frontend/src/pages/customer/dashboard.astro` (refactored)
+- `frontend/src/components/customer/dashboard/` (new directory, 9 files)
+
+**API/Backend impact:** None. This is a frontend architecture change only; all behavior is preserved identically.
+
+**Tests/Scripts run:**
+
+- `pnpm build` (frontend) — ✅ Success
 
 ---
 

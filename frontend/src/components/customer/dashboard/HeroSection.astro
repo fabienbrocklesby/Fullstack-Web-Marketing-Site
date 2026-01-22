@@ -1,0 +1,134 @@
+---
+/**
+ * Dashboard Hero Section - Shows state-dependent "next action" hero
+ *
+ * Three states:
+ * 1. No subscriptions → Buy subscription CTA
+ * 2. Has subscriptions, no activated devices → Download & activate CTA
+ * 3. Has activated devices → You're activated, manage options
+ */
+import ActivationChecklist from "./ActivationChecklist.astro";
+import DashboardIcon from "./DashboardIcon.astro";
+import ResponsiveBadge from "../shared/ResponsiveBadge.astro";
+---
+
+<section id="next-action-hero" class="surface rounded-2xl p-6 md:p-8">
+  <!-- Loading state -->
+  <div id="hero-loading" class="flex items-center justify-center py-12">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+  </div>
+
+  <!-- Hero: No Subscriptions (State 1) -->
+  <div id="hero-no-entitlements" class="hidden">
+    <div class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+      <div class="flex-1">
+        <h1 class="text-2xl md:text-3xl font-bold mb-3 text-ll-gradient">
+          Get a subscription to activate Lightlane
+        </h1>
+        <p class="text-base-content/70 mb-6">
+          Subscribe to unlock professional laser engraving features. After
+          checkout, you'll activate directly in the app.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mb-6">
+          <button id="hero-buy-btn" class="btn btn-primary">
+            <DashboardIcon name="cart" class="w-5 h-5 mr-1" />
+            Buy subscription
+          </button>
+          <button class="btn btn-ghost" data-download-modal-trigger>
+            <DashboardIcon name="download" class="w-5 h-5 mr-1" />
+            Download app
+          </button>
+        </div>
+        <p class="text-sm text-base-content/60">
+          After you buy a plan, activate it in the app.
+        </p>
+      </div>
+      <ActivationChecklist suffix="1" step1Complete={false} />
+    </div>
+  </div>
+
+  <!-- Hero: Has Subscriptions, No Activated Devices (State 2) -->
+  <div id="hero-no-activated" class="hidden">
+    <div class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+      <div class="flex-1">
+        <div class="mb-3">
+          <ResponsiveBadge text="Subscription active" variant="success" />
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold mb-3 text-ll-gradient">
+          Activate your first device in the app
+        </h1>
+        <p class="text-base-content/70 mb-6">
+          Open Lightlane on your computer, sign in with your account, and choose
+          a subscription to activate.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mb-6">
+          <button class="btn btn-primary" data-download-modal-trigger>
+            <DashboardIcon name="download" class="w-5 h-5 mr-1" />
+            Download app
+          </button>
+          <a href="/pricing" class="btn btn-ghost">View plans</a>
+        </div>
+        <p class="text-sm text-base-content/60">
+          Sign in, choose a subscription, and activate.
+        </p>
+      </div>
+      <ActivationChecklist suffix="2" step1Complete={true} />
+    </div>
+  </div>
+
+  <!-- Hero: Has Activated Devices (State 3) -->
+  <div id="hero-all-good" class="hidden">
+    <div class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+      <div class="flex-1">
+        <div class="mb-3">
+          <ResponsiveBadge text="Activated" variant="success" />
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold mb-3 text-ll-gradient">
+          You're activated
+        </h1>
+        <p class="text-base-content/70 mb-6">
+          Your device is ready. Open Lightlane on your machine to start
+          engraving.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+          <button class="btn btn-primary" data-download-modal-trigger>
+            Open Lightlane
+          </button>
+          <button id="hero-add-device-btn" class="btn btn-ghost">
+            Activate another device
+          </button>
+        </div>
+        <!-- Expandable instructions for adding another device -->
+        <div
+          id="hero-add-device-info"
+          class="hidden mt-4 p-4 bg-base-200/50 rounded-lg"
+        >
+          <p class="text-sm text-base-content/70 mb-2">
+            <strong>To activate another device:</strong>
+          </p>
+          <ol
+            class="text-sm text-base-content/60 list-decimal list-inside space-y-1"
+          >
+            <li>Install Lightlane on the new device</li>
+            <li>Sign in with your account</li>
+            <li>Choose a subscription to activate</li>
+          </ol>
+          <div class="mt-3">
+            <button class="btn btn-sm btn-ghost" data-download-modal-trigger>
+              <DashboardIcon name="download" class="w-4 h-4 mr-1" />
+              Download app
+            </button>
+            <button id="hero-buy-another-btn" class="btn btn-sm btn-ghost">
+              Buy another subscription
+            </button>
+          </div>
+        </div>
+      </div>
+      <ActivationChecklist
+        suffix="3"
+        allComplete={true}
+        advancedLinkText="Air-gapped or manual tools →"
+      />
+    </div>
+  </div>
+</section>

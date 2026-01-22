@@ -20,7 +20,10 @@ import DownloadButtons from "./DownloadButtons.astro";
       </p>
     </div>
     <DownloadButtons align="center" />
-    <div class="text-xs text-base-content/60 text-center">
+    <div
+      id="download-modal-signin-footer"
+      class="text-xs text-base-content/60 text-center"
+    >
       Already purchased? <a href="/customer/login" class="link link-primary"
         >Sign in</a
       >
@@ -31,3 +34,30 @@ import DownloadButtons from "./DownloadButtons.astro";
     <button type="submit" aria-label="Close download modal">close</button>
   </form>
 </dialog>
+
+<script>
+  // Hide "Already purchased? Sign in..." footer when user is logged in
+  function updateDownloadModalFooter() {
+    const footer = document.getElementById("download-modal-signin-footer");
+    if (footer) {
+      const customerToken = localStorage.getItem("customerToken");
+      footer.classList.toggle("hidden", !!customerToken);
+    }
+  }
+
+  // Run on page load
+  updateDownloadModalFooter();
+
+  // Also run when modal opens (in case login state changed)
+  const downloadModal = document.getElementById(
+    "download-modal",
+  ) as HTMLDialogElement;
+  downloadModal?.addEventListener("show", updateDownloadModalFooter);
+
+  // Listen for storage changes (e.g., login in another tab)
+  window.addEventListener("storage", (e) => {
+    if (e.key === "customerToken") {
+      updateDownloadModalFooter();
+    }
+  });
+</script>

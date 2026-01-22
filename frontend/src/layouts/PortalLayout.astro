@@ -7,6 +7,7 @@
  * - User dropdown (Billing, Account, Logout)
  * - Mobile-friendly responsive design
  * - Auth guard (redirects to login if not authenticated)
+ * - Download modal for app downloads
  */
 
 export interface Props {
@@ -24,6 +25,7 @@ const {
 // @ts-ignore - Astro injects import.meta.env at build time
 import "../styles/app.css";
 import { STRAPI_URL } from "../config/strapi";
+import DownloadModal from "../components/DownloadModal.astro";
 
 const siteUrl = Astro.site?.href || "https://lightlane.app/";
 ---
@@ -190,15 +192,16 @@ const siteUrl = Astro.site?.href || "https://lightlane.app/";
           <button
             tabindex="0"
             role="button"
-            class="btn btn-ghost btn-circle avatar placeholder"
+            class="btn btn-ghost btn-circle"
             aria-label="User menu"
             id="portal-user-btn"
           >
-            <div
-              class="bg-primary text-primary-content rounded-full w-9 h-9 flex items-center justify-center text-sm font-semibold"
-              id="portal-user-initials"
-            >
-              ?
+            <div class="avatar avatar-placeholder">
+              <div class="bg-primary text-primary-content w-9 rounded-full">
+                <span class="text-sm font-semibold" id="portal-user-initials"
+                  >?</span
+                >
+              </div>
             </div>
           </button>
           <ul
@@ -332,7 +335,7 @@ const siteUrl = Astro.site?.href || "https://lightlane.app/";
                 body: JSON.stringify({ returnUrl: window.location.href }),
               },
             );
-            if (result.ok && result.url) {
+            if (result.url) {
               window.location.href = result.url;
             }
           } catch (err) {
@@ -354,6 +357,27 @@ const siteUrl = Astro.site?.href || "https://lightlane.app/";
 
       // Initialize
       updateUserUI();
+    </script>
+
+    <!-- Download Modal -->
+    <DownloadModal />
+
+    <!-- Download Modal Trigger Script -->
+    <script>
+      // Handle data-download-modal-trigger clicks
+      const downloadModal = document.getElementById(
+        "download-modal",
+      ) as HTMLDialogElement | null;
+      if (downloadModal) {
+        document.addEventListener("click", (e) => {
+          const target = e.target as HTMLElement;
+          const trigger = target.closest("[data-download-modal-trigger]");
+          if (trigger) {
+            e.preventDefault();
+            downloadModal.showModal();
+          }
+        });
+      }
     </script>
   </body>
 </html>
