@@ -845,6 +845,47 @@ The portal supports:
 
 ## 10. Changelog
 
+### 2026-01-23: App Integration Reference Document
+
+**Summary:** Created a comprehensive standalone markdown document (`docs/app-integration-reference.md`) that provides complete specifications for implementing LightLane licensing in the desktop app, including online activation, air-gapped (offline) activation, and all cryptographic requirements.
+
+**Changes:**
+
+1. **New documentation file: `docs/app-integration-reference.md`**
+   - Complete endpoint reference for all licensing API calls (app-required and portal-only)
+   - Full request/response JSON examples with exact field names and types
+   - All error codes with HTTP status and meaning
+   - Air-gapped activation system fully documented:
+     - Device setup code format (app → portal)
+     - Activation package format (portal → app)
+     - Lease refresh request/response code formats
+     - Deactivation code format
+     - Ed25519 signature message formats
+     - State machine for offline devices
+   - Configuration/environment requirements (app vs backend)
+   - Data persistence requirements
+   - Cryptographic operations (Ed25519 keypair, RS256 verification)
+
+**Files touched:**
+
+- `docs/app-integration-reference.md` (new file, ~800 lines)
+
+**API/Backend impact:** None. Documentation only; no code changes.
+
+**Tests/Scripts run:**
+
+- `npm run build` (frontend) — ✅ Success
+
+**git diff --stat:**
+
+```
+ docs/app-integration-reference.md           | 800 ++++++++++++++++++++++++++++
+ docs/licensing-portal-current-state.md      |  35 ++
+ 2 files changed, 835 insertions(+)
+```
+
+---
+
 ### 2026-01-23: Badge Helper for TypeScript Modules + CSS Fix
 
 **Summary:** Extended badge consistency to TypeScript modules by creating a `badge.ts` helper, and fixed "hidden flex" CSS class contradictions in pagination components.
@@ -1254,6 +1295,68 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 **Tests/Scripts run:**
 
 - `pnpm build` (frontend) — ✅ Success
+
+---
+
+### 2026-01-27: Fix Offline Provisioning Entitlement Dropdown Bug
+
+**Summary:** Fixed a bug where the "Provision Device" dropdown in the Air-Gapped Device Activation section showed no entitlements. The root cause was a timing issue: the entitlement dropdown was populated during `initAirgapped()`, but this was called BEFORE `loadAllData()` completed, so the state was empty. Additionally, API errors were silently swallowed into empty arrays, preventing proper error display.
+
+**Changes:**
+
+1. **Split dropdown initialization from rendering:**
+   - `initProvision()` now only sets up event listeners (no dropdown population)
+   - New `renderAirgappedProvision()` function populates the dropdown
+   - `renderAirgappedProvision()` is called after `loadAllData()` completes
+   - Also called in `reloadAll()` to refresh dropdown on data updates
+
+2. **Added error state tracking:**
+   - `state.ts`: Added `entitlementsError` and `devicesError` state variables
+   - `state.ts`: Added `getEntitlementsError()`, `setEntitlementsError()`, `getDevicesError()`, `setDevicesError()` functions
+   - `data.ts`: Now stores error messages when API calls fail (instead of silently returning `[]`)
+
+3. **UI error display for failed entitlement loading:**
+   - Added `#ag-prov-load-error` alert element in `AirGappedSection.astro`
+   - `renderAirgappedProvision()` shows error alert if API failed
+   - Dropdown is disabled and shows "Unable to load entitlements" when errors occur
+   - Initial dropdown placeholder changed from "Select subscription..." to "Loading entitlements..."
+
+4. **Improved subscription filtering logic:**
+   - Uses `isSubscriptionEntitlement()` helper (checks `leaseRequired === true`)
+   - Double-checks `isLifetime === false` to ensure lifetime/founders are excluded
+   - Comments clarify offline provisioning is subscription-only
+
+5. **Regression test added:**
+   - `docs/api/http/stage5/smoke-test.sh` now verifies:
+     - Entitlements array is non-empty (warns if seeded customer has none)
+     - `leaseRequired` field is present on entitlements (critical for offline provisioning)
+
+**Files touched:**
+
+- `frontend/src/lib/customer/dashboard/airgapped.ts` (split init/render, add error handling)
+- `frontend/src/lib/customer/dashboard/state.ts` (add error state)
+- `frontend/src/lib/customer/dashboard/data.ts` (track API errors)
+- `frontend/src/lib/customer/dashboard/init.ts` (call renderAirgappedProvision after data load)
+- `frontend/src/components/customer/dashboard/AirGappedSection.astro` (add error alert, loading placeholder)
+- `docs/api/http/stage5/smoke-test.sh` (add regression tests)
+
+**API/Backend impact:** None. Backend endpoint `/api/customers/me/entitlements` was working correctly; this was a frontend-only timing bug.
+
+**Tests/Scripts run:**
+
+- `pnpm -r lint` — ✅ 0 errors (warnings only, pre-existing)
+
+**git diff --stat:**
+
+```
+frontend/src/components/customer/dashboard/AirGappedSection.astro |  9 +++++--
+frontend/src/lib/customer/dashboard/airgapped.ts                  | 71 +++++++++++++++++++++++++++++++++++++++++++++++----------
+frontend/src/lib/customer/dashboard/data.ts                       | 14 ++++++-----
+frontend/src/lib/customer/dashboard/init.ts                       |  6 +++--
+frontend/src/lib/customer/dashboard/state.ts                      | 22 ++++++++++++++++++
+docs/api/http/stage5/smoke-test.sh                                | 22 ++++++++++++++++
+6 files changed, 121 insertions(+), 23 deletions(-)
+```
 
 ---
 

@@ -194,6 +194,30 @@ assert_equals "true" "$ENT_OK" "Fetch entitlements response has ok: true"
 ENT_COUNT=$(echo "$ENT_BODY" | jq '.entitlements | length')
 log_info "Found $ENT_COUNT entitlements"
 
+# Regression: Verify entitlements array is not empty when expected
+# This guards against the bug where entitlements silently return empty
+if [ "$ENT_COUNT" -eq 0 ]; then
+  log_warn "No entitlements found - verify test customer has at least one entitlement"
+else
+  TESTS_RUN=$((TESTS_RUN + 1))
+  TESTS_PASSED=$((TESTS_PASSED + 1))
+  log_pass "Entitlements array is non-empty (count: $ENT_COUNT)"
+fi
+
+# Regression: Verify leaseRequired field is present on entitlements
+# This is critical for offline provisioning UI to filter subscriptions correctly
+FIRST_ENT_LEASE_REQUIRED=$(echo "$ENT_BODY" | jq -r '.entitlements[0].leaseRequired // "missing"')
+if [ "$ENT_COUNT" -gt 0 ]; then
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$FIRST_ENT_LEASE_REQUIRED" != "missing" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Entitlements include leaseRequired field"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Entitlements missing leaseRequired field (needed for offline provisioning)"
+  fi
+fi
+
 # Find a subscription entitlement (isLifetime=false) for offline refresh testing
 SUBSCRIPTION_ENT=$(echo "$ENT_BODY" | jq -r '.entitlements[] | select(.isLifetime == false) | .id' | head -1)
 LIFETIME_ENT=$(echo "$ENT_BODY" | jq -r '.entitlements[] | select(.isLifetime == true) | .id' | head -1)

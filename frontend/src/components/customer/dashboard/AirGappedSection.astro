@@ -68,12 +68,18 @@ import ResponsiveBadge from "../shared/ResponsiveBadge.astro";
 
   <!-- Provision Panel -->
   <div id="ag-panel-provision" role="tabpanel" class="space-y-5 pt-1">
+    <!-- Load error alert (shown if entitlements API failed) -->
+    <div id="ag-prov-load-error" class="alert alert-error hidden">
+      <DashboardIcon name="error" class="w-5 h-5 shrink-0" />
+      <span id="ag-prov-load-error-text">Couldn't load entitlements. Please refresh the page.</span>
+    </div>
+
     <div class="form-control">
       <label class="label pb-1">
         <span class="label-text font-medium">Entitlement</span>
       </label>
       <select id="ag-prov-entitlement" class="select select-bordered w-full">
-        <option value="">Select subscription...</option>
+        <option value="">Loading entitlements...</option>
       </select>
     </div>
 

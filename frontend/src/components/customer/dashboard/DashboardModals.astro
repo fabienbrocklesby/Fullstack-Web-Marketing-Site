@@ -104,7 +104,11 @@ import DashboardIcon from "./DashboardIcon.astro";
             id="register-btn-loading"
             class="loading loading-spinner loading-sm hidden"></span>
         </button>
-        <form method="dialog"><button class="btn">Cancel</button></form>
+        <button
+          type="button"
+          class="btn"
+          onclick="this.closest('dialog').close()">Cancel</button
+        >
       </div>
     </form>
   </div>
@@ -143,7 +147,11 @@ import DashboardIcon from "./DashboardIcon.astro";
             id="activate-btn-loading"
             class="loading loading-spinner loading-sm hidden"></span>
         </button>
-        <form method="dialog"><button class="btn">Close</button></form>
+        <button
+          type="button"
+          class="btn"
+          onclick="this.closest('dialog').close()">Close</button
+        >
       </div>
     </form>
   </div>
@@ -180,7 +188,11 @@ import DashboardIcon from "./DashboardIcon.astro";
             id="deactivate-btn-loading"
             class="loading loading-spinner loading-sm hidden"></span>
         </button>
-        <form method="dialog"><button class="btn">Cancel</button></form>
+        <button
+          type="button"
+          class="btn"
+          onclick="this.closest('dialog').close()">Cancel</button
+        >
       </div>
     </form>
   </div>
@@ -220,7 +232,11 @@ import DashboardIcon from "./DashboardIcon.astro";
             id="refresh-btn-loading"
             class="loading loading-spinner loading-sm hidden"></span>
         </button>
-        <form method="dialog"><button class="btn">Close</button></form>
+        <button
+          type="button"
+          class="btn"
+          onclick="this.closest('dialog').close()">Close</button
+        >
       </div>
     </form>
   </div>

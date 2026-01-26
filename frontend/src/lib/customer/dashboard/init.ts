@@ -11,7 +11,7 @@ import { initPlans, renderPlans } from "./plans";
 import { initDevicesOverview, renderDevicesOverview } from "./devicesOverview";
 import { initDevicesTable, renderDevicesTable } from "./devicesTable";
 import { initModals, setReloadCallback } from "./modals";
-import { initAirgapped, setAirgapReloadCallback } from "./airgapped";
+import { initAirgapped, setAirgapReloadCallback, renderAirgappedProvision } from "./airgapped";
 
 /**
  * Reload all data and re-render all sections.
@@ -23,6 +23,7 @@ async function reloadAll(): Promise<void> {
   renderPlans();
   renderDevicesOverview();
   renderDevicesTable();
+  renderAirgappedProvision();
 }
 
 /**
@@ -76,6 +77,7 @@ export async function initCustomerDashboard(): Promise<void> {
   renderPlans();
   renderDevicesOverview();
   renderDevicesTable();
+  renderAirgappedProvision();
 
   // Sync tab state from URL
   initTabFromUrl();

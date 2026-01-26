@@ -10,6 +10,10 @@ import type { Entitlement, Device } from "../../portal/types";
 let entitlements: Entitlement[] = [];
 let devices: Device[] = [];
 
+// Error state - track if API calls failed
+let entitlementsError: string | null = null;
+let devicesError: string | null = null;
+
 export function getEntitlements(): Entitlement[] {
   return entitlements;
 }
@@ -18,12 +22,28 @@ export function setEntitlements(data: Entitlement[]): void {
   entitlements = data;
 }
 
+export function getEntitlementsError(): string | null {
+  return entitlementsError;
+}
+
+export function setEntitlementsError(error: string | null): void {
+  entitlementsError = error;
+}
+
 export function getDevices(): Device[] {
   return devices;
 }
 
 export function setDevices(data: Device[]): void {
   devices = data;
+}
+
+export function getDevicesError(): string | null {
+  return devicesError;
+}
+
+export function setDevicesError(error: string | null): void {
+  devicesError = error;
 }
 
 // ============================================================

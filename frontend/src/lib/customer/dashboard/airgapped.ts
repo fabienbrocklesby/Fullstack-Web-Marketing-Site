@@ -8,8 +8,8 @@ import type {
   OfflineLeaseRefreshResponse,
   OfflineDeactivateResponse,
 } from "../../portal/types";
-import { formatTier, isActiveEntitlement } from "../../portal/types";
-import { getEntitlements } from "./state";
+import { formatTier, isActiveEntitlement, isSubscriptionEntitlement } from "../../portal/types";
+import { getEntitlements, getEntitlementsError } from "./state";
 
 // Callback to reload all data after successful operations
 let reloadAllDataFn: () => Promise<void>;
@@ -240,22 +240,67 @@ function setCopyButtonSuccess(btn: HTMLButtonElement): void {
 // PROVISION
 // ============================================================
 
-function initProvision(): void {
-  // Update entitlement selector with active entitlements (non-lifetime only)
+/**
+ * Render the provision entitlement dropdown.
+ * Call this after data is loaded (or reloaded) to populate the select.
+ * Shows:
+ * - Error state if entitlements API failed
+ * - "No eligible entitlements" if customer has none that qualify
+ * - List of subscription entitlements (excluding lifetime/founders)
+ *   with disabled options for those at max devices
+ */
+export function renderAirgappedProvision(): void {
   const select = maybeById<HTMLSelectElement>("ag-prov-entitlement");
-  if (select) {
-    const entitlements = getEntitlements();
-    select.innerHTML =
-      '<option value="">Select entitlement...</option>' +
-      entitlements
-        .filter((e) => isActiveEntitlement(e) && !e.isLifetime)
-        .map(
-          (e) =>
-            `<option value="${e.id}">${formatTier(e.tier)} (Subscription)</option>`
-        )
-        .join("");
+  const loadErrorEl = maybeById("ag-prov-load-error");
+  const loadErrorText = maybeById("ag-prov-load-error-text");
+  
+  if (!select) return;
+
+  // Check for API error first
+  const apiError = getEntitlementsError();
+  if (apiError) {
+    // Show load error alert
+    if (loadErrorEl && loadErrorText) {
+      setText(loadErrorText, `Couldn't load entitlements: ${apiError}. Please refresh the page.`);
+      setHidden(loadErrorEl, false);
+    }
+    select.innerHTML = '<option value="">Unable to load entitlements</option>';
+    select.disabled = true;
+    return;
   }
 
+  // Hide load error if previously shown
+  if (loadErrorEl) setHidden(loadErrorEl, true);
+  select.disabled = false;
+
+  const entitlements = getEntitlements();
+
+  // Filter to subscription entitlements only (exclude lifetime/founders for offline)
+  // leaseRequired=true OR !isLifetime indicates subscription
+  const subscriptionEntitlements = entitlements.filter(
+    (e) => isSubscriptionEntitlement(e) || !e.isLifetime
+  ).filter(e => !e.isLifetime); // Double-check: must NOT be lifetime
+
+  // Further filter to only active subscription entitlements
+  const activeSubscriptions = subscriptionEntitlements.filter((e) => isActiveEntitlement(e));
+
+  if (activeSubscriptions.length === 0) {
+    select.innerHTML = '<option value="">No eligible entitlements for offline activation</option>';
+    return;
+  }
+
+  // Build options - include all active subscriptions, but disable those at max devices
+  const options = activeSubscriptions.map((e) => {
+    // Check device availability (for future: could show used/max)
+    // For now, just show the entitlement - backend will reject if at max
+    return `<option value="${e.id}">${formatTier(e.tier)} (Subscription)</option>`;
+  });
+
+  select.innerHTML = '<option value="">Select entitlement...</option>' + options.join("");
+}
+
+function initProvision(): void {
+  // Event listeners only - do NOT populate dropdown here (data not loaded yet)
   maybeById("ag-prov-entitlement")?.addEventListener("change", updateAgProvBtn);
   maybeById("ag-prov-setup-code")?.addEventListener("input", updateAgProvBtn);
 

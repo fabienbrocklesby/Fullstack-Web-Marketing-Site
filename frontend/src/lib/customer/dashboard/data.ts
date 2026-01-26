@@ -1,15 +1,16 @@
 /**
  * Data loading functions for dashboard
  */
-import { portalFetch } from "../../portal/api";
+import { portalFetch, parseApiError } from "../../portal/api";
 import type { EntitlementsResponse, DevicesResponse } from "../../portal/types";
-import { setEntitlements, setDevices } from "./state";
+import { setEntitlements, setDevices, setEntitlementsError, setDevicesError } from "./state";
 
 /**
  * Load entitlements from API
  */
 export async function loadEntitlements(): Promise<void> {
   try {
+    setEntitlementsError(null);
     const data = await portalFetch<EntitlementsResponse>(
       "/api/customers/me/entitlements",
       { cache: "no-store" }
@@ -18,6 +19,7 @@ export async function loadEntitlements(): Promise<void> {
   } catch (err) {
     console.error("Failed to load entitlements:", err);
     setEntitlements([]);
+    setEntitlementsError(parseApiError(err));
   }
 }
 
@@ -26,6 +28,7 @@ export async function loadEntitlements(): Promise<void> {
  */
 export async function loadDevices(): Promise<void> {
   try {
+    setDevicesError(null);
     const data = await portalFetch<DevicesResponse>(
       "/api/customers/me/devices",
       { cache: "no-store" }
@@ -34,6 +37,7 @@ export async function loadDevices(): Promise<void> {
   } catch (err) {
     console.error("Failed to load devices:", err);
     setDevices([]);
+    setDevicesError(parseApiError(err));
   }
 }
 
