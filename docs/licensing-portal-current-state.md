@@ -1360,4 +1360,69 @@ docs/api/http/stage5/smoke-test.sh                                | 22 +++++++++
 
 ---
 
+### 2026-01-27: Offline Provisioning Eligibility Filtering
+
+**Summary:** Refined the "Provision Device" entitlement picker to only show entitlements that are truly eligible for offline provisioning. Previously, the dropdown showed all subscription entitlements regardless of their status or device seat availability. Now it enforces proper eligibility rules matching the backend's validation.
+
+**Changes:**
+
+1. **Implemented comprehensive eligibility checking:**
+   - New `checkOfflineEligibility()` function with clear rules:
+     - Rule 1: Lifetime entitlements are NOT eligible (`LIFETIME_NOT_SUPPORTED`)
+     - Rule 2: Only `active` or `trialing` status are eligible (excludes `past_due`, `canceled`, `expired`, `inactive`)
+     - Rule 3: Must have available device seats (`maxDevices` not reached)
+   - Returns structured `OfflineEligibility` result with `eligible` boolean and human-readable `reason`
+
+2. **Device seat counting:**
+   - Counts bound devices per entitlement from the devices list
+   - Shows available seats in dropdown (e.g., "Pro Subscription (2/3 seats available)")
+   - Excludes entitlements at max capacity from selection
+
+3. **Clear empty state when no eligible entitlements:**
+   - Added `#ag-prov-empty-state` warning alert in UI
+   - Lists specific reasons for each ineligible entitlement
+   - Different message when customer has no entitlements at all vs. has entitlements but none are eligible
+
+4. **Dropdown shows only eligible entitlements:**
+   - Ineligible entitlements are completely excluded (not shown disabled)
+   - Dropdown is disabled with explanatory text when no eligible options exist
+
+5. **Enhanced regression tests in smoke-test.sh:**
+   - Verifies lifetime entitlements have `isLifetime=true` (correctly ineligible)
+   - Verifies subscription entitlements have eligible status (`active` or `trialing`)
+   - Verifies `maxDevices` field is present and valid
+
+**Eligibility Rules (matching backend `/api/licence/offline-provision` validation):**
+
+| Condition                          | Backend Error Code       | Frontend Behavior      |
+| ---------------------------------- | ------------------------ | ---------------------- |
+| `isLifetime=true`                  | `LIFETIME_NOT_SUPPORTED` | Excluded from dropdown |
+| Status not in `[active, trialing]` | `ENTITLEMENT_NOT_ACTIVE` | Excluded from dropdown |
+| `maxDevices` reached               | `MAX_DEVICES_EXCEEDED`   | Excluded from dropdown |
+
+**Files touched:**
+
+- `frontend/src/lib/customer/dashboard/airgapped.ts` (new eligibility logic, seat counting)
+- `frontend/src/components/customer/dashboard/AirGappedSection.astro` (empty state alert, label hint)
+- `docs/api/http/stage5/smoke-test.sh` (eligibility regression tests)
+
+**API/Backend impact:** None. Frontend now pre-filters to match backend validation rules.
+
+**Tests/Scripts run:**
+
+- `pnpm -r lint` — ✅ 0 errors (warnings only, pre-existing)
+- `pnpm build` (frontend) — ✅ Success
+
+**git diff --stat:**
+
+```
+docs/api/http/stage5/smoke-test.sh                                 | 38 ++++++++++++++++++--
+docs/licensing-portal-current-state.md                             | 56 +++++++++++++++++++++++++++++
+frontend/src/components/customer/dashboard/AirGappedSection.astro  | 10 ++++--
+frontend/src/lib/customer/dashboard/airgapped.ts                   | 95 ++++++++++++++++++++++++++++++++++++++--------------
+4 files changed, 168 insertions(+), 31 deletions(-)
+```
+
+---
+
 _End of contract document._

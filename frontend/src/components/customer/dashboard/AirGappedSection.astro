@@ -71,12 +71,25 @@ import ResponsiveBadge from "../shared/ResponsiveBadge.astro";
     <!-- Load error alert (shown if entitlements API failed) -->
     <div id="ag-prov-load-error" class="alert alert-error hidden">
       <DashboardIcon name="error" class="w-5 h-5 shrink-0" />
-      <span id="ag-prov-load-error-text">Couldn't load entitlements. Please refresh the page.</span>
+      <span id="ag-prov-load-error-text"
+        >Couldn't load entitlements. Please refresh the page.</span
+      >
+    </div>
+
+    <!-- Empty state (shown if no eligible entitlements) -->
+    <div id="ag-prov-empty-state" class="alert alert-warning hidden">
+      <DashboardIcon name="warning" class="w-5 h-5 shrink-0" />
+      <p class="text-sm whitespace-pre-line">
+        No eligible entitlements for offline provisioning.
+      </p>
     </div>
 
     <div class="form-control">
       <label class="label pb-1">
         <span class="label-text font-medium">Entitlement</span>
+        <span class="label-text-alt text-base-content/60"
+          >Subscription only</span
+        >
       </label>
       <select id="ag-prov-entitlement" class="select select-bordered w-full">
         <option value="">Loading entitlements...</option>

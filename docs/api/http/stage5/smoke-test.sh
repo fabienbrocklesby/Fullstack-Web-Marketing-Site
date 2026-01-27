@@ -222,6 +222,44 @@ fi
 SUBSCRIPTION_ENT=$(echo "$ENT_BODY" | jq -r '.entitlements[] | select(.isLifetime == false) | .id' | head -1)
 LIFETIME_ENT=$(echo "$ENT_BODY" | jq -r '.entitlements[] | select(.isLifetime == true) | .id' | head -1)
 
+# Regression: Verify offline provisioning eligibility rules
+# Rule 1: Lifetime entitlements should NOT be eligible
+if [ -n "$LIFETIME_ENT" ]; then
+  LIFETIME_IS_LIFETIME=$(echo "$ENT_BODY" | jq -r --argjson id "$LIFETIME_ENT" '.entitlements[] | select(.id == $id) | .isLifetime')
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$LIFETIME_IS_LIFETIME" = "true" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Lifetime entitlement correctly has isLifetime=true (not eligible for offline)"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Lifetime entitlement has unexpected isLifetime value: $LIFETIME_IS_LIFETIME"
+  fi
+fi
+
+# Rule 2: Active subscription should be eligible (has required fields)
+if [ -n "$SUBSCRIPTION_ENT" ]; then
+  SUB_STATUS=$(echo "$ENT_BODY" | jq -r --argjson id "$SUBSCRIPTION_ENT" '.entitlements[] | select(.id == $id) | .status')
+  SUB_MAX_DEVICES=$(echo "$ENT_BODY" | jq -r --argjson id "$SUBSCRIPTION_ENT" '.entitlements[] | select(.id == $id) | .maxDevices')
+  
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$SUB_STATUS" = "active" ] || [ "$SUB_STATUS" = "trialing" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Subscription entitlement has eligible status: $SUB_STATUS"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Subscription entitlement has non-eligible status: $SUB_STATUS (expected active or trialing)"
+  fi
+  
+  TESTS_RUN=$((TESTS_RUN + 1))
+  if [ "$SUB_MAX_DEVICES" != "null" ] && [ "$SUB_MAX_DEVICES" -ge 1 ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    log_pass "Subscription entitlement has maxDevices: $SUB_MAX_DEVICES"
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    log_fail "Subscription entitlement missing or invalid maxDevices: $SUB_MAX_DEVICES"
+  fi
+fi
+
 if [ -n "$SUBSCRIPTION_ENT" ]; then
   log_info "Found subscription entitlement (ID: $SUBSCRIPTION_ENT) for offline refresh test"
 else

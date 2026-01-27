@@ -7,9 +7,10 @@ import type {
   OfflineProvisionResponse,
   OfflineLeaseRefreshResponse,
   OfflineDeactivateResponse,
+  Entitlement,
 } from "../../portal/types";
-import { formatTier, isActiveEntitlement, isSubscriptionEntitlement } from "../../portal/types";
-import { getEntitlements, getEntitlementsError } from "./state";
+import { formatTier } from "../../portal/types";
+import { getEntitlements, getEntitlementsError, getDevices } from "./state";
 
 // Callback to reload all data after successful operations
 let reloadAllDataFn: () => Promise<void>;
@@ -241,29 +242,71 @@ function setCopyButtonSuccess(btn: HTMLButtonElement): void {
 // ============================================================
 
 /**
+ * Offline provisioning eligibility result for a single entitlement.
+ */
+interface OfflineEligibility {
+  entitlement: Entitlement;
+  eligible: boolean;
+  reason: string | null; // null if eligible, otherwise explains why not
+}
+
+/**
+ * Check if an entitlement is eligible for offline provisioning.
+ * Rules (from docs/licensing-portal-current-state.md):
+ * - Must NOT be lifetime (LIFETIME_NOT_SUPPORTED)
+ * - Must be in active/trialing status (ENTITLEMENT_NOT_ACTIVE)
+ * - Must not have reached maxDevices (MAX_DEVICES_EXCEEDED)
+ */
+function checkOfflineEligibility(ent: Entitlement, boundDeviceCount: number): OfflineEligibility {
+  // Rule 1: Lifetime entitlements are not supported for offline
+  if (ent.isLifetime) {
+    return { entitlement: ent, eligible: false, reason: "Lifetime licenses don't support offline activation" };
+  }
+
+  // Rule 2: Must be in an active state (active or trialing)
+  // Note: past_due is usable for regular activation but risky for offline since lease could expire during payment resolution
+  const activeStatuses = ["active", "trialing"];
+  if (!activeStatuses.includes(ent.status)) {
+    const statusLabels: Record<string, string> = {
+      inactive: "Subscription inactive",
+      canceled: "Subscription canceled",
+      expired: "Subscription expired",
+      past_due: "Subscription payment overdue",
+    };
+    return { entitlement: ent, eligible: false, reason: statusLabels[ent.status] || `Status: ${ent.status}` };
+  }
+
+  // Rule 3: Must have available device slots
+  if (boundDeviceCount >= ent.maxDevices) {
+    return { entitlement: ent, eligible: false, reason: `All ${ent.maxDevices} device seats in use` };
+  }
+
+  return { entitlement: ent, eligible: true, reason: null };
+}
+
+/**
  * Render the provision entitlement dropdown.
  * Call this after data is loaded (or reloaded) to populate the select.
- * Shows:
- * - Error state if entitlements API failed
- * - "No eligible entitlements" if customer has none that qualify
- * - List of subscription entitlements (excluding lifetime/founders)
- *   with disabled options for those at max devices
+ * 
+ * Shows ONLY eligible entitlements (subscription + active/trialing + seats available).
+ * If none eligible, shows a clear empty state with reasons.
  */
 export function renderAirgappedProvision(): void {
   const select = maybeById<HTMLSelectElement>("ag-prov-entitlement");
   const loadErrorEl = maybeById("ag-prov-load-error");
   const loadErrorText = maybeById("ag-prov-load-error-text");
+  const emptyStateEl = maybeById("ag-prov-empty-state");
   
   if (!select) return;
 
   // Check for API error first
   const apiError = getEntitlementsError();
   if (apiError) {
-    // Show load error alert
     if (loadErrorEl && loadErrorText) {
       setText(loadErrorText, `Couldn't load entitlements: ${apiError}. Please refresh the page.`);
       setHidden(loadErrorEl, false);
     }
+    if (emptyStateEl) setHidden(emptyStateEl, true);
     select.innerHTML = '<option value="">Unable to load entitlements</option>';
     select.disabled = true;
     return;
@@ -274,26 +317,57 @@ export function renderAirgappedProvision(): void {
   select.disabled = false;
 
   const entitlements = getEntitlements();
+  const devices = getDevices();
 
-  // Filter to subscription entitlements only (exclude lifetime/founders for offline)
-  // leaseRequired=true OR !isLifetime indicates subscription
-  const subscriptionEntitlements = entitlements.filter(
-    (e) => isSubscriptionEntitlement(e) || !e.isLifetime
-  ).filter(e => !e.isLifetime); // Double-check: must NOT be lifetime
+  // Count bound devices per entitlement
+  const boundCounts = new Map<number, number>();
+  for (const device of devices) {
+    if (device.entitlement?.id) {
+      boundCounts.set(device.entitlement.id, (boundCounts.get(device.entitlement.id) || 0) + 1);
+    }
+  }
 
-  // Further filter to only active subscription entitlements
-  const activeSubscriptions = subscriptionEntitlements.filter((e) => isActiveEntitlement(e));
+  // Check eligibility for each entitlement
+  const eligibilityResults = entitlements.map((ent) => 
+    checkOfflineEligibility(ent, boundCounts.get(ent.id) || 0)
+  );
 
-  if (activeSubscriptions.length === 0) {
-    select.innerHTML = '<option value="">No eligible entitlements for offline activation</option>';
+  // Separate eligible from ineligible
+  const eligible = eligibilityResults.filter((r) => r.eligible);
+  const ineligible = eligibilityResults.filter((r) => !r.eligible);
+
+  // Show empty state if no eligible entitlements
+  if (eligible.length === 0) {
+    select.innerHTML = '<option value="">No eligible entitlements</option>';
+    select.disabled = true;
+    
+    // Build detailed empty state message
+    if (emptyStateEl) {
+      let reasons = "";
+      if (entitlements.length === 0) {
+        reasons = "You don't have any entitlements. Purchase a subscription to get started.";
+      } else {
+        const reasonList = ineligible.map((r) => 
+          `• ${formatTier(r.entitlement.tier)}: ${r.reason}`
+        ).join("\n");
+        reasons = `None of your entitlements are eligible for offline provisioning:\n${reasonList}`;
+      }
+      setText(emptyStateEl, reasons);
+      setHidden(emptyStateEl, false);
+    }
     return;
   }
 
-  // Build options - include all active subscriptions, but disable those at max devices
-  const options = activeSubscriptions.map((e) => {
-    // Check device availability (for future: could show used/max)
-    // For now, just show the entitlement - backend will reject if at max
-    return `<option value="${e.id}">${formatTier(e.tier)} (Subscription)</option>`;
+  // Hide empty state if we have eligible entitlements
+  if (emptyStateEl) setHidden(emptyStateEl, true);
+
+  // Build options for eligible entitlements only
+  const options = eligible.map((r) => {
+    const ent = r.entitlement;
+    const boundCount = boundCounts.get(ent.id) || 0;
+    const availableSeats = ent.maxDevices - boundCount;
+    const seatInfo = ent.maxDevices > 1 ? ` (${availableSeats}/${ent.maxDevices} seats available)` : "";
+    return `<option value="${ent.id}">${formatTier(ent.tier)} Subscription${seatInfo}</option>`;
   });
 
   select.innerHTML = '<option value="">Select entitlement...</option>' + options.join("");
