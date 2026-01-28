@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
+import EasterEgg from "../components/EasterEgg.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import { pricingOffers } from "../data/pricing";
 import { getSaleBadgeText, getHeroPricingNote } from "../utils/sale-dates";
@@ -1342,17 +1343,17 @@ const structuredData = [
             }
           });
         },
-        { threshold: 0.2 }
+        { threshold: 0.2 },
       );
       const autoVideos = Array.from(
-        document.querySelectorAll("video[data-autoplay]")
+        document.querySelectorAll("video[data-autoplay]"),
       ) as HTMLVideoElement[];
       autoVideos.forEach((el) => vidObserver.observe(el));
 
       // Scrollytelling workflow (one step visible at a time)
       const stepsContainer = document.getElementById("workflow-scrollytell");
       const steps = Array.from(
-        document.querySelectorAll(".workflow-step")
+        document.querySelectorAll(".workflow-step"),
       ) as HTMLElement[];
       if (stepsContainer && steps.length) {
         // Provide scroll space: each step ~80vh extra to allow deliberate transition
@@ -1423,4 +1424,5 @@ const structuredData = [
   </script>
 
   <Footer />
+  <EasterEgg />
 </Layout>

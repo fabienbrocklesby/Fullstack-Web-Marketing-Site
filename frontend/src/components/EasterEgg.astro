@@ -1,0 +1,173 @@
+---
+// Easter Egg Component
+// Trigger: Scroll to footer + press spacebar 3 times quickly
+---
+
+<!-- Easter Egg Modal -->
+<dialog id="easter-egg-modal" class="modal">
+  <div class="modal-box text-center max-w-md">
+    <button
+      class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+      id="close-easter-egg">✕</button
+    >
+
+    <div class="py-4">
+      <!-- Animated laser beam emoji -->
+      <div class="text-6xl mb-4 animate-bounce" id="easter-egg-icon">🔦</div>
+
+      <h3 class="font-bold text-xl mb-2">You found the secret! 🎉</h3>
+
+      <p class="py-2 text-base-content/80">
+        Congrats, you're officially a <span class="font-bold text-primary"
+          >Lightlane Explorer</span
+        >!
+      </p>
+
+      <div class="divider my-2"></div>
+
+      <div class="bg-base-200 rounded-box p-4 text-sm space-y-2">
+        <p class="font-mono text-xs opacity-60">// Dev team note:</p>
+        <p class="italic">
+          "We spent 3 hours adding this easter egg instead of fixing bugs. Worth
+          it."
+        </p>
+        <p class="text-xs opacity-50 mt-2">- The Lightlane Team</p>
+      </div>
+
+      <div class="mt-4 flex justify-center gap-2 flex-wrap">
+        <span class="badge badge-primary badge-outline"
+          >🥚 Easter Egg Found</span
+        >
+        <span class="badge badge-secondary badge-outline">⌨️ Spacebar x3</span>
+      </div>
+    </div>
+
+    <div class="modal-action justify-center">
+      <button class="btn btn-primary" id="easter-egg-close-btn">
+        <span>Keep Engraving</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 ml-1"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+  (function initEasterEgg() {
+    const modal = document.getElementById(
+      "easter-egg-modal",
+    ) as HTMLDialogElement | null;
+    const closeBtn = document.getElementById("close-easter-egg");
+    const closeBtn2 = document.getElementById("easter-egg-close-btn");
+    const icon = document.getElementById("easter-egg-icon");
+
+    if (!modal) return;
+
+    let spacebarPresses: number[] = [];
+    const REQUIRED_PRESSES = 3;
+    const TIME_WINDOW = 800; // ms - all 3 presses must happen within this window
+
+    function isNearFooter(): boolean {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      // Check if user is within 200px of the bottom
+      return scrollTop + windowHeight >= documentHeight - 200;
+    }
+
+    function triggerEasterEgg() {
+      if (!modal) return;
+      modal.showModal();
+
+      if (icon) {
+        const emojis = ["🔦", "✨", "🔥", "💎", "🚀", "🎯", "⚡"];
+        let idx = 0;
+
+        const interval = setInterval(() => {
+          icon.textContent = emojis[idx % emojis.length];
+          idx++;
+          if (idx > 10) clearInterval(interval);
+        }, 200);
+      }
+
+      // Reset space bar presses
+      spacebarPresses = [];
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      // Only trigger on spacebar, and not when typing in inputs
+      if (e.code !== "Space") return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return;
+      }
+
+      // Only activate when near footer
+      if (!isNearFooter()) {
+        spacebarPresses = [];
+        return;
+      }
+
+      // Prevent page scroll
+      e.preventDefault();
+
+      const now = Date.now();
+      spacebarPresses.push(now);
+
+      // Remove old presses outside the time window
+      spacebarPresses = spacebarPresses.filter((t) => now - t < TIME_WINDOW);
+
+      // Check if we have enough rapid presses
+      if (spacebarPresses.length >= REQUIRED_PRESSES) {
+        triggerEasterEgg();
+      }
+    }
+
+    // Add event listeners
+    document.addEventListener("keydown", handleKeyDown);
+
+    closeBtn?.addEventListener("click", () => modal.close());
+    closeBtn2?.addEventListener("click", () => modal.close());
+  })();
+</script>
+
+<style>
+  #easter-egg-icon {
+    display: inline-block;
+    filter: drop-shadow(0 0 8px oklch(var(--p)));
+  }
+
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 8px oklch(var(--p)));
+    }
+    50% {
+      filter: drop-shadow(0 0 16px oklch(var(--p)));
+    }
+  }
+
+  dialog[open] #easter-egg-icon {
+    animation:
+      pulse-glow 1s ease-in-out infinite,
+      bounce 1s ease-in-out infinite;
+  }
+</style>
