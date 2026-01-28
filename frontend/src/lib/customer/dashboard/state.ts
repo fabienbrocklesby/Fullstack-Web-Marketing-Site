@@ -3,6 +3,7 @@
  * Holds entitlements, devices, and pagination state.
  */
 import type { Entitlement, Device } from "../../portal/types";
+import { isActiveEntitlement, isActiveTrial, isActivePaid, getDaysLeft, formatDate } from "../../portal/types";
 
 // ============================================================
 // DATA STATE
@@ -13,6 +14,10 @@ let devices: Device[] = [];
 // Error state - track if API calls failed
 let entitlementsError: string | null = null;
 let devicesError: string | null = null;
+
+// Trial eligibility state
+let trialEligible: boolean = false;
+let trialStatusLoaded: boolean = false;
 
 export function getEntitlements(): Entitlement[] {
   return entitlements;
@@ -44,6 +49,62 @@ export function getDevicesError(): string | null {
 
 export function setDevicesError(error: string | null): void {
   devicesError = error;
+}
+
+export function getTrialEligible(): boolean {
+  return trialEligible;
+}
+
+export function setTrialEligible(eligible: boolean): void {
+  trialEligible = eligible;
+}
+
+export function getTrialStatusLoaded(): boolean {
+  return trialStatusLoaded;
+}
+
+export function setTrialStatusLoaded(loaded: boolean): void {
+  trialStatusLoaded = loaded;
+}
+
+// ============================================================
+// DERIVED TRIAL STATE (computed from entitlements)
+// ============================================================
+
+export interface TrialState {
+  hasActiveTrial: boolean;
+  hasActivePaid: boolean;
+  isTrialOnly: boolean;
+  trialExpiresAt: string | null;
+  trialDaysLeft: number | null;
+  trialExpiryLabel: string | null;
+  hasActivatedDevices: boolean;
+}
+
+/**
+ * Compute derived trial state from current entitlements and devices.
+ * Use this to keep trial-related UI consistent across hero, plans, steps, and banner.
+ */
+export function getTrialState(): TrialState {
+  const activeTrialEnt = entitlements.find(isActiveTrial);
+  const hasActiveTrial = !!activeTrialEnt;
+  const hasActivePaid = entitlements.some(isActivePaid);
+  const isTrialOnly = hasActiveTrial && !hasActivePaid;
+  const hasActivatedDevices = devices.some((d) => d.isActivated);
+  
+  const trialExpiresAt = activeTrialEnt?.expiresAt ?? null;
+  const trialDaysLeft = trialExpiresAt ? getDaysLeft(trialExpiresAt) : null;
+  const trialExpiryLabel = trialExpiresAt ? formatDate(trialExpiresAt) : null;
+
+  return {
+    hasActiveTrial,
+    hasActivePaid,
+    isTrialOnly,
+    trialExpiresAt,
+    trialDaysLeft,
+    trialExpiryLabel,
+    hasActivatedDevices,
+  };
 }
 
 // ============================================================

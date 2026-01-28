@@ -16,7 +16,7 @@
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const crypto = require("crypto");
-const { determineEntitlementTier } = require("./entitlement-mapping");
+const { determineEntitlementTier, retireTrialsForCustomer } = require("./entitlement-mapping");
 
 // -----------------------------------------------------------------------------
 // Idempotency
@@ -547,6 +547,19 @@ async function handleCheckoutSessionCompleted(session) {
     `[Webhook] Created entitlement ${entitlement.id}: tier=${finalTier}, customer=${customer?.id || "NULL"}, ` +
       `lifetime=${entitlement.isLifetime}` + (isSubscription ? `, subscription=${subscriptionId}` : "")
   );
+
+  // Retire any active trial entitlements for this customer
+  // This runs AFTER the paid entitlement is successfully created
+  if (customer?.id) {
+    const trialRetirement = await retireTrialsForCustomer(customer.id, {
+      replacedByEntitlementId: entitlement.id,
+    });
+    if (trialRetirement.retiredCount > 0) {
+      strapi.log.info(
+        `[Webhook] Retired ${trialRetirement.retiredCount} trial(s) for customer ${customer.id}: [${trialRetirement.retiredIds.join(", ")}]`
+      );
+    }
+  }
 
   // Update affiliate earnings
   if (affiliate && commissionAmount > 0) {

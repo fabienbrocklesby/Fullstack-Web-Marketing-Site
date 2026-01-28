@@ -513,9 +513,10 @@ async function recordJtiOrReplay(strapi, { jti, kind, customerId, entitlementId,
  * @param {string} params.activationToken - RS256 signed activation JWT
  * @param {string} params.leaseToken - RS256 signed lease JWT
  * @param {string} params.leaseExpiresAt - ISO timestamp
+ * @param {string} [params.entitlementExpiresAt] - ISO timestamp for trial expiry (null for lifetime/subscription)
  * @returns {string} Base64URL encoded activation package JSON
  */
-function buildActivationPackage({ activationToken, leaseToken, leaseExpiresAt }) {
+function buildActivationPackage({ activationToken, leaseToken, leaseExpiresAt, entitlementExpiresAt }) {
   const packageObj = {
     v: 1,
     type: "activation_package",
@@ -523,6 +524,10 @@ function buildActivationPackage({ activationToken, leaseToken, leaseExpiresAt })
     leaseToken,
     leaseExpiresAt,
   };
+  // Include entitlement expiry only if set (trial entitlements)
+  if (entitlementExpiresAt) {
+    packageObj.entitlementExpiresAt = entitlementExpiresAt;
+  }
   return base64UrlEncodeJson(packageObj);
 }
 
@@ -531,15 +536,20 @@ function buildActivationPackage({ activationToken, leaseToken, leaseExpiresAt })
  * @param {object} params
  * @param {string} params.leaseToken - RS256 signed lease JWT
  * @param {string} params.leaseExpiresAt - ISO timestamp
+ * @param {string} [params.entitlementExpiresAt] - ISO timestamp for trial expiry (null for lifetime/subscription)
  * @returns {string} Base64URL encoded refresh response JSON
  */
-function buildRefreshResponseCode({ leaseToken, leaseExpiresAt }) {
+function buildRefreshResponseCode({ leaseToken, leaseExpiresAt, entitlementExpiresAt }) {
   const responseObj = {
     v: 1,
     type: "lease_refresh_response",
     leaseToken,
     leaseExpiresAt,
   };
+  // Include entitlement expiry only if set (trial entitlements)
+  if (entitlementExpiresAt) {
+    responseObj.entitlementExpiresAt = entitlementExpiresAt;
+  }
   return base64UrlEncodeJson(responseObj);
 }
 

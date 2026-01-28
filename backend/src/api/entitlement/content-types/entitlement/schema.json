@@ -32,6 +32,7 @@
     "tier": {
       "type": "enumeration",
       "enum": [
+        "trial",
         "maker",
         "pro",
         "education",

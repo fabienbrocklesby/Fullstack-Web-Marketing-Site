@@ -84,7 +84,7 @@ export function initTabs(): void {
     switchTab("advanced");
   });
 
-  ["hero-advanced-link-1", "hero-advanced-link-2", "hero-advanced-link-3"].forEach((id) => {
+  ["hero-advanced-link-1", "hero-advanced-link-2", "hero-advanced-link-3", "hero-advanced-link-trial"].forEach((id) => {
     maybeById(id)?.addEventListener("click", (e) => {
       e.preventDefault();
       switchTab("advanced", "airgapped-section");

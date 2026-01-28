@@ -1243,7 +1243,9 @@ export interface ApiEntitlementEntitlement extends Schema.CollectionType {
       'oneToOne',
       'api::purchase.purchase'
     >;
-    tier: Attribute.Enumeration<['maker', 'pro', 'education', 'enterprise']> &
+    tier: Attribute.Enumeration<
+      ['trial', 'maker', 'pro', 'education', 'enterprise']
+    > &
       Attribute.Required;
     status: Attribute.Enumeration<
       ['active', 'inactive', 'expired', 'canceled']

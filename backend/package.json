@@ -12,7 +12,8 @@
     "test": "node --test tests/**/*.test.js",
     "lint": "eslint . --ext .js",
     "format": "prettier --write .",
-    "seed": "node scripts/seed-data.js"
+    "seed": "node scripts/seed-data.js",
+    "dev:purge-customers": "ALLOW_DEV_PURGE=1 node scripts/dev-purge-customers.js"
   },
   "keywords": [
     "strapi",

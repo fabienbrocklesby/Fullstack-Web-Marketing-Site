@@ -27,6 +27,18 @@ async function reloadAll(): Promise<void> {
 }
 
 /**
+ * Refresh all UI components (call after data is already loaded).
+ * Exported for use by hero.ts after trial start.
+ */
+export function refreshAllUI(): void {
+  updateHeroState();
+  renderPlans();
+  renderDevicesOverview();
+  renderDevicesTable();
+  renderAirgappedProvision();
+}
+
+/**
  * Initialize the customer dashboard.
  * Should be called once when the page loads.
  */

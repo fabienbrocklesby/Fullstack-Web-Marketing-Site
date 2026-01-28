@@ -1,9 +1,16 @@
 /**
  * Data loading functions for dashboard
  */
-import { portalFetch, parseApiError } from "../../portal/api";
+import { portalFetch, parseApiError, getTrialStatus } from "../../portal/api";
 import type { EntitlementsResponse, DevicesResponse } from "../../portal/types";
-import { setEntitlements, setDevices, setEntitlementsError, setDevicesError } from "./state";
+import {
+  setEntitlements,
+  setDevices,
+  setEntitlementsError,
+  setDevicesError,
+  setTrialEligible,
+  setTrialStatusLoaded,
+} from "./state";
 
 /**
  * Load entitlements from API
@@ -42,8 +49,24 @@ export async function loadDevices(): Promise<void> {
 }
 
 /**
+ * Load trial eligibility status from API
+ */
+export async function loadTrialStatus(): Promise<void> {
+  try {
+    const data = await getTrialStatus();
+    setTrialEligible(data.trialEligible);
+    setTrialStatusLoaded(true);
+  } catch (err) {
+    console.error("Failed to load trial status:", err);
+    // Default to not eligible on error (safe default)
+    setTrialEligible(false);
+    setTrialStatusLoaded(true);
+  }
+}
+
+/**
  * Load all dashboard data
  */
 export async function loadAllData(): Promise<void> {
-  await Promise.all([loadEntitlements(), loadDevices()]);
+  await Promise.all([loadEntitlements(), loadDevices(), loadTrialStatus()]);
 }

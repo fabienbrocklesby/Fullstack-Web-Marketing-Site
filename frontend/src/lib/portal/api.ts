@@ -85,3 +85,42 @@ export function parseApiError(error: unknown): string {
   }
   return "An unexpected error occurred";
 }
+
+/**
+ * Start a 14-day free trial for the authenticated customer.
+ * One trial per account - throws on 409 if trial already used.
+ */
+export interface StartTrialResponse {
+  ok: true;
+  entitlement: {
+    id: number;
+    tier: string;
+    status: string;
+    isLifetime: boolean;
+    expiresAt: string;
+    maxDevices: number;
+    source: string;
+    createdAt: string;
+    leaseRequired: boolean;
+  };
+  message: string;
+}
+
+export async function startTrial(): Promise<StartTrialResponse> {
+  return portalFetch<StartTrialResponse>("/api/trial/start", {
+    method: "POST",
+  });
+}
+
+// === Trial Status ===
+
+export interface TrialStatusResponse {
+  ok: true;
+  trialEligible: boolean;
+  hasEverHadEntitlements: boolean;
+  hasUsedTrial: boolean;
+}
+
+export async function getTrialStatus(): Promise<TrialStatusResponse> {
+  return portalFetch<TrialStatusResponse>("/api/trial/status");
+}

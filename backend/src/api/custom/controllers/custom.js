@@ -3619,6 +3619,7 @@ module.exports = {
         activationToken,
         leaseToken: lease.token,
         leaseExpiresAt: lease.expiresAt,
+        entitlementExpiresAt: entitlement.expiresAt || null,
       });
 
       audit.offlineProvision(ctx, {
@@ -3869,6 +3870,7 @@ module.exports = {
       const refreshResponseCode = buildRefreshResponseCode({
         leaseToken: lease.token,
         leaseExpiresAt: lease.expiresAt,
+        entitlementExpiresAt: entitlement.expiresAt || null,
       });
 
       audit.offlineLeaseRefresh(ctx, {
@@ -4082,6 +4084,156 @@ module.exports = {
       });
     } catch (err) {
       strapi.log.error(`[offlineDeactivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/trial/start
+   * Start a 14-day free trial for the authenticated customer.
+   * One trial per account (ever) - returns 409 if trial already used.
+   *
+   * Creates an entitlement with:
+   * - tier: "trial"
+   * - status: "active"
+   * - isLifetime: false (requires lease token like subscriptions)
+   * - expiresAt: now + 14 days
+   * - maxDevices: 1
+   * - source: "manual" (not from purchase or subscription)
+   */
+  async trialStart(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      // Check if customer has ever had a trial entitlement (any status)
+      const existingTrial = await strapi.entityService.findMany(
+        "api::entitlement.entitlement",
+        {
+          filters: {
+            customer: customer.id,
+            tier: "trial",
+          },
+          limit: 1,
+        }
+      );
+
+      if (existingTrial && existingTrial.length > 0) {
+        audit.log("trial_start", {
+          ctx,
+          outcome: "failure",
+          reason: "trial_already_used",
+          customerId: customer.id,
+          metadata: { existingTrialId: existingTrial[0].id },
+        });
+        return sendError(ctx, 409, ErrorCodes.TRIAL_ALREADY_USED, "Trial already used on this account.");
+      }
+
+      // Create trial entitlement
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days
+
+      const trialEntitlement = await strapi.entityService.create(
+        "api::entitlement.entitlement",
+        {
+          data: {
+            customer: customer.id,
+            tier: "trial",
+            status: "active",
+            isLifetime: false,
+            expiresAt: expiresAt.toISOString(),
+            maxDevices: 1,
+            source: "manual",
+            // Stripe fields intentionally null for trial
+            stripeCustomerId: null,
+            stripeSubscriptionId: null,
+            stripePriceId: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+          },
+        }
+      );
+
+      audit.log("trial_start", {
+        ctx,
+        outcome: "success",
+        reason: "trial_created",
+        customerId: customer.id,
+        metadata: {
+          entitlementId: trialEntitlement.id,
+          expiresAt: expiresAt.toISOString(),
+        },
+      });
+
+      // Return the created entitlement in the same shape as other endpoints
+      return sendOk(ctx, {
+        entitlement: {
+          id: trialEntitlement.id,
+          tier: trialEntitlement.tier,
+          status: trialEntitlement.status,
+          isLifetime: trialEntitlement.isLifetime,
+          expiresAt: trialEntitlement.expiresAt,
+          maxDevices: trialEntitlement.maxDevices,
+          source: trialEntitlement.source,
+          createdAt: trialEntitlement.createdAt,
+          leaseRequired: true, // Trial requires lease like subscriptions
+        },
+        message: "Trial started successfully. Your 14-day trial expires on " + expiresAt.toISOString().split("T")[0] + ".",
+      }, 201);
+    } catch (err) {
+      strapi.log.error(`[trialStart] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * GET /api/trial/status
+   * Check if customer is eligible to start a trial.
+   * Eligibility: customer has never had ANY entitlements AND has never used a trial.
+   */
+  async trialStatus(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      // Count ALL entitlements (any status, any tier) for this customer
+      const totalEntitlements = await strapi.entityService.count(
+        "api::entitlement.entitlement",
+        {
+          filters: {
+            customer: customer.id,
+          },
+        }
+      );
+
+      // Check if any of those entitlements is a trial
+      const trialCount = await strapi.entityService.count(
+        "api::entitlement.entitlement",
+        {
+          filters: {
+            customer: customer.id,
+            tier: "trial",
+          },
+        }
+      );
+
+      const hasEverHadEntitlements = totalEntitlements > 0;
+      const hasUsedTrial = trialCount > 0;
+      const trialEligible = !hasEverHadEntitlements && !hasUsedTrial;
+
+      return sendOk(ctx, {
+        trialEligible,
+        hasEverHadEntitlements,
+        hasUsedTrial,
+      });
+    } catch (err) {
+      strapi.log.error(`[trialStatus] Error: ${err.message}`);
       strapi.log.error(err.stack);
       return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }

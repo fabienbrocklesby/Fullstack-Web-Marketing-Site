@@ -28,6 +28,9 @@ help:
 	@echo "  make smoke-stage4 - Run Stage 4 device activation test"
 	@echo "  make smoke-stage5 - Run Stage 5.5 full licensing test"
 	@echo ""
+	@echo "Dev Data Cleanup:"
+	@echo "  make dev-purge-customers - Purge customers + all related records (interactive)"
+	@echo ""
 	@echo "Checks (CI/CD):"
 	@echo "  make check        - Run all must-pass checks (env, lint, build)"
 	@echo "  make check-env    - Validate required environment variables"
@@ -250,3 +253,16 @@ airgap-setup:
 # Extracts deviceId + entitlementId from the embedded lease token
 # Usage: make airgap-request-codes
 # Prerequisites: run `make airgap-setup` first, then provision in portal
+
+# ============================================================
+# Dev Data Cleanup (DEVELOPMENT ONLY)
+# ============================================================
+
+# Purge customers and all related records (interactive, requires confirmation)
+# Usage: make dev-purge-customers
+# Safety: Refuses to run unless NODE_ENV=development
+# Runs inside Docker container for proper dependency isolation
+.PHONY: dev-purge-customers
+dev-purge-customers:
+	@echo "🗑️  Starting customer purge (dev-only, interactive)..."
+	@$(DOCKER_COMPOSE) exec backend sh -c "cd /workspace/backend && NODE_ENV=development ALLOW_DEV_PURGE=1 node scripts/dev-purge-customers.js"

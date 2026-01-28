@@ -1,7 +1,7 @@
 # LightLane Licensing System – Current State Contract
 
-**Document Version:** 2.0  
-**Date:** 2026-01-22  
+**Document Version:** 2.4  
+**Date:** 2026-01-29  
 **Scope:** Backend licensing API + portal integration; not desktop app implementation details.
 
 ---
@@ -31,18 +31,35 @@ LightLane uses a **subscription + lease token** licensing model:
 
 ## 2. Data Model (Concepts)
 
+### Customer
+
+Portal customer accounts (not Strapi admin users).
+
+| Field              | Type           | Description                                       |
+| ------------------ | -------------- | ------------------------------------------------- |
+| `id`               | integer        | Primary key                                       |
+| `email`            | email (unique) | Account email — enforced unique, case-insensitive |
+| `firstName`        | string         | Customer's first name                             |
+| `lastName`         | string         | Customer's last name                              |
+| `password`         | string         | Bcrypt-hashed password (private)                  |
+| `isActive`         | boolean        | Account active state                              |
+| `emailVerified`    | boolean        | Email verification status                         |
+| `stripeCustomerId` | string         | Stripe customer ID (unique)                       |
+
+**Email uniqueness:** Customer emails are enforced unique at both the application level (pre-check before create) and database level (schema constraint). Emails are normalized (trimmed + lowercased) on registration, login, and profile update. Duplicate emails (including case variants like `Test@Email.com` vs `test@email.com`) return HTTP 409 with error code `EMAIL_ALREADY_EXISTS`.
+
 ### Entitlement
 
-| Field              | Type                                      | Description                                   |
-| ------------------ | ----------------------------------------- | --------------------------------------------- |
-| `id`               | integer                                   | Primary key                                   |
-| `customer`         | relation                                  | Owning customer                               |
-| `tier`             | enum: maker, pro, education, enterprise   | Product tier                                  |
-| `status`           | enum: active, inactive, expired, canceled | Subscription status                           |
-| `isLifetime`       | boolean                                   | `true` = founders/lifetime, no lease required |
-| `maxDevices`       | integer (≥1)                              | Maximum simultaneously bound devices          |
-| `expiresAt`        | datetime                                  | Subscription expiry (null for lifetime)       |
-| `currentPeriodEnd` | datetime                                  | Stripe billing period end                     |
+| Field              | Type                                           | Description                                   |
+| ------------------ | ---------------------------------------------- | --------------------------------------------- |
+| `id`               | integer                                        | Primary key                                   |
+| `customer`         | relation                                       | Owning customer                               |
+| `tier`             | enum: trial, maker, pro, education, enterprise | Product tier                                  |
+| `status`           | enum: active, inactive, expired, canceled      | Subscription status                           |
+| `isLifetime`       | boolean                                        | `true` = founders/lifetime, no lease required |
+| `maxDevices`       | integer (≥1)                                   | Maximum simultaneously bound devices          |
+| `expiresAt`        | datetime                                       | Subscription expiry (null for lifetime)       |
+| `currentPeriodEnd` | datetime                                       | Stripe billing period end                     |
 
 ### Device
 
@@ -325,6 +342,183 @@ All online endpoints require `customer-auth` middleware (portal JWT in Authoriza
 
 - Clears device.entitlement (unbinds)
 - Sets device.status = "deactivated", device.deactivatedAt = now
+
+---
+
+### 3.5 Start Trial
+
+**Endpoint:** `POST /api/trial/start`  
+**Middleware:** `customer-auth`, `license-rate-limit`
+
+Starts a 14-day free trial for the authenticated customer. One trial per account (ever) — cannot be used again even if the original trial expired.
+
+**Request:** (no body required)
+
+```json
+{}
+```
+
+**Response (201):**
+
+```json
+{
+  "ok": true,
+  "entitlement": {
+    "id": 456,
+    "tier": "trial",
+    "status": "active",
+    "isLifetime": false,
+    "expiresAt": "2026-02-11T12:00:00.000Z",
+    "maxDevices": 1,
+    "source": "manual",
+    "createdAt": "2026-01-28T12:00:00.000Z",
+    "leaseRequired": true
+  },
+  "message": "Trial started successfully. Your 14-day trial expires on 2026-02-11."
+}
+```
+
+**Errors:**
+| Status | Code | Description |
+| ------ | ------------------ | -------------------------------- |
+| 401 | UNAUTHENTICATED | No valid customer auth |
+| 409 | TRIAL_ALREADY_USED | Account has already used a trial |
+
+**Side Effects:**
+
+- Creates a new entitlement with `tier="trial"`, `status="active"`, `isLifetime=false`, `maxDevices=1`, `source="manual"`
+- Sets `expiresAt` to 14 days from now
+- Stripe fields remain null (not a paid subscription)
+
+**Trial Behavior:**
+
+- Trial entitlements behave like subscriptions: they require lease tokens and support offline refresh
+- After `expiresAt`, the trial becomes unusable (activation/refresh will fail with `ENTITLEMENT_NOT_ACTIVE`)
+- The account can never start another trial — calling this endpoint again returns 409
+
+### 3.6 Check Trial Eligibility
+
+**Endpoint:** `GET /api/trial/status`  
+**Middleware:** `customer-auth`
+
+Checks whether the authenticated customer is eligible to start a free trial. A customer is only eligible if they have **never** had any entitlements (including expired or canceled ones) and have **never** used a trial before.
+
+**Request:** (no body)
+
+**Response (200):**
+
+```json
+{
+  "ok": true,
+  "trialEligible": true,
+  "hasEverHadEntitlements": false,
+  "hasUsedTrial": false
+}
+```
+
+**Response fields:**
+
+| Field                    | Type    | Description                                             |
+| ------------------------ | ------- | ------------------------------------------------------- |
+| `trialEligible`          | boolean | `true` if customer can start a trial                    |
+| `hasEverHadEntitlements` | boolean | `true` if customer has any entitlements (any status)    |
+| `hasUsedTrial`           | boolean | `true` if customer has a trial entitlement (any status) |
+
+**Eligibility logic:**
+
+```
+trialEligible = !hasEverHadEntitlements && !hasUsedTrial
+```
+
+**Errors:**
+| Status | Code | Description |
+| ------ | --------------- | -------------------- |
+| 401 | UNAUTHENTICATED | No valid customer auth |
+
+**UI Behavior:**
+
+The dashboard hero section uses this endpoint to conditionally show the "Start 14-day free trial" CTA. The trial button:
+
+- Is hidden by default until eligibility is checked (no flash of CTA before status loads)
+- Only appears when `trialEligible === true`
+- Disappears immediately after a trial is started (refreshAllUI re-fetches status)
+
+**Dashboard Hero States (updated):**
+
+The dashboard hero section now has **4 states**:
+
+1. **No entitlements (hero-no-entitlements):** Brand new account, no subscriptions or trials
+   - CTAs: "Start 14-day free trial" (if eligible) + "Buy subscription"
+   - Step 1 text: "Buy a subscription or activate a trial"
+   - Step 1 completed: ✗
+
+2. **Trial only (hero-trial-only):** Has active trial, no paid subscription
+   - Badge: "Trial active" (primary variant) + countdown: "Trial ends in X days (on DATE)"
+   - CTAs: "Download app" (primary) + "Keep access after trial" (opens purchase modal with Maker preselected)
+   - Helper text: "Avoid interruption when your trial ends."
+   - Progress indicator: "X/4 complete" (1 = trial started, 2 = device activated)
+   - 4-step checklist:
+     - Step 1: "Trial started" ✓ (always completed in this state)
+     - Step 2: "Download the app" (clickable)
+     - Step 3: "Sign in and activate on your device" (✓ if device activated)
+     - Step 4: "Keep access after trial" with subtext "Your trial ends in X days." (opens purchase modal)
+
+3. **Has paid subscription, no activated devices (hero-no-activated):** Has paid entitlement
+   - Badge: "Subscription active" (success variant)
+   - CTAs: "Download app" + "View plans"
+   - Step 1 text: "Buy a subscription"
+   - Step 1 completed: ✓
+
+4. **Fully activated (hero-all-good):** Has activated devices
+   - Badge: "Activated" (success variant)
+   - CTAs: "Open Lightlane" + "Activate another device"
+
+**Trial-Only Conversion UX:**
+
+When a customer has only a trial (no paid subscription), the dashboard applies subtle conversion nudges:
+
+1. **Endowment framing:** CTA label is "Keep access after trial" (not "Buy subscription") with helper text "Avoid interruption when your trial ends." This frames purchase as continuity rather than a sales pitch.
+
+2. **Time-left clarity with urgency pill:** Countdown displayed via urgency pill component showing:
+   - Clock icon + big tabular-nums number + "X days left" + "Ends DATE"
+   - Pulsing dot animation for ≤7 days (respects `prefers-reduced-motion`)
+   - Color coding: info (>7 days), warning (4-7 days), error (≤3 days)
+   - Used in hero countdown badge, step 4 subtext, and plans row
+
+3. **Goal-gradient progress cue:** Progress indicator shows "X/4 complete" (1=trial started, 2=device activated). Step 4 is the "Keep access" CTA, making purchase feel like the natural next step.
+
+4. **Just-in-time banner:** A dismissible banner appears only when `trialDaysLeft <= 7`:
+   - 4-7 days left: "Your trial ends in X days. Keep access after trial."
+   - 0-3 days left (stronger): "Trial ending soon: X days left. Keep access to avoid interruption."
+   - Dismiss behavior: stores `trialBannerDismissedUntil` timestamp in localStorage (24h cooldown)
+   - Actions: "Keep access after trial" (primary) + "Not now" (dismiss)
+
+5. **"Ends soon" hint (≤3 days):** CTA hint text under hero buttons changes from neutral to warning-colored: "Your trial ends soon. Purchase now to keep access."
+
+6. **Purchase modal preselection:** When opened from trial-only surfaces (hero CTA, step 4, banner), the purchase modal preselects Maker tier. User can still choose any plan; closing works normally.
+
+**Derived Trial State (computed in state.ts):**
+
+The `getTrialState()` function returns:
+
+| Field                 | Type           | Description                                 |
+| --------------------- | -------------- | ------------------------------------------- |
+| `hasActiveTrial`      | boolean        | Customer has an active trial entitlement    |
+| `hasActivePaid`       | boolean        | Customer has any paid active entitlement    |
+| `isTrialOnly`         | boolean        | `hasActiveTrial && !hasActivePaid`          |
+| `trialExpiresAt`      | string \| null | ISO date when trial expires                 |
+| `trialDaysLeft`       | number \| null | Days until expiry (0 if expired)            |
+| `trialExpiryLabel`    | string \| null | Formatted expiry date (e.g., "28 Jan 2026") |
+| `hasActivatedDevices` | boolean        | Customer has at least one activated device  |
+
+**Plans Section (Trial Card):**
+
+Trial entitlements in the plans section display:
+
+- Type label: "Trial" (not "Subscription")
+- Urgency pill with countdown (clock icon, big number, pulsing dot when ≤7 days, color-coded by urgency)
+- "Keep access" primary button (`data-trial-purchase`) instead of "Manage" button
+- No billing portal access (trial is not a Stripe subscription)
 
 ---
 
@@ -830,6 +1024,8 @@ The portal supports:
 
 | Endpoint                             | Method | Auth     | Purpose                                                       |
 | ------------------------------------ | ------ | -------- | ------------------------------------------------------------- |
+| `/api/trial/start`                   | POST   | customer | Start 14-day free trial (one per account)                     |
+| `/api/trial/status`                  | GET    | customer | Check trial eligibility (has account ever had entitlements)   |
 | `/api/device/register`               | POST   | customer | Register device                                               |
 | `/api/licence/activate`              | POST   | customer | Bind device to entitlement                                    |
 | `/api/licence/refresh`               | POST   | customer | Online lease refresh                                          |
@@ -844,6 +1040,190 @@ The portal supports:
 ---
 
 ## 10. Changelog
+
+### 2026-01-28: Trial Urgency Visual Enhancements
+
+**Summary:** Made trial expiry more visually prominent with urgency pill component featuring countdown, pulsing dot (motion-safe), and urgency-based color coding. Upgraded Plans row for trial entitlements with "Keep access" CTA.
+
+**Changes:**
+
+1. **TrialUrgencyPill component (Astro + runtime HTML):**
+   - Created `TrialUrgencyPill.astro` for static rendering (e.g., build-time)
+   - Created `urgency-pill.ts` for runtime HTML generation (`urgencyPill()`, `urgencyPillCompact()`)
+   - Features: clock icon, big tabular-nums number, "X days left", "Ends DATE"
+   - Pulsing dot with `motion-safe:animate-ping` for ≤7 days (respects `prefers-reduced-motion`)
+   - Color coding: info (>7 days), warning (4-7 days), error (≤3 days)
+
+2. **Hero countdown badge updated (hero.ts):**
+   - Replaced plain text "Trial ends in X days (on DATE)" with `urgencyPill()`
+   - Now renders clock icon + big number + pulsing dot + expiry date
+
+3. **Step 4 subtext updated (hero.ts):**
+   - Replaced plain text with `urgencyPillCompact()` — smaller inline version with pulsing dot
+   - Shows "ends soon" suffix when ≤3 days
+
+4. **CTA hint text strengthened:**
+   - New element `#trial-cta-hint` under hero CTAs
+   - Normal: "Avoid interruption when your trial ends."
+   - ≤3 days: "Your trial ends soon. Purchase now to keep access." (warning color)
+
+5. **Plans row upgraded (plans.ts):**
+   - Trial entitlements now show urgency pill instead of plain text expiry
+   - Added "Keep access" primary button (`data-trial-purchase`) to trial rows
+   - Non-trial rows unchanged (still have "Manage" button)
+
+6. **DashboardIcon clock icon:**
+   - Added "clock" to icon library for urgency pill
+
+**Files touched:**
+
+- `frontend/src/components/customer/dashboard/DashboardIcon.astro` — added clock icon
+- `frontend/src/components/customer/dashboard/TrialUrgencyPill.astro` — new component (static)
+- `frontend/src/lib/customer/dashboard/urgency-pill.ts` — new module (runtime HTML)
+- `frontend/src/lib/customer/dashboard/hero.ts` — uses urgency pill, CTA hint logic
+- `frontend/src/lib/customer/dashboard/plans.ts` — uses urgency pill, Keep access button
+- `frontend/src/components/customer/dashboard/HeroSection.astro` — added #trial-cta-hint id
+- `docs/licensing-portal-current-state.md` — updated docs
+
+**API/Backend impact:** None. Frontend-only visual changes.
+
+---
+
+### 2026-01-28: Trial-Only Conversion UX Improvements
+
+**Summary:** Enhanced the trial-only dashboard experience with subtle, non-cringey conversion nudges: time-left clarity, "keep what you have" endowment framing, goal-gradient progress cues, just-in-time dismissible banner, and Maker preselection in purchase modal.
+
+**Changes:**
+
+1. **Centralized trial state (`state.ts`):**
+   - Added `getTrialState()` function returning derived state: `hasActiveTrial`, `hasActivePaid`, `isTrialOnly`, `trialExpiresAt`, `trialDaysLeft`, `trialExpiryLabel`, `hasActivatedDevices`
+   - Added `getDaysLeft()` utility in `types.ts` to compute days until expiry
+
+2. **Endowment framing (HeroSection.astro + hero.ts):**
+   - Changed CTA from "Purchase subscription" to "Keep access after trial"
+   - Added helper text: "Avoid interruption when your trial ends."
+   - Added countdown badge: "Trial ends in X days (on DATE)"
+
+3. **Goal-gradient progress cue:**
+   - Replaced Reset button with progress indicator: "X/4 complete"
+   - Added Step 4: "Keep access after trial" with subtext showing days left
+   - Step 3 dynamically marked complete when device is activated
+
+4. **Just-in-time trial banner:**
+   - Shows only when `isTrialOnly && trialDaysLeft <= 7` and not dismissed
+   - Copy variants: calmer for 4-7 days, stronger for 0-3 days
+   - Dismisses for 24 hours (localStorage key: `trialBannerDismissedUntil`)
+   - Actions: "Keep access after trial" (primary) + "Not now"
+
+5. **Purchase modal preselection (modals.ts):**
+   - Buttons with `data-trial-purchase` attribute open modal with Maker preselected
+   - Exported `openPurchaseModalFromTrial()` for other modules
+   - User can still choose any plan; closing works normally
+
+6. **Plans section (plans.ts):**
+   - Trial card shows "Trial" label (not "Subscription")
+   - Shows expiry with days left: "Expires DATE (X days left)"
+   - No "Manage" button for trial entitlements
+
+**Files touched:**
+
+- `frontend/src/lib/customer/dashboard/state.ts` — added `getTrialState()` and `TrialState` interface
+- `frontend/src/lib/portal/types.ts` — added `getDaysLeft()` utility
+- `frontend/src/lib/customer/dashboard/hero.ts` — added banner logic, trial-only UI updates, dismiss handling
+- `frontend/src/lib/customer/dashboard/modals.ts` — added trial preselection, `openPurchaseModalFromTrial()`
+- `frontend/src/lib/customer/dashboard/plans.ts` — trial card display (already updated)
+- `frontend/src/components/customer/dashboard/HeroSection.astro` — trial-only hero redesign, banner markup
+- `docs/licensing-portal-current-state.md` — updated trial-only UX docs
+
+**API/Backend impact:** None. Frontend-only changes.
+
+**Tests/Scripts run:**
+
+- `pnpm -C frontend lint` — 0 errors (13 pre-existing warnings)
+- VS Code error checking — no errors in changed files
+- Verification scans confirmed new terms present: `trialDaysLeft`, `Keep access after trial`, `data-trial-purchase`, `trialBannerDismissedUntil`
+
+**git diff --stat:**
+
+```
+ docs/licensing-portal-current-state.md                         | 479 +++++++++++-
+ frontend/src/components/customer/dashboard/HeroSection.astro   | 259 +++++-
+ frontend/src/lib/customer/dashboard/hero.ts                    | 202 ++++-
+ frontend/src/lib/customer/dashboard/modals.ts                  |  36 +-
+ frontend/src/lib/customer/dashboard/plans.ts                   |  36 +-
+ frontend/src/lib/customer/dashboard/state.ts                   |  61 ++
+ frontend/src/lib/portal/types.ts                               |  30 +
+ 7 files changed (trial UX only, excludes backend trial endpoint changes from earlier)
+```
+
+---
+
+### 2026-01-28: Trial-Only Dashboard State
+
+**Summary:** Added a dedicated dashboard hero state for "trial-only" accounts (active trial, no paid subscription). This state shows differentiated CTAs and activation step text to guide trial users toward purchasing a subscription while acknowledging their trial is active.
+
+**Changes:**
+
+1. **New hero state: `hero-trial-only`:**
+   - Shows when customer has active trial but no paid subscription
+   - Badge: "Trial active" (primary variant)
+   - Primary CTA: "Download app"
+   - Secondary CTA: "Purchase subscription" (opens purchase modal, not "View plans")
+   - Step 1 in checklist: "Activate a trial" shown as completed (green checkmark, crossed out)
+
+2. **Updated no-entitlements hero:**
+   - Step 1 text dynamically updated to "Buy a subscription or activate a trial"
+   - Inline checklist markup (not using ActivationChecklist component) to allow JS text updates
+
+3. **New utility functions in types.ts:**
+   - `isActiveTrial(ent)` — true if tier="trial" and active status
+   - `isActivePaid(ent)` — true if tier!="trial" and active status
+
+4. **Updated hero.ts state logic:**
+   - Computes `isTrialOnly = hasActiveTrial && !hasActivePaidEnt`
+   - Shows `hero-trial-only` when trial-only, before checking `hero-no-activated`
+
+5. **Wiring:**
+   - `hero-trial-buy-btn` opens purchase modal (modals.ts)
+   - `hero-advanced-link-trial` switches to Advanced tab (tabs.ts)
+
+**Dashboard Hero States (now 4):**
+
+| State ID               | Condition                               | Badge                  | Primary CTA    | Secondary CTA           | Step 1                                                   |
+| ---------------------- | --------------------------------------- | ---------------------- | -------------- | ----------------------- | -------------------------------------------------------- |
+| `hero-no-entitlements` | No active entitlements                  | —                      | Start trial    | Buy subscription        | "Buy a subscription or activate a trial" (not completed) |
+| `hero-trial-only`      | Active trial, no paid                   | Trial active (primary) | Download app   | Purchase subscription   | "Activate a trial" (completed)                           |
+| `hero-no-activated`    | Paid subscription, no activated devices | Subscription active    | Download app   | View plans              | "Buy a subscription" (completed)                         |
+| `hero-all-good`        | Has activated devices                   | Activated              | Open Lightlane | Activate another device | All completed                                            |
+
+**Files touched:**
+
+- `frontend/src/lib/portal/types.ts` — added `isActiveTrial()`, `isActivePaid()`
+- `frontend/src/lib/customer/dashboard/hero.ts` — added trial-only state logic
+- `frontend/src/components/customer/dashboard/HeroSection.astro` — added trial-only hero section, inline checklist
+- `frontend/src/lib/customer/dashboard/modals.ts` — wired `hero-trial-buy-btn`
+- `frontend/src/lib/customer/dashboard/tabs.ts` — wired `hero-advanced-link-trial`
+- `docs/licensing-portal-current-state.md` — updated UI behavior docs
+
+**API/Backend impact:** None. Frontend-only changes.
+
+**Tests/Scripts run:**
+
+- VS Code error checking — no errors in changed files
+
+**git diff --stat:**
+
+```
+ docs/licensing-portal-current-state.md                              | 70 +++++++++++++++
+ frontend/src/components/customer/dashboard/HeroSection.astro        | 130 +++++++++++++++++++++++---
+ frontend/src/lib/customer/dashboard/hero.ts                         |  35 +++++++
+ frontend/src/lib/customer/dashboard/modals.ts                       |   1 +
+ frontend/src/lib/customer/dashboard/tabs.ts                         |   2 +-
+ frontend/src/lib/portal/types.ts                                    |  14 +++
+ 6 files changed, 237 insertions(+), 15 deletions(-)
+```
+
+---
 
 ### 2026-01-23: App Integration Reference Document
 
@@ -1425,4 +1805,438 @@ frontend/src/lib/customer/dashboard/airgapped.ts                   | 95 ++++++++
 
 ---
 
-_End of contract document._
+### 2026-01-28: 14-Day Free Trial Feature
+
+**Summary:** Added a "Start 14-day free trial" feature that allows logged-in customers to activate a trial entitlement. Each account can only use one trial ever (one-per-account, enforced server-side). Trial entitlements behave like subscriptions (require lease tokens, support offline refresh) and expire after 14 days.
+
+**Changes:**
+
+1. **Schema update: Added `trial` to entitlement tier enum:**
+   - `backend/src/api/entitlement/content-types/entitlement/schema.json` — tier now includes: `trial`, `maker`, `pro`, `education`, `enterprise`
+
+2. **New backend endpoint: `POST /api/trial/start`:**
+   - Protected by `customer-auth` and `license-rate-limit` middleware
+   - Creates trial entitlement: `tier="trial"`, `status="active"`, `isLifetime=false`, `maxDevices=1`, `expiresAt=now+14d`
+   - Returns 409 `TRIAL_ALREADY_USED` if customer has any previous trial (even expired)
+   - Audit logged via `audit.log("trial_start", ...)`
+   - Route added to `backend/src/api/custom/routes/custom.js`
+   - Handler added to `backend/src/api/custom/controllers/custom.js`
+
+3. **New error code: `TRIAL_ALREADY_USED`:**
+   - Added to `backend/src/utils/api-responses.js`
+
+4. **Frontend: Trial API and dashboard UI:**
+   - `frontend/src/lib/portal/api.ts` — added `startTrial()` function and `StartTrialResponse` type
+   - `frontend/src/lib/customer/dashboard/hero.ts` — added trial button handler with loading/error states
+   - `frontend/src/lib/customer/dashboard/init.ts` — added `refreshAllUI()` export for post-trial refresh
+   - `frontend/src/components/customer/dashboard/HeroSection.astro` — redesigned "no entitlements" hero state with "Start 14-day free trial" primary CTA
+   - `frontend/src/components/customer/dashboard/DashboardIcon.astro` — added `play` icon for trial button
+
+**Trial Behavior (matching existing entitlement patterns):**
+
+- Trial entitlements are non-lifetime (`isLifetime=false`), so they require lease tokens
+- Activation, refresh, and offline flows work identically to regular subscriptions
+- After `expiresAt`, the entitlement becomes unusable (status check in activation/refresh returns `ENTITLEMENT_NOT_ACTIVE`)
+- Offline provisioning is supported for trial entitlements (they are not lifetime)
+
+**Files touched:**
+
+- `backend/src/api/entitlement/content-types/entitlement/schema.json`
+- `backend/src/api/custom/routes/custom.js`
+- `backend/src/api/custom/controllers/custom.js`
+- `backend/src/utils/api-responses.js`
+- `frontend/src/lib/portal/api.ts`
+- `frontend/src/lib/customer/dashboard/hero.ts`
+- `frontend/src/lib/customer/dashboard/init.ts`
+- `frontend/src/components/customer/dashboard/HeroSection.astro`
+- `frontend/src/components/customer/dashboard/DashboardIcon.astro`
+- `docs/licensing-portal-current-state.md`
+
+**API/Backend impact:**
+
+- New endpoint: `POST /api/trial/start`
+- New error code: `TRIAL_ALREADY_USED`
+- Schema change: `tier` enum now includes `trial`
+
+**Tests/Scripts run:**
+
+- File error checking (no lint/compile errors in changed files)
+
+**git diff --stat:**
+
+```
+ backend/src/api/custom/controllers/custom.js                        | 101 +++++++++++++++++++++++++++++++++++
+ backend/src/api/custom/routes/custom.js                             |  15 +++++
+ backend/src/api/entitlement/content-types/entitlement/schema.json   |   1 +
+ backend/src/utils/api-responses.js                                  |   3 +
+ docs/licensing-portal-current-state.md                              |  98 ++++++++++++++++++++++++++++++++++
+ frontend/src/components/customer/dashboard/DashboardIcon.astro      |  37 ++++++++++++-
+ frontend/src/components/customer/dashboard/HeroSection.astro        |  32 +++++++----
+ frontend/src/lib/customer/dashboard/hero.ts                         |  48 ++++++++++++++++-
+ frontend/src/lib/customer/dashboard/init.ts                         |  12 +++++
+ frontend/src/lib/portal/api.ts                                      |  28 ++++++++++
+ 10 files changed, 358 insertions(+), 17 deletions(-)
+```
+
+---
+
+### 2026-01-28: Trial Eligibility Check (GET /api/trial/status)
+
+**Summary:** Added a trial eligibility endpoint and frontend integration so the "Start 14-day free trial" CTA only appears for truly eligible accounts (never had any entitlements and never used a trial). Previously, the trial CTA could appear to accounts that had expired entitlements or trials. Now the trial button is hidden by default and only shown after server confirms eligibility.
+
+**Changes:**
+
+1. **New backend endpoint: `GET /api/trial/status`:**
+   - Protected by `customer-auth` middleware (no rate limit needed for read-only status check)
+   - Queries ALL entitlements for the customer (any status, any tier)
+   - Returns `{ trialEligible, hasEverHadEntitlements, hasUsedTrial }`
+   - Eligibility logic: `trialEligible = !hasEverHadEntitlements && !hasUsedTrial`
+   - Route added to `backend/src/api/custom/routes/custom.js`
+   - Handler added to `backend/src/api/custom/controllers/custom.js`
+
+2. **Frontend state management:**
+   - `frontend/src/lib/customer/dashboard/state.ts` — added `trialEligible` and `trialStatusLoaded` state variables with getters/setters
+   - `frontend/src/lib/customer/dashboard/data.ts` — added `loadTrialStatus()` function, integrated into `loadAllData()`
+   - `frontend/src/lib/portal/api.ts` — added `getTrialStatus()` function and `TrialStatusResponse` type
+
+3. **Frontend hero updates:**
+   - `frontend/src/lib/customer/dashboard/hero.ts` — added `updateTrialButtonVisibility()` function that hides trial CTA until eligibility confirmed
+   - `frontend/src/components/customer/dashboard/HeroSection.astro` — trial button now `hidden` by default (no CTA flash before eligibility check)
+
+4. **Documentation:**
+   - Added section 3.6 "Check Trial Eligibility" with full endpoint spec
+   - Added `GET /api/trial/status` to quick reference table
+   - Updated changelog
+
+**UI Behavior:**
+
+- Trial button is hidden by default in HTML (`class="btn btn-primary hidden"`)
+- On dashboard load, `loadAllData()` fetches trial status in parallel with entitlements/devices
+- After status loads, `updateTrialButtonVisibility()` shows button only if `trialEligible === true`
+- After trial start, `loadAllData()` re-fetches status (now ineligible), and button disappears
+
+**Files touched:**
+
+- `backend/src/api/custom/routes/custom.js`
+- `backend/src/api/custom/controllers/custom.js`
+- `frontend/src/lib/portal/api.ts`
+- `frontend/src/lib/customer/dashboard/state.ts`
+- `frontend/src/lib/customer/dashboard/data.ts`
+- `frontend/src/lib/customer/dashboard/hero.ts`
+- `frontend/src/components/customer/dashboard/HeroSection.astro`
+- `docs/licensing-portal-current-state.md`
+
+**API/Backend impact:**
+
+- New endpoint: `GET /api/trial/status`
+
+**Tests/Scripts run:**
+
+- VS Code error checking (no errors in changed files)
+- Repo scan confirming routes/handlers in place
+
+**git diff --stat:**
+
+```
+ backend/src/api/custom/controllers/custom.js  | 150 ++++++++++
+ backend/src/api/custom/routes/custom.js       |  23 ++
+ docs/licensing-portal-current-state.md        | 257 +++++++++++++++++-
+ frontend/src/components/customer/dashboard/HeroSection.astro      |  27 +-
+ frontend/src/lib/customer/dashboard/data.ts   |  29 +-
+ frontend/src/lib/customer/dashboard/hero.ts   |  65 ++++-
+ frontend/src/lib/customer/dashboard/state.ts  |  20 ++
+ frontend/src/lib/portal/api.ts                |  39 +++
+ 8 files changed, 597 insertions(+), 13 deletions(-)
+```
+
+---
+
+### 2026-01-29: Trial Retirement on Paid Purchase
+
+**Summary:** When a customer successfully purchases a paid subscription (via Stripe checkout), any active trial entitlement is now automatically retired — status set to `expired`, expiresAt set to current time. This ensures trials don't persist alongside paid subscriptions. Additionally, the `entitlementExpiresAt` field is now included in all offline activation packages and lease refresh responses so the app can display accurate trial countdown timers.
+
+**Changes:**
+
+1. **New function: `retireTrialsForCustomer()` in `entitlement-mapping.js`:**
+   - Finds all trial entitlements for the customer where `tier=trial` and `status=active`
+   - Sets `status=expired` and `expiresAt=now`
+   - Adds metadata: `retiredReason="replaced_by_paid"` and `replacedByEntitlementId`
+   - Logs each retirement for audit trail
+   - Added to module.exports
+
+2. **Stripe webhook handler integration:**
+   - In `handleCheckoutSessionCompleted()`, after creating the paid entitlement, calls `retireTrialsForCustomer(customer.id, { replacedByEntitlementId: entitlement.id })`
+   - Trial retirement happens within the same webhook processing flow
+
+3. **Offline packages updated to include `entitlementExpiresAt`:**
+   - `buildActivationPackage()` now accepts and includes `entitlementExpiresAt` (ISO timestamp or null)
+   - `buildRefreshResponseCode()` now accepts and includes `entitlementExpiresAt`
+   - Both package builders called with `entitlement.expiresAt` from the activate and refresh handlers
+
+4. **Documentation updates:**
+   - `app-integration-reference.md` version bumped to 1.1, date to 2026-01-29
+   - Added key constraints about trial expiry and retirement on purchase
+   - Added "Tier" and "Trial" to terminology table
+   - Updated H.3 and H.5 to document `entitlementExpiresAt` field
+   - Updated J.5 example and added J.6 Lease Refresh Response example
+   - Updated storage recommendations to include `entitlementExpiresAt`
+   - Added trial entitlement examples to entitlements list responses
+
+**Behavior:**
+
+- If a customer has an active trial and purchases a Pro subscription, the trial entitlement immediately becomes `status=expired`
+- Existing activate/refresh endpoints already check `status=active` and return `ENTITLEMENT_NOT_ACTIVE` for retired trials
+- Trial's `expiresAt` (14-day window) is preserved in responses for app to display countdown
+- Subscription entitlements have `expiresAt=null` (renewal-based, not fixed expiry)
+
+**Files touched:**
+
+- `backend/src/utils/entitlement-mapping.js` — new `retireTrialsForCustomer()` function
+- `backend/src/utils/stripe-webhook-handler.js` — import and call retirement function
+- `backend/src/utils/offline-codes.js` — updated both package builders
+- `backend/src/api/custom/controllers/custom.js` — pass `expiresAt` to package builders
+- `docs/app-integration-reference.md` — comprehensive trial documentation
+- `docs/licensing-portal-current-state.md` — this changelog entry
+
+**API/Backend impact:**
+
+- No new endpoints
+- No endpoint signature changes
+- New field `entitlementExpiresAt` added to offline activation packages and refresh responses (additive, non-breaking)
+
+**Tests/Scripts run:**
+
+- VS Code error checking (no errors in changed files)
+- Code review of webhook handler flow
+- Code review of activate/refresh response handling
+
+**git diff --stat:**
+
+```
+ backend/src/api/custom/controllers/custom.js  |  10 +-
+ backend/src/utils/entitlement-mapping.js      |  80 +++++++++++++
+ backend/src/utils/offline-codes.js            |  14 ++-
+ backend/src/utils/stripe-webhook-handler.js   |  15 ++-
+ docs/app-integration-reference.md             | 140 +++++++++++++++++++----
+ docs/licensing-portal-current-state.md        |  90 +++++++++++++++
+ 6 files changed, 327 insertions(+), 22 deletions(-)
+```
+
+---
+
+### 2026-01-29: Dev-Only Customer Purge Script
+
+**Summary:** Added a development-only CLI script (`backend/scripts/dev-purge-customers.js`) to completely purge one or more customers and ALL their related records (entitlements, devices, purchases, license keys, offline challenges, offline code uses). This enables quick account reset for testing fresh portal/app flows without manual database manipulation.
+
+**Safety Gates (all must pass or script exits):**
+
+- `NODE_ENV` must be `"development"` (refuses in production/staging)
+- `ALLOW_DEV_PURGE` env var must be `"1"` (explicit opt-in)
+- Interactive confirmation required (type `DELETE` exactly)
+- Shows dry-run summary before any deletions
+
+**Usage:**
+
+```bash
+# From backend directory:
+NODE_ENV=development ALLOW_DEV_PURGE=1 node scripts/dev-purge-customers.js
+
+# Or via package.json script (sets ALLOW_DEV_PURGE for you):
+pnpm dev:purge-customers
+```
+
+**Script Flow:**
+
+1. Prompt for search term (email or name)
+2. Display matching customers (up to 50) in a table
+3. Select customers by index (comma-separated, e.g., `1,3,5`)
+4. Show dry-run summary: counts of all related records per customer
+5. Require explicit `DELETE` confirmation
+6. Delete in order: offline-challenges → offline-code-uses → devices → entitlements → license-keys → purchases → customer
+7. Print final report with totals and elapsed time
+
+**Files touched:**
+
+- `backend/scripts/dev-purge-customers.js` — new script
+- `backend/package.json` — added `dev:purge-customers` script
+
+**API/Backend impact:**
+
+- No endpoint changes
+- No schema changes
+- Script only runs in development mode
+
+**Models/Relations discovered and handled:**
+
+| Content Type        | Relation to Customer     | Delete Order |
+| ------------------- | ------------------------ | ------------ |
+| `offline-challenge` | `customerId` (integer)   | 1            |
+| `offline-code-use`  | `customerId` (integer)   | 2            |
+| `device`            | `customer` (FK relation) | 3            |
+| `entitlement`       | `customer` (FK relation) | 4            |
+| `license-key`       | `customer` (FK relation) | 5            |
+| `purchase`          | `customer` (FK relation) | 6            |
+| `customer`          | (self)                   | 7 (last)     |
+
+**Tests/Scripts run:**
+
+- Safety gate test 1: `node scripts/dev-purge-customers.js` → refuses (missing both env vars)
+- Safety gate test 2: `NODE_ENV=production ALLOW_DEV_PURGE=1 node scripts/dev-purge-customers.js` → refuses
+- Safety gate test 3: `NODE_ENV=development node scripts/dev-purge-customers.js` → refuses (missing ALLOW_DEV_PURGE)
+- VS Code error checking (no errors in script)
+
+**git diff --stat:**
+
+```
+ backend/package.json                     |   3 +-
+ backend/scripts/dev-purge-customers.js   | 381 +++++++++++++++++++++++++++++++
+ docs/licensing-portal-current-state.md   |  73 ++++++
+ 3 files changed, 456 insertions(+), 1 deletion(-)
+```
+
+---
+
+### 2026-01-29: Customer Email Uniqueness Enforcement
+
+**Summary:** Enforced unique customer emails (case-insensitive) at registration and profile update. Added stable error code `EMAIL_ALREADY_EXISTS` for duplicate email attempts.
+
+**Problem:** Portal allowed creating multiple customer accounts with the same email (or case variants like `Test@Email.com` and `test@email.com`), which broke the assumption that email is the customer's identity.
+
+**Solution:**
+
+1. **Email normalization:** All email inputs are now normalized with `email.trim().toLowerCase()` before lookup or storage:
+   - Registration (`POST /api/customers/register`)
+   - Login (`POST /api/customers/login`)
+   - Profile update (`PUT /api/customers/me`)
+
+2. **Pre-check with stable error code:** Before creating/updating, the system queries for existing customers with the normalized email. If found, returns:
+
+   ```json
+   {
+     "ok": false,
+     "code": "EMAIL_ALREADY_EXISTS",
+     "message": "An account with this email already exists. Try signing in."
+   }
+   ```
+
+   HTTP status: `409 Conflict`
+
+3. **Schema constraint:** The customer schema already had `"unique": true` on email. This now works correctly because all emails are stored lowercase.
+
+**New error code:**
+
+| Code                   | HTTP | When                                               |
+| ---------------------- | ---- | -------------------------------------------------- |
+| `EMAIL_ALREADY_EXISTS` | 409  | Registration or profile update with existing email |
+
+**Files touched:**
+
+- `backend/src/utils/api-responses.js` — added `EMAIL_ALREADY_EXISTS` to `ErrorCodes`
+- `backend/src/api/customer/controllers/customer.js` — email normalization + proper error response
+- `docs/licensing-portal-current-state.md` — added Customer data model section + this changelog
+
+**API/Backend impact:**
+
+- Registration now returns structured `{ ok, code, message }` error instead of plain `ctx.badRequest()`
+- Profile update now returns structured error for duplicate email
+- Login and registration are case-insensitive (existing behavior, now explicit)
+- No breaking changes for successful registrations
+
+**Tests run:**
+
+```bash
+# Fresh email registration - SUCCESS
+curl -X POST http://localhost:1337/api/customers/register \
+  -d '{"email": "uniquetest999@example.com", ...}'
+# Returns: { customer: {...}, token: "..." }
+
+# Duplicate email - BLOCKED
+curl -X POST http://localhost:1337/api/customers/register \
+  -d '{"email": "uniquetest999@example.com", ...}'
+# Returns: HTTP 409, { ok: false, code: "EMAIL_ALREADY_EXISTS", ... }
+
+# Case-insensitive duplicate - BLOCKED
+curl -X POST http://localhost:1337/api/customers/register \
+  -d '{"email": "UNIQUETEST999@Example.COM", ...}'
+# Returns: HTTP 409, { ok: false, code: "EMAIL_ALREADY_EXISTS", ... }
+
+# Whitespace-trimmed duplicate - BLOCKED
+curl -X POST http://localhost:1337/api/customers/register \
+  -d '{"email": "  uniquetest999@example.com  ", ...}'
+# Returns: HTTP 409, { ok: false, code: "EMAIL_ALREADY_EXISTS", ... }
+
+# Login still works
+curl -X POST http://localhost:1337/api/customers/login \
+  -d '{"email": "uniquetest999@example.com", "password": "..."}'
+# Returns: { customer: {...}, token: "..." }
+```
+
+**git diff --stat:**
+
+```
+ backend/src/api/customer/controllers/customer.js | 30 ++++++++++++++----------
+ backend/src/utils/api-responses.js               |  3 +++
+ docs/licensing-portal-current-state.md           | 80 ++++++++++++++++++++++++++
+ 3 files changed, 98 insertions(+), 15 deletions(-)
+```
+
+---
+
+### 2026-01-29: Friendly Signup Error Messages (Frontend)
+
+**Summary:** Improved signup UX by showing user-friendly error messages instead of generic "Registration failed" for known error conditions. The frontend now properly parses structured API errors and maps them to helpful messages.
+
+**Problem:** When registration failed (e.g., duplicate email), the UI showed a generic "Registration failed" message, which didn't help users understand what went wrong.
+
+**Solution:**
+
+1. **Frontend error mapping:** Updated registration pages to parse the structured `{ ok, code, message }` error format from the backend:
+
+   | Backend `code`         | Frontend Message                                                      |
+   | ---------------------- | --------------------------------------------------------------------- |
+   | `EMAIL_ALREADY_EXISTS` | "That email is already in use. Try signing in instead."               |
+   | `VALIDATION_ERROR`     | Uses backend message or "Please check the form fields and try again." |
+   | HTTP 409 (no code)     | "That email is already in use. Try signing in instead."               |
+   | HTTP 400 (no code)     | Uses backend message or "Please check the form fields and try again." |
+   | Other / 5xx            | "Registration failed. Please try again."                              |
+
+2. **No internal details exposed:** Error messages never reveal database errors, stack traces, endpoint names, or "user not found" style security information.
+
+**Files touched:**
+
+- `frontend/src/pages/customer/register.astro` — improved error parsing for customer portal signup
+- `frontend/src/pages/register.astro` — improved error parsing for team/staff signup (consistency)
+- `docs/licensing-portal-current-state.md` — this changelog entry
+
+**API/Backend impact:**
+
+- No backend changes required (already returns structured errors from previous changelog)
+
+**Tests run:**
+
+```bash
+# Duplicate email test
+curl -X POST http://localhost:1337/api/customers/register \
+  -d '{"email": "existing@example.com", ...}'
+# Backend returns: { ok: false, code: "EMAIL_ALREADY_EXISTS", message: "..." }
+# Frontend shows: "That email is already in use. Try signing in instead."
+
+# Frontend lint - PASS (no new errors)
+pnpm -C frontend lint
+
+# Frontend build - PASS
+pnpm -C frontend build
+```
+
+**git diff --stat:**
+
+```
+ frontend/src/pages/customer/register.astro | 28 +++++++++++++++++++-------
+ frontend/src/pages/register.astro          | 12 ++++++++++--
+ docs/licensing-portal-current-state.md     | 50 ++++++++++++++++++++++++++++++++
+ 3 files changed, 81 insertions(+), 9 deletions(-)
+```
+
+---
+
+\_End of contract document.

@@ -23,27 +23,253 @@ import ResponsiveBadge from "../shared/ResponsiveBadge.astro";
     <div class="flex flex-col lg:flex-row gap-8 lg:gap-12">
       <div class="flex-1">
         <h1 class="text-2xl md:text-3xl font-bold mb-3 text-ll-gradient">
-          Get a subscription to activate Lightlane
+          Get started with Lightlane
         </h1>
         <p class="text-base-content/70 mb-6">
-          Subscribe to unlock professional laser engraving features. After
-          checkout, you'll activate directly in the app.
+          Start a 14-day free trial to test all features, or subscribe now to
+          unlock professional laser engraving.
         </p>
         <div class="flex flex-col sm:flex-row gap-3 mb-6">
-          <button id="hero-buy-btn" class="btn btn-primary">
+          <!-- Trial CTA: only visible when customer is trial-eligible (hidden by default) -->
+          <button id="hero-start-trial-btn" class="btn btn-primary hidden">
+            <DashboardIcon name="play" class="w-5 h-5 mr-1" />
+            Start 14-day free trial
+          </button>
+          <button id="hero-buy-btn" class="btn btn-ghost">
             <DashboardIcon name="cart" class="w-5 h-5 mr-1" />
             Buy subscription
           </button>
-          <button class="btn btn-ghost" data-download-modal-trigger>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button class="btn btn-ghost btn-sm" data-download-modal-trigger>
             <DashboardIcon name="download" class="w-5 h-5 mr-1" />
             Download app
           </button>
         </div>
-        <p class="text-sm text-base-content/60">
-          After you buy a plan, activate it in the app.
+        <!-- Trial status messages -->
+        <div id="hero-trial-error" class="hidden mt-4 alert alert-error">
+          <span id="hero-trial-error-text"></span>
+        </div>
+        <div id="hero-trial-loading" class="hidden mt-4">
+          <span class="loading loading-spinner loading-sm"></span>
+          <span class="ml-2 text-sm">Starting trial...</span>
+        </div>
+      </div>
+      <!-- Checklist with dynamic step 1 text (will be updated by JS) -->
+      <div class="lg:w-72 bg-base-200/50 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-sm text-base-content/80">
+            How to activate
+          </h3>
+          <button
+            id="checklist-reset-1"
+            class="btn btn-xs btn-ghost text-base-content/50"
+            title="Reset checklist"
+          >
+            Reset
+          </button>
+        </div>
+        <ol class="space-y-3">
+          <!-- Step 1: Buy subscription or trial (text updated by JS) -->
+          <li class="flex items-start gap-3">
+            <span
+              id="step1-indicator-1"
+              class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0 cursor-default"
+            >
+              1
+            </span>
+            <span id="step1-text-1" class="text-sm text-base-content/70"
+              >Buy a subscription or activate a trial</span
+            >
+          </li>
+          <!-- Step 2: Download app -->
+          <li>
+            <button
+              id="step2-row-1"
+              type="button"
+              class="flex items-start gap-3 w-full text-left rounded-lg p-1 -m-1 cursor-pointer hover:bg-base-200/60 transition-colors"
+              aria-pressed="false"
+              title="Click to mark as done"
+            >
+              <span
+                id="step2-toggle-1"
+                class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0"
+              >
+                2
+              </span>
+              <span id="step2-text-1" class="text-sm text-base-content/70">
+                Download the app
+              </span>
+            </button>
+          </li>
+          <!-- Step 3: Sign in & activate -->
+          <li>
+            <button
+              id="step3-row-1"
+              type="button"
+              class="flex items-start gap-3 w-full text-left rounded-lg p-1 -m-1 cursor-pointer hover:bg-base-200/60 transition-colors"
+              aria-pressed="false"
+              title="Click to mark as done"
+            >
+              <span
+                id="step3-toggle-1"
+                class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0"
+              >
+                3
+              </span>
+              <span id="step3-text-1" class="text-sm text-base-content/70">
+                Sign in, choose plan, activate
+              </span>
+            </button>
+          </li>
+        </ol>
+        <p
+          class="text-xs text-base-content/50 mt-4 pt-3 border-t border-base-300"
+        >
+          <a href="#" id="hero-advanced-link-1" class="link link-hover">
+            Need manual or air-gapped activation?
+          </a>
         </p>
       </div>
-      <ActivationChecklist suffix="1" step1Complete={false} />
+    </div>
+  </div>
+
+  <!-- Hero: Trial Only (State 1.5) - Has active trial but no paid subscription -->
+  <div id="hero-trial-only" class="hidden">
+    <div class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+      <div class="flex-1">
+        <div class="mb-3 flex items-center gap-3 flex-wrap">
+          <ResponsiveBadge text="Trial active" variant="primary" />
+          <span id="trial-countdown-badge" class="text-sm text-base-content/60">
+            <!-- JS will populate: "Trial ends in X days (on DATE)" -->
+          </span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold mb-3 text-ll-gradient">
+          Activate your first device in the app
+        </h1>
+        <p class="text-base-content/70 mb-6">
+          Your 14-day trial is active. Download Lightlane, sign in with your
+          account, and activate to start engraving.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+          <button class="btn btn-primary" data-download-modal-trigger>
+            <DashboardIcon name="download" class="w-5 h-5 mr-1" />
+            Download app
+          </button>
+          <button
+            id="hero-trial-buy-btn"
+            class="btn btn-ghost"
+            data-trial-purchase
+          >
+            <DashboardIcon name="cart" class="w-5 h-5 mr-1" />
+            Keep access after trial
+          </button>
+        </div>
+        <p id="trial-cta-hint" class="text-sm text-base-content/60">
+          Avoid interruption when your trial ends.
+        </p>
+      </div>
+      <!-- Checklist with step 1 completed and progress indicator -->
+      <div class="lg:w-72 bg-base-200/50 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-sm text-base-content/80">
+            How to activate
+          </h3>
+          <span
+            id="trial-progress-indicator"
+            class="text-xs text-base-content/50"
+          >
+            <!-- JS will populate: "1/4 complete" -->
+          </span>
+        </div>
+        <ol id="trial-steps-list" class="space-y-3">
+          <!-- Step 1: Trial started - COMPLETED -->
+          <li class="flex items-start gap-3">
+            <span
+              class="flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0"
+            >
+              ✓
+            </span>
+            <span class="text-sm text-base-content/70 line-through">
+              Trial started
+            </span>
+          </li>
+          <!-- Step 2: Download app -->
+          <li>
+            <button
+              id="step2-row-trial"
+              type="button"
+              class="flex items-start gap-3 w-full text-left rounded-lg p-1 -m-1 cursor-pointer hover:bg-base-200/60 transition-colors"
+              aria-pressed="false"
+              title="Click to mark as done"
+            >
+              <span
+                id="step2-toggle-trial"
+                class="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-content text-xs font-bold shrink-0"
+              >
+                2
+              </span>
+              <span id="step2-text-trial" class="text-sm font-medium">
+                Download the app
+              </span>
+            </button>
+          </li>
+          <!-- Step 3: Sign in & activate -->
+          <li>
+            <button
+              id="step3-row-trial"
+              type="button"
+              class="flex items-start gap-3 w-full text-left rounded-lg p-1 -m-1 cursor-pointer hover:bg-base-200/60 transition-colors"
+              aria-pressed="false"
+              title="Click to mark as done"
+            >
+              <span
+                id="step3-toggle-trial"
+                class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0"
+              >
+                3
+              </span>
+              <span id="step3-text-trial" class="text-sm text-base-content/70">
+                Sign in and activate on your device
+              </span>
+            </button>
+          </li>
+          <!-- Step 4: Keep access after trial (CTA) -->
+          <li>
+            <button
+              id="step4-row-trial"
+              type="button"
+              class="flex items-start gap-3 w-full text-left rounded-lg p-1 -m-1 cursor-pointer hover:bg-base-200/60 transition-colors"
+              data-trial-purchase
+              title="Keep your access"
+            >
+              <span
+                class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0"
+              >
+                4
+              </span>
+              <div class="flex flex-col">
+                <span class="text-sm text-base-content/70">
+                  Keep access after trial
+                </span>
+                <span
+                  id="step4-subtext-trial"
+                  class="text-xs text-base-content/50"
+                >
+                  <!-- JS will populate: "Your trial ends in X days." -->
+                </span>
+              </div>
+            </button>
+          </li>
+        </ol>
+        <p
+          class="text-xs text-base-content/50 mt-4 pt-3 border-t border-base-300"
+        >
+          <a href="#" id="hero-advanced-link-trial" class="link link-hover">
+            Need manual or air-gapped activation?
+          </a>
+        </p>
+      </div>
     </div>
   </div>
 
@@ -132,3 +358,29 @@ import ResponsiveBadge from "../shared/ResponsiveBadge.astro";
     </div>
   </div>
 </section>
+
+<!-- Trial Expiry Banner (shown when trial-only and <= 7 days left) -->
+<div
+  id="trial-expiry-banner"
+  class="hidden alert alert-info shadow-md mb-6"
+  role="alert"
+>
+  <DashboardIcon name="info" class="w-5 h-5 shrink-0" />
+  <div class="flex-1">
+    <span id="trial-banner-text">
+      <!-- JS will populate based on days left -->
+    </span>
+  </div>
+  <div class="flex gap-2">
+    <button
+      id="trial-banner-buy-btn"
+      class="btn btn-sm btn-primary"
+      data-trial-purchase
+    >
+      Keep access after trial
+    </button>
+    <button id="trial-banner-dismiss-btn" class="btn btn-sm btn-ghost">
+      Not now
+    </button>
+  </div>
+</div>

@@ -5,6 +5,7 @@ const {
   normalizeEmail,
   linkPendingLicensesToCustomer,
 } = require("../../../utils/license-linker");
+const { ErrorCodes, sendError } = require("../../../utils/api-responses");
 
 const getSanitizedCustomer = async (strapi, customerId) => {
   if (!customerId) {
@@ -56,27 +57,35 @@ module.exports = createCoreController(
           );
         }
 
-        // Check if customer already exists
+        // Normalize email: trim whitespace and lowercase for case-insensitive uniqueness
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Check if customer already exists (case-insensitive)
         const existingCustomer = await strapi.entityService.findMany(
           "api::customer.customer",
           {
-            filters: { email: email.toLowerCase() },
+            filters: { email: normalizedEmail },
           },
         );
 
         if (existingCustomer.length > 0) {
-          return ctx.badRequest("Customer already exists with this email");
+          return sendError(
+            ctx,
+            409,
+            ErrorCodes.EMAIL_ALREADY_EXISTS,
+            "An account with this email already exists. Try signing in.",
+          );
         }
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Create customer
+        // Create customer with normalized email
         const customer = await strapi.entityService.create(
           "api::customer.customer",
           {
             data: {
-              email: email.toLowerCase(),
+              email: normalizedEmail,
               password: hashedPassword,
               firstName,
               lastName,
@@ -126,11 +135,14 @@ module.exports = createCoreController(
           return ctx.badRequest("Email and password are required");
         }
 
+        // Normalize email: trim whitespace and lowercase for case-insensitive lookup
+        const normalizedEmail = email.trim().toLowerCase();
+
         // Find customer
         const customers = await strapi.entityService.findMany(
           "api::customer.customer",
           {
-            filters: { email: email.toLowerCase() },
+            filters: { email: normalizedEmail },
           },
         );
 
@@ -234,17 +246,25 @@ module.exports = createCoreController(
 
         const { firstName, lastName, email } = ctx.request.body;
 
+        // Normalize email if provided
+        const normalizedEmail = email ? email.trim().toLowerCase() : null;
+
         // If email is being updated, check if it's already taken
-        if (email && email !== ctx.state.customer.email) {
+        if (normalizedEmail && normalizedEmail !== ctx.state.customer.email) {
           const existingCustomer = await strapi.entityService.findMany(
             "api::customer.customer",
             {
-              filters: { email: email.toLowerCase() },
+              filters: { email: normalizedEmail },
             },
           );
 
           if (existingCustomer.length > 0) {
-            return ctx.badRequest("Email already taken");
+            return sendError(
+              ctx,
+              409,
+              ErrorCodes.EMAIL_ALREADY_EXISTS,
+              "An account with this email already exists.",
+            );
           }
         }
 
@@ -255,7 +275,7 @@ module.exports = createCoreController(
             data: {
               firstName: firstName || undefined,
               lastName: lastName || undefined,
-              email: email ? email.toLowerCase() : undefined,
+              email: normalizedEmail || undefined,
             },
           },
         );

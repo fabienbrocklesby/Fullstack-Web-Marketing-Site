@@ -328,6 +328,85 @@ function repairFoundersTier(entitlement) {
   };
 }
 
+// -----------------------------------------------------------------------------
+// Trial Retirement
+// -----------------------------------------------------------------------------
+
+/**
+ * Retire any active trial entitlements for a customer when they purchase a paid plan.
+ * This is called after a paid entitlement becomes active.
+ *
+ * Behavior:
+ * - Finds all trial entitlements (tier="trial") for the customer that are still active/usable
+ * - Sets status="expired" and expiresAt=now so they no longer appear as usable
+ * - Idempotent: calling multiple times is safe (no-op if already retired)
+ * - Does NOT delete trials (preserves history/relations)
+ *
+ * @param {number} customerId - The customer ID whose trials should be retired
+ * @param {Object} options - Additional options
+ * @param {number} [options.replacedByEntitlementId] - The new paid entitlement ID (for audit)
+ * @returns {Promise<{retiredCount: number, retiredIds: number[]}>}
+ */
+async function retireTrialsForCustomer(customerId, options = {}) {
+  const { replacedByEntitlementId } = options;
+
+  if (!customerId) {
+    strapi.log.warn("[RetireTrials] No customerId provided, skipping");
+    return { retiredCount: 0, retiredIds: [] };
+  }
+
+  // Find all active trial entitlements for this customer
+  // "Active" means: tier=trial AND status=active
+  const trialEntitlements = await strapi.entityService.findMany(
+    "api::entitlement.entitlement",
+    {
+      filters: {
+        customer: customerId,
+        tier: "trial",
+        status: "active",
+      },
+    }
+  );
+
+  if (!trialEntitlements || trialEntitlements.length === 0) {
+    strapi.log.info(`[RetireTrials] No active trials found for customer ${customerId}`);
+    return { retiredCount: 0, retiredIds: [] };
+  }
+
+  const now = new Date();
+  const retiredIds = [];
+
+  for (const trial of trialEntitlements) {
+    // Skip if already expired (idempotency)
+    if (trial.status === "expired") {
+      strapi.log.info(`[RetireTrials] Trial ${trial.id} already expired, skipping`);
+      continue;
+    }
+
+    // Retire the trial: set status=expired and expiresAt=now
+    await strapi.entityService.update("api::entitlement.entitlement", trial.id, {
+      data: {
+        status: "expired",
+        expiresAt: now.toISOString(),
+        metadata: {
+          ...(trial.metadata || {}),
+          retiredReason: "replaced_by_paid",
+          retiredAt: now.toISOString(),
+          replacedByEntitlementId: replacedByEntitlementId || null,
+        },
+      },
+    });
+
+    retiredIds.push(trial.id);
+    strapi.log.info(
+      `[RetireTrials] Retired trial ${trial.id} for customer ${customerId}` +
+        (replacedByEntitlementId ? ` (replaced by entitlement ${replacedByEntitlementId})` : "")
+    );
+  }
+
+  return { retiredCount: retiredIds.length, retiredIds };
+}
+
 module.exports = {
   // Price ID arrays
   MAKER_PRICE_IDS,
@@ -349,4 +428,5 @@ module.exports = {
   determineEntitlementTier,
   createEntitlementData,
   repairFoundersTier,
+  retireTrialsForCustomer,
 };

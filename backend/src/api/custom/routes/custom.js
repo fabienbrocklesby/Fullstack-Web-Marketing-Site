@@ -323,5 +323,28 @@ module.exports = {
         middlewares: ["global::customer-auth", "global::license-rate-limit"],
       },
     },
+
+    // =========================================================================
+    // Trial: Start 14-day free trial (one per account)
+    // =========================================================================
+    {
+      method: "POST",
+      path: "/trial/start",
+      handler: "custom.trialStart",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth", "global::license-rate-limit"],
+      },
+    },
+    // Check trial eligibility (has customer ever had any entitlements/trial)
+    {
+      method: "GET",
+      path: "/trial/status",
+      handler: "custom.trialStatus",
+      config: {
+        auth: false,
+        middlewares: ["global::customer-auth"],
+      },
+    },
   ],
 };

@@ -230,6 +230,20 @@ export function isSubscriptionEntitlement(ent: Entitlement): boolean {
   return ent.leaseRequired === true;
 }
 
+/**
+ * Check if an entitlement is an active trial (tier="trial" and active status)
+ */
+export function isActiveTrial(ent: Entitlement): boolean {
+  return ent.tier === "trial" && isActiveEntitlement(ent);
+}
+
+/**
+ * Check if an entitlement is a paid subscription (not trial, active status)
+ */
+export function isActivePaid(ent: Entitlement): boolean {
+  return ent.tier !== "trial" && isActiveEntitlement(ent);
+}
+
 export function formatTier(tier: string): string {
   return tier.charAt(0).toUpperCase() + tier.slice(1);
 }
@@ -251,6 +265,22 @@ export function formatDateTime(dateStr: string | null | undefined): string | nul
   if (!dateStr) return null;
   try {
     return new Date(dateStr).toLocaleString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Calculate days remaining until a date. Returns null if date is invalid/past.
+ */
+export function getDaysLeft(dateStr: string | null | undefined): number | null {
+  if (!dateStr) return null;
+  try {
+    const targetDate = new Date(dateStr);
+    const now = new Date();
+    const diffMs = targetDate.getTime() - now.getTime();
+    if (diffMs <= 0) return 0;
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   } catch {
     return null;
   }

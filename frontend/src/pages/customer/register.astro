@@ -316,18 +316,40 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         const data = await response.json();
 
         if (!response.ok) {
-          let message = "Registration failed";
-          const err = data?.error;
-          if (err) {
-            if (typeof err === "string") message = err;
-            else if (typeof err.message === "string") message = err.message;
-            else if (Array.isArray(err) && err[0]?.message)
-              message = err[0].message;
-            else if (err.details?.errors?.length) {
-              message = err.details.errors[0].message || message;
-            }
+          // Handle structured API errors (Stage 6A format: { ok, code, message })
+          const code = data?.code || null;
+          const rawMessage = data?.message || null;
+
+          // Map error codes to user-friendly messages
+          let friendlyMessage: string;
+
+          switch (code) {
+            case "EMAIL_ALREADY_EXISTS":
+              friendlyMessage =
+                "That email is already in use. Try signing in instead.";
+              break;
+            case "VALIDATION_ERROR":
+              friendlyMessage =
+                rawMessage || "Please check the form fields and try again.";
+              break;
+            default:
+              // For unknown codes or missing codes, try to extract something safe
+              // but default to generic message to avoid leaking internals
+              if (response.status === 409) {
+                // 409 Conflict without code - likely duplicate email
+                friendlyMessage =
+                  "That email is already in use. Try signing in instead.";
+              } else if (response.status === 400) {
+                // 400 Bad Request - validation issue
+                friendlyMessage =
+                  rawMessage || "Please check the form fields and try again.";
+              } else {
+                // 5xx or unexpected - generic message
+                friendlyMessage = "Registration failed. Please try again.";
+              }
           }
-          throw new Error(message);
+
+          throw new Error(friendlyMessage);
         }
 
         // Store the customer token

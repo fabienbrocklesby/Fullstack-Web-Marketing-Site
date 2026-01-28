@@ -30,23 +30,45 @@ export function setReloadCallback(fn: () => Promise<void>): void {
 // ============================================================
 let purchaseModal: HTMLDialogElement;
 let purchaseForm: HTMLFormElement;
+let purchaseTierSelect: HTMLSelectElement;
 
-function openPurchaseModal(): void {
+/**
+ * Open purchase modal. If fromTrialOnly=true, preselect Maker tier.
+ */
+function openPurchaseModal(fromTrialOnly: boolean = false): void {
+  if (fromTrialOnly && purchaseTierSelect) {
+    purchaseTierSelect.value = "maker";
+  }
   purchaseModal.showModal();
+}
+
+/**
+ * Export for use by other modules (hero, trial banner)
+ */
+export function openPurchaseModalFromTrial(): void {
+  openPurchaseModal(true);
 }
 
 function initPurchaseModal(): void {
   purchaseModal = byId<HTMLDialogElement>("purchase-modal");
   purchaseForm = byId<HTMLFormElement>("purchase-form");
+  purchaseTierSelect = byId<HTMLSelectElement>("purchase-tier");
 
-  maybeById("hero-buy-btn")?.addEventListener("click", openPurchaseModal);
-  maybeById("hero-buy-another-btn")?.addEventListener("click", openPurchaseModal);
-  maybeById("add-plan-btn")?.addEventListener("click", openPurchaseModal);
-  maybeById("plans-empty-buy")?.addEventListener("click", openPurchaseModal);
+  // Regular purchase buttons (non-trial context)
+  maybeById("hero-buy-btn")?.addEventListener("click", () => openPurchaseModal(false));
+  maybeById("hero-buy-another-btn")?.addEventListener("click", () => openPurchaseModal(false));
+  maybeById("add-plan-btn")?.addEventListener("click", () => openPurchaseModal(false));
+  maybeById("plans-empty-buy")?.addEventListener("click", () => openPurchaseModal(false));
+
+  // Trial-only purchase buttons (preselect Maker)
+  // Use data-trial-purchase attribute to identify these
+  document.querySelectorAll("[data-trial-purchase]").forEach((btn) => {
+    btn.addEventListener("click", () => openPurchaseModal(true));
+  });
 
   purchaseForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const tier = (byId<HTMLSelectElement>("purchase-tier")).value;
+    const tier = purchaseTierSelect.value;
     const btnText = byId("purchase-btn-text");
     const btnLoad = byId("purchase-btn-loading");
     const errorEl = byId("purchase-error");

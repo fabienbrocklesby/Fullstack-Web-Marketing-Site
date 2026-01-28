@@ -1,0 +1,102 @@
+---
+/**
+ * TrialUrgencyPill – prominent countdown pill for trial entitlements
+ * Shows clock icon, big number, "days left" text, and expiry date
+ * Adds subtle pulse animation when ≤7 days (respects reduced-motion)
+ */
+import DashboardIcon from "./DashboardIcon.astro";
+
+interface Props {
+  /** Days remaining in trial (0+ integer) */
+  daysLeft: number;
+  /** Human-readable expiry date, e.g. "Jan 15" */
+  expiresLabel: string;
+  /** Size variant */
+  size?: "sm" | "md";
+  /** Extra classes */
+  class?: string;
+}
+
+const {
+  daysLeft,
+  expiresLabel,
+  size = "md",
+  class: className = "",
+} = Astro.props;
+
+// Urgency thresholds
+const isUrgent = daysLeft <= 7;
+const isCritical = daysLeft <= 3;
+
+// Size-based classes
+const sizeClasses = {
+  sm: {
+    pill: "px-2 py-1 gap-1.5 text-xs",
+    number: "text-base font-bold",
+    icon: "w-3.5 h-3.5",
+    dot: "w-1.5 h-1.5",
+  },
+  md: {
+    pill: "px-3 py-1.5 gap-2 text-sm",
+    number: "text-lg font-bold",
+    icon: "w-4 h-4",
+    dot: "w-2 h-2",
+  },
+};
+
+const s = sizeClasses[size];
+
+// Color scheme based on urgency
+const colorClasses = isCritical
+  ? "bg-error/10 text-error border-error/20"
+  : isUrgent
+    ? "bg-warning/10 text-warning border-warning/20"
+    : "bg-info/10 text-info border-info/20";
+
+const dotColorClasses = isCritical
+  ? "bg-error"
+  : isUrgent
+    ? "bg-warning"
+    : "bg-info";
+---
+
+<div
+  class:list={[
+    "inline-flex items-center rounded-full border",
+    colorClasses,
+    s.pill,
+    className,
+  ]}
+>
+  <!-- Pulsing dot for urgency -->
+  {
+    isUrgent && (
+      <span class="relative flex items-center justify-center">
+        <span
+          class:list={[
+            "absolute rounded-full opacity-75",
+            "motion-safe:animate-ping motion-reduce:animate-none",
+            dotColorClasses,
+            s.dot,
+          ]}
+        />
+        <span class:list={["relative rounded-full", dotColorClasses, s.dot]} />
+      </span>
+    )
+  }
+
+  <!-- Clock icon -->
+  <DashboardIcon name="clock" class={s.icon} />
+
+  <!-- Big number -->
+  <span class:list={[s.number, "tabular-nums"]}>{daysLeft}</span>
+
+  <!-- Text -->
+  <span class="opacity-80">
+    {daysLeft === 1 ? "day left" : "days left"}
+  </span>
+
+  <!-- Separator + expiry date -->
+  <span class="opacity-40">·</span>
+  <span class="opacity-70">Ends {expiresLabel}</span>
+</div>
