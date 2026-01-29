@@ -173,8 +173,10 @@ Desktop app sends a design image plus a goal and device/material context. The po
 
 Fields:
 
-- `image` (file, required): PNG or JPG
+- `image` (file, required): PNG, JPEG, WEBP, GIF (first frame only), or SVG (rasterized)
 - `payload` (string, required): JSON string with prompt/context/availableSettings
+
+**Image handling:** If `image` exceeds `AI_ENGRAVE_MAX_IMAGE_BYTES` (default 5MB), the portal will automatically normalize and downscale/recompress it before sending to OpenAI. Images above `AI_ENGRAVE_ABS_MAX_IMAGE_BYTES` (default 40MB) are rejected. Normalization respects `AI_ENGRAVE_MAX_IMAGE_DIM_PX` (default 2048). SVGs are rejected if they contain scripts, event handlers, foreignObject, or external hrefs; export to PNG if blocked. SVG size is capped at `AI_ENGRAVE_SVG_MAX_BYTES` (default 2MB) and embedded SVG data URIs are capped by `AI_ENGRAVE_SVG_DATA_URI_MAX_BYTES` (default 200KB).
 
 ### Payload JSON (string)
 

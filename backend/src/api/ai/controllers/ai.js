@@ -286,6 +286,8 @@ module.exports = {
 
     const result = await engraveAssistantService.callOpenAI(payload, imageFile);
 
+    const imageMeta = result.imageMeta || {};
+
     audit.aiEngraveAssistant(ctx, {
       outcome: result.success ? "success" : "failure",
       reason: result.success ? null : result.error?.code,
@@ -297,6 +299,21 @@ module.exports = {
       imageType: imageFile?.type || imageFile?.mimetype || null,
       promptLength: payload.prompt.trim().length,
       settingsKeysCount: Object.keys(payload.availableSettings || {}).length,
+      imageDownscaled: imageMeta.imageDownscaled || false,
+      imageTransformed: imageMeta.imageTransformed || false,
+      originalBytes: imageMeta.originalBytes || null,
+      finalBytes: imageMeta.finalBytes || null,
+      originalMimeType: imageMeta.originalMimeType || null,
+      finalMimeType: imageMeta.finalMimeType || null,
+      framesUsed: imageMeta.framesUsed || null,
+      originalDimensions:
+        imageMeta.originalWidth && imageMeta.originalHeight
+          ? `${imageMeta.originalWidth}x${imageMeta.originalHeight}`
+          : null,
+      finalDimensions:
+        imageMeta.finalWidth && imageMeta.finalHeight
+          ? `${imageMeta.finalWidth}x${imageMeta.finalHeight}`
+          : null,
     });
 
     if (!result.success) {
@@ -314,7 +331,8 @@ module.exports = {
         ctx,
         result.error.status,
         errorCode,
-        result.error.message
+        result.error.message,
+        result.error.details
       );
     }
 

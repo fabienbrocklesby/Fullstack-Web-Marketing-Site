@@ -11,6 +11,7 @@
 "use strict";
 
 const fs = require("node:fs/promises");
+const { normalizeForAi } = require("../../../utils/image-normalize");
 
 // Error codes that map to portal error codes
 const ProviderErrorCodes = {
@@ -55,7 +56,21 @@ function getConfig() {
     maxSettingsSchemaChars:
       parseInt(process.env.AI_ENGRAVE_MAX_SETTINGS_SCHEMA_CHARS, 10) || 10000,
     maxImageBytes: parseInt(process.env.AI_ENGRAVE_MAX_IMAGE_BYTES, 10) || 5 * 1024 * 1024,
-    allowedImageTypes: ["image/png", "image/jpeg", "image/jpg"],
+    absMaxImageBytes:
+      parseInt(process.env.AI_ENGRAVE_ABS_MAX_IMAGE_BYTES, 10) || 40 * 1024 * 1024,
+    maxImageDimensionPx:
+      parseInt(process.env.AI_ENGRAVE_MAX_IMAGE_DIM_PX, 10) || 2048,
+    svgMaxBytes: parseInt(process.env.AI_ENGRAVE_SVG_MAX_BYTES, 10) || 2 * 1024 * 1024,
+    svgDataUriMaxBytes:
+      parseInt(process.env.AI_ENGRAVE_SVG_DATA_URI_MAX_BYTES, 10) || 200 * 1024,
+    allowedImageTypes: [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+      "image/gif",
+      "image/svg+xml",
+    ],
   };
 }
 
@@ -85,15 +100,6 @@ function validateRequest(payload, imageFile) {
     };
   }
 
-  const imageType = getImageType(imageFile);
-  if (!config.allowedImageTypes.includes(imageType)) {
-    return {
-      valid: false,
-      error: "image must be a PNG or JPG",
-      details: { field: "image", allowed: config.allowedImageTypes },
-    };
-  }
-
   const imageSize = Number(imageFile.size || 0);
   if (imageSize <= 0) {
     return {
@@ -103,13 +109,13 @@ function validateRequest(payload, imageFile) {
     };
   }
 
-  if (imageSize > config.maxImageBytes) {
+  if (imageSize > config.absMaxImageBytes) {
     return {
       valid: false,
-      error: `image exceeds maximum size of ${config.maxImageBytes} bytes`,
+      error: `image exceeds maximum size of ${config.absMaxImageBytes} bytes`,
       details: {
         field: "image",
-        maxBytes: config.maxImageBytes,
+        maxBytes: config.absMaxImageBytes,
         actualBytes: imageSize,
       },
     };
@@ -645,8 +651,46 @@ async function callOpenAI(payload, imageFile) {
     };
   }
 
-  const imageType = getImageType(imageFile) || "image/png";
-  const imageDataUrl = `data:${imageType};base64,${imageBuffer.toString("base64")}`;
+  const imageType = getImageType(imageFile);
+  let normalizeResult;
+
+  try {
+    normalizeResult = await normalizeForAi({
+      inputBuffer: imageBuffer,
+      inputMimeType: imageType,
+      maxBytes: config.maxImageBytes,
+      absMaxBytes: config.absMaxImageBytes,
+      maxDimensionPx: config.maxImageDimensionPx,
+      svgMaxBytes: config.svgMaxBytes,
+      svgDataUriMaxBytes: config.svgDataUriMaxBytes,
+    });
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: error.code || ProviderErrorCodes.BAD_REQUEST,
+        status: error.status || 400,
+        message: error.message || "image could not be processed",
+        details: error.details || null,
+      },
+      latencyMs: Date.now() - startTime,
+      imageMeta: {
+        imageDownscaled: false,
+        imageTransformed: false,
+        originalBytes: imageBuffer.byteLength,
+        finalBytes: null,
+        originalWidth: null,
+        originalHeight: null,
+        finalWidth: null,
+        finalHeight: null,
+        originalMimeType: imageType || null,
+        finalMimeType: null,
+        framesUsed: null,
+      },
+    };
+  }
+
+  const imageDataUrl = `data:${normalizeResult.mimeType};base64,${normalizeResult.buffer.toString("base64")}`;
   const responseSchema = buildResponseSchema(payload.availableSettings);
 
   const requestBody = {
@@ -698,7 +742,23 @@ async function callOpenAI(payload, imageFile) {
       if (typeof strapi !== "undefined" && strapi.log) {
         strapi.log.error(`[AI] OpenAI error ${response.status}: ${errorBody.substring(0, 500)}`);
       }
-      return mapProviderError(response.status, errorBody, latencyMs);
+      const mapped = mapProviderError(response.status, errorBody, latencyMs);
+      return {
+        ...mapped,
+        imageMeta: {
+          imageDownscaled: normalizeResult.didDownscale,
+          imageTransformed: normalizeResult.didTransform,
+          originalBytes: normalizeResult.originalBytes,
+          finalBytes: normalizeResult.finalBytes,
+          originalWidth: normalizeResult.meta?.width || null,
+          originalHeight: normalizeResult.meta?.height || null,
+          finalWidth: normalizeResult.meta?.finalWidth || null,
+          finalHeight: normalizeResult.meta?.finalHeight || null,
+          originalMimeType: normalizeResult.originalMimeType,
+          finalMimeType: normalizeResult.finalMimeType,
+          framesUsed: normalizeResult.meta?.framesUsed || null,
+        },
+      };
     }
 
     const data = await response.json();
@@ -747,6 +807,19 @@ async function callOpenAI(payload, imageFile) {
         model: config.model,
       },
       latencyMs,
+      imageMeta: {
+        imageDownscaled: normalizeResult.didDownscale,
+        imageTransformed: normalizeResult.didTransform,
+        originalBytes: normalizeResult.originalBytes,
+        finalBytes: normalizeResult.finalBytes,
+        originalWidth: normalizeResult.meta?.width || null,
+        originalHeight: normalizeResult.meta?.height || null,
+        finalWidth: normalizeResult.meta?.finalWidth || null,
+        finalHeight: normalizeResult.meta?.finalHeight || null,
+        originalMimeType: normalizeResult.originalMimeType,
+        finalMimeType: normalizeResult.finalMimeType,
+        framesUsed: normalizeResult.meta?.framesUsed || null,
+      },
     };
   } catch (err) {
     clearTimeout(timeoutId);
@@ -761,6 +834,21 @@ async function callOpenAI(payload, imageFile) {
           message: "AI request timed out",
         },
         latencyMs,
+        imageMeta: normalizeResult
+          ? {
+              imageDownscaled: normalizeResult.didDownscale,
+              imageTransformed: normalizeResult.didTransform,
+              originalBytes: normalizeResult.originalBytes,
+              finalBytes: normalizeResult.finalBytes,
+              originalWidth: normalizeResult.meta?.width || null,
+              originalHeight: normalizeResult.meta?.height || null,
+              finalWidth: normalizeResult.meta?.finalWidth || null,
+              finalHeight: normalizeResult.meta?.finalHeight || null,
+              originalMimeType: normalizeResult.originalMimeType,
+              finalMimeType: normalizeResult.finalMimeType,
+              framesUsed: normalizeResult.meta?.framesUsed || null,
+            }
+          : null,
       };
     }
 
@@ -772,6 +860,21 @@ async function callOpenAI(payload, imageFile) {
         message: "Failed to connect to AI provider",
       },
       latencyMs,
+      imageMeta: normalizeResult
+        ? {
+            imageDownscaled: normalizeResult.didDownscale,
+            imageTransformed: normalizeResult.didTransform,
+            originalBytes: normalizeResult.originalBytes,
+            finalBytes: normalizeResult.finalBytes,
+            originalWidth: normalizeResult.meta?.width || null,
+            originalHeight: normalizeResult.meta?.height || null,
+            finalWidth: normalizeResult.meta?.finalWidth || null,
+            finalHeight: normalizeResult.meta?.finalHeight || null,
+            originalMimeType: normalizeResult.originalMimeType,
+            finalMimeType: normalizeResult.finalMimeType,
+            framesUsed: normalizeResult.meta?.framesUsed || null,
+          }
+        : null,
     };
   }
 }

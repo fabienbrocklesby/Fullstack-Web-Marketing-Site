@@ -196,7 +196,12 @@ Stage naming is documentation-only; endpoints remain callable regardless of stag
 - `enum` must be a non-empty array (string enums must be strings; number/integer enums must be numbers; integers must be integers).
 - `minimum`/`maximum` must be numbers and `minimum <= maximum` when both present.
 - `minLength`/`maxLength` must be integers and `minLength <= maxLength` when both present.
-- `image` required; allowed types: PNG/JPEG; must be non-empty; max size `AI_ENGRAVE_MAX_IMAGE_BYTES` (default 5MB).
+- `image` required; allowed types: PNG, JPEG, WEBP, GIF (first frame only), SVG (rasterized).
+- If `image` exceeds `AI_ENGRAVE_MAX_IMAGE_BYTES` (default 5MB), the server **automatically normalizes and downscales/recompresses** it before sending to OpenAI.
+- Hard reject if `image` exceeds `AI_ENGRAVE_ABS_MAX_IMAGE_BYTES` (default 40MB).
+- Normalization uses `AI_ENGRAVE_MAX_IMAGE_DIM_PX` (default 2048) as the max dimension cap.
+- SVG safety: SVGs are rejected if they contain scripts, event handlers, foreignObject, or external hrefs. Export to PNG if blocked.
+- SVG max size: `AI_ENGRAVE_SVG_MAX_BYTES` (default 2MB). Embedded SVG data URIs are capped by `AI_ENGRAVE_SVG_DATA_URI_MAX_BYTES` (default 200KB).
 
 **Response (success):**
 
