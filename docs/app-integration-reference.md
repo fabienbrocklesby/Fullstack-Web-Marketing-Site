@@ -1,8 +1,15 @@
 # LightLane App Integration Reference
 
-**Document Version:** 1.1  
+**Document Version:** 1.2  
 **Date:** 2026-01-29  
-**Purpose:** Complete specification for implementing LightLane licensing in the desktop app, including online activation and air-gapped (offline) flows.
+**Purpose:** Complete specification for implementing LightLane licensing in the desktop app, including online activation, trial system, and air-gapped (offline) flows.
+
+**Changelog (1.2):**
+
+- Added E.5 Trial System section with `POST /api/trial/start` and `GET /api/trial/status` endpoints
+- Added `TRIAL_ALREADY_USED` and `EMAIL_ALREADY_EXISTS` to error codes table
+- Clarified trial eligibility rules and retirement behavior on paid purchase
+- Updated `ENTITLEMENT_NOT_ACTIVE` description to include trial expiry
 
 ---
 
@@ -466,6 +473,156 @@ Authorization: Bearer <token>
 | 401 | `UNAUTHENTICATED` | `"Authentication required"` |
 | 403 | `DEVICE_NOT_OWNED` | `"Device is not registered to your account"` |
 | 404 | `DEVICE_NOT_FOUND` | `"Device not found"` |
+
+---
+
+### E.5 Trial System
+
+The trial system provides a 14-day free trial for new customers. Trials behave like subscriptions: they require lease tokens and can be activated on devices.
+
+#### Trial Eligibility Rules
+
+1. **One trial per account (ever).** Once a customer has started a trial, they cannot start another — even if that trial has expired.
+2. **No trial if customer has any entitlements.** If a customer already has ANY entitlement (paid or otherwise), they are not eligible for a trial.
+3. **Trial is retired on paid purchase.** When the customer purchases a paid subscription, any active trial is immediately set to `status: "expired"` and `expiresAt: now`. This happens automatically via the webhook handler.
+
+#### Start Trial
+
+**`POST /api/trial/start`** — Requires `customer-auth`
+
+**Request:** (empty body)
+
+```json
+{}
+```
+
+**Response (201):**
+
+```json
+{
+  "ok": true,
+  "entitlement": {
+    "id": 456,
+    "tier": "trial",
+    "status": "active",
+    "isLifetime": false,
+    "expiresAt": "2026-02-11T00:00:00.000Z",
+    "maxDevices": 1,
+    "source": "manual",
+    "createdAt": "2026-01-28T00:00:00.000Z",
+    "leaseRequired": true
+  },
+  "message": "Trial started successfully. Your 14-day trial expires on 2026-02-11."
+}
+```
+
+**Key Fields:**
+
+- `tier`: Always `"trial"` for trial entitlements
+- `isLifetime`: Always `false` — trials are never lifetime
+- `leaseRequired`: Always `true` — trials need lease tokens like subscriptions
+- `expiresAt`: Exactly 14 days from creation
+- `maxDevices`: `1` — trials are limited to one device
+- `source`: `"manual"` — not from Stripe subscription
+
+**Errors:**
+
+| Status | Code                 | Message                                 |
+| ------ | -------------------- | --------------------------------------- |
+| 401    | `UNAUTHENTICATED`    | `"Authentication required"`             |
+| 409    | `TRIAL_ALREADY_USED` | `"Trial already used on this account."` |
+| 500    | `INTERNAL_ERROR`     | `"An internal error occurred"`          |
+
+**Notes:**
+
+- `TRIAL_ALREADY_USED` (409) is returned if the customer has ever had a trial entitlement, regardless of its current status
+- The app should check `GET /api/trial/status` first to avoid calling this endpoint unnecessarily
+
+#### Check Trial Eligibility
+
+**`GET /api/trial/status`** — Requires `customer-auth`
+
+**Response (200):**
+
+```json
+{
+  "ok": true,
+  "trialEligible": true,
+  "hasEverHadEntitlements": false,
+  "hasUsedTrial": false
+}
+```
+
+**Fields:**
+
+| Field                    | Type    | Description                                                       |
+| ------------------------ | ------- | ----------------------------------------------------------------- |
+| `trialEligible`          | boolean | `true` if customer can start a trial, `false` otherwise           |
+| `hasEverHadEntitlements` | boolean | `true` if customer has ever had ANY entitlement (any tier/status) |
+| `hasUsedTrial`           | boolean | `true` if customer has ever started a trial (any status)          |
+
+**Eligibility Logic:**
+
+```
+trialEligible = !hasEverHadEntitlements && !hasUsedTrial
+```
+
+**Errors:**
+
+| Status | Code              | Message                        |
+| ------ | ----------------- | ------------------------------ |
+| 401    | `UNAUTHENTICATED` | `"Authentication required"`    |
+| 500    | `INTERNAL_ERROR`  | `"An internal error occurred"` |
+
+#### Trial Entitlement in Lists
+
+When fetching `GET /api/customers/me/entitlements`, trial entitlements appear like any other entitlement:
+
+```json
+{
+  "id": 456,
+  "tier": "trial",
+  "status": "active",
+  "isLifetime": false,
+  "leaseRequired": true,
+  "maxDevices": 1,
+  "expiresAt": "2026-02-11T00:00:00.000Z",
+  "currentPeriodEnd": null,
+  "cancelAtPeriodEnd": false,
+  "source": "manual",
+  "createdAt": "2026-01-28T00:00:00.000Z",
+  "licenseKey": null
+}
+```
+
+**Trial-Specific Fields:**
+
+- `tier`: `"trial"`
+- `expiresAt`: The hard expiry date (14 days from creation)
+- `currentPeriodEnd`: Always `null` for trials (no subscription cycle)
+- `licenseKey`: Always `null` for trials (no license key generated)
+
+#### Trial Expiry and Retirement
+
+**Natural Expiry:** When the current time passes `expiresAt`, the trial is considered expired. The server does not actively update the status — the app should check `expiresAt` against the current time.
+
+**Retirement on Paid Purchase:** When the customer purchases a paid subscription, the webhook handler calls `retireTrialsForCustomer()` which:
+
+1. Finds all active trial entitlements for the customer
+2. Sets `status: "expired"` and `expiresAt: now`
+3. Adds metadata: `{ retiredReason: "replaced_by_paid", retiredAt: "...", replacedByEntitlementId: ... }`
+
+After retirement, the trial will appear in entitlement lists with `status: "expired"` and the retirement timestamp.
+
+#### App-Side Trial Handling
+
+The app should:
+
+1. **Check eligibility** before showing "Start Trial" UI: `GET /api/trial/status`
+2. **Start trial** on user action: `POST /api/trial/start`
+3. **Display countdown** using `expiresAt` from the trial entitlement
+4. **Handle expiry gracefully:** When `expiresAt` has passed, show upgrade prompts
+5. **Handle activation/refresh failures** for expired trials: Check for `ENTITLEMENT_NOT_ACTIVE` error code
 
 ---
 
@@ -992,30 +1149,32 @@ claims = jwt_verify(token, public_key, algorithms=["RS256"])
 
 ## K. Quick Reference: All Error Codes
 
-| Code                            | HTTP    | Meaning                              |
-| ------------------------------- | ------- | ------------------------------------ |
-| `VALIDATION_ERROR`              | 400     | Missing or invalid request field     |
-| `UNAUTHENTICATED`               | 401     | No valid auth token                  |
-| `FORBIDDEN`                     | 403     | Not authorized for this resource     |
-| `NOT_FOUND`                     | 404     | Generic resource not found           |
-| `ENTITLEMENT_NOT_FOUND`         | 404     | Entitlement doesn't exist            |
-| `DEVICE_NOT_FOUND`              | 404     | Device doesn't exist                 |
-| `DEVICE_NOT_OWNED`              | 403/409 | Device belongs to another customer   |
-| `DEVICE_NOT_BOUND`              | 400/403 | Device not activated for entitlement |
-| `ENTITLEMENT_NOT_ACTIVE`        | 403     | Subscription expired/canceled        |
-| `MAX_DEVICES_EXCEEDED`          | 409     | Would exceed maxDevices limit        |
-| `LIFETIME_NOT_SUPPORTED`        | 400     | Offline not available for lifetime   |
-| `CHALLENGE_INVALID`             | 400     | Challenge JWT malformed              |
-| `CHALLENGE_EXPIRED`             | 400     | Challenge JWT expired                |
-| `REPLAY_REJECTED`               | 409     | Code/challenge already used          |
-| `INVALID_SETUP_CODE`            | 400     | Malformed device setup code          |
-| `INVALID_PUBLIC_KEY`            | 400     | Ed25519 key invalid/corrupted        |
-| `INVALID_REQUEST_CODE`          | 400     | Malformed lease refresh request      |
-| `INVALID_DEACTIVATION_CODE`     | 400     | Malformed deactivation code          |
-| `SIGNATURE_VERIFICATION_FAILED` | 403     | Ed25519 signature invalid            |
-| `RATE_LIMITED`                  | 429     | Too many requests                    |
-| `RETIRED_ENDPOINT`              | 410     | Endpoint no longer available         |
-| `INTERNAL_ERROR`                | 500     | Server error                         |
+| Code                            | HTTP    | Meaning                                     |
+| ------------------------------- | ------- | ------------------------------------------- |
+| `VALIDATION_ERROR`              | 400     | Missing or invalid request field            |
+| `UNAUTHENTICATED`               | 401     | No valid auth token                         |
+| `FORBIDDEN`                     | 403     | Not authorized for this resource            |
+| `NOT_FOUND`                     | 404     | Generic resource not found                  |
+| `ENTITLEMENT_NOT_FOUND`         | 404     | Entitlement doesn't exist                   |
+| `DEVICE_NOT_FOUND`              | 404     | Device doesn't exist                        |
+| `DEVICE_NOT_OWNED`              | 403/409 | Device belongs to another customer          |
+| `DEVICE_NOT_BOUND`              | 400/403 | Device not activated for entitlement        |
+| `ENTITLEMENT_NOT_ACTIVE`        | 403     | Subscription/trial expired or canceled      |
+| `MAX_DEVICES_EXCEEDED`          | 409     | Would exceed maxDevices limit               |
+| `TRIAL_ALREADY_USED`            | 409     | Customer has already used their trial       |
+| `EMAIL_ALREADY_EXISTS`          | 409     | Email already registered to another account |
+| `LIFETIME_NOT_SUPPORTED`        | 400     | Offline not available for lifetime          |
+| `CHALLENGE_INVALID`             | 400     | Challenge JWT malformed                     |
+| `CHALLENGE_EXPIRED`             | 400     | Challenge JWT expired                       |
+| `REPLAY_REJECTED`               | 409     | Code/challenge already used                 |
+| `INVALID_SETUP_CODE`            | 400     | Malformed device setup code                 |
+| `INVALID_PUBLIC_KEY`            | 400     | Ed25519 key invalid/corrupted               |
+| `INVALID_REQUEST_CODE`          | 400     | Malformed lease refresh request             |
+| `INVALID_DEACTIVATION_CODE`     | 400     | Malformed deactivation code                 |
+| `SIGNATURE_VERIFICATION_FAILED` | 403     | Ed25519 signature invalid                   |
+| `RATE_LIMITED`                  | 429     | Too many requests                           |
+| `RETIRED_ENDPOINT`              | 410     | Endpoint no longer available                |
+| `INTERNAL_ERROR`                | 500     | Server error                                |
 
 ---
 

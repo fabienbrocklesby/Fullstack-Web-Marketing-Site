@@ -1,0 +1,115 @@
+### ==========================================================================
+### Stage 1: AI API Smoke Tests
+###
+### Prerequisites:
+### 1. Backend running: docker-compose -f docker-compose.dev.yml up -d
+### 2. Test customer seeded: docker exec lightlane-backend-dev node scripts/seed-smoke-test-data.js
+###
+### Run with VS Code REST Client extension or similar .http client
+### ==========================================================================
+
+@baseUrl = http://localhost:1337
+@contentType = application/json
+
+### --------------------------------------------------------------------------
+### 1. Login to get customer token
+### --------------------------------------------------------------------------
+# @name login
+POST {{baseUrl}}/api/customers/login
+Content-Type: {{contentType}}
+
+{
+  "email": "smoketest@example.com",
+  "password": "SmokeTest123!"
+}
+
+### --------------------------------------------------------------------------
+### 2. Mint AI token (requires customer token)
+### --------------------------------------------------------------------------
+# @name mintAiToken
+POST {{baseUrl}}/api/v1/ai/token
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.token}}
+
+### --------------------------------------------------------------------------
+### 3. Settings Assistant (requires AI token)
+###
+### Expected: 200 OK with AI response
+### --------------------------------------------------------------------------
+# @name settingsAssistant
+POST {{baseUrl}}/api/v1/ai/settings-assistant
+Content-Type: {{contentType}}
+Authorization: Bearer {{mintAiToken.response.body.data.token}}
+
+{
+  "prompt": "How do I enable dark mode in LightLane?",
+  "context": {
+    "currentSettings": {
+      "theme": "light",
+      "language": "en"
+    }
+  }
+}
+
+### --------------------------------------------------------------------------
+### 4. Settings Assistant - Missing AI token
+###
+### Expected: 401 UNAUTHENTICATED
+### --------------------------------------------------------------------------
+# @name settingsAssistantNoAuth
+POST {{baseUrl}}/api/v1/ai/settings-assistant
+Content-Type: {{contentType}}
+
+{
+  "prompt": "test"
+}
+
+### --------------------------------------------------------------------------
+### 5. Settings Assistant - Invalid prompt (empty)
+###
+### Expected: 400 VALIDATION_ERROR
+### --------------------------------------------------------------------------
+# @name settingsAssistantEmptyPrompt
+POST {{baseUrl}}/api/v1/ai/settings-assistant
+Content-Type: {{contentType}}
+Authorization: Bearer {{mintAiToken.response.body.data.token}}
+
+{
+  "prompt": ""
+}
+
+### --------------------------------------------------------------------------
+### 6. Settings Assistant - Prompt too long
+###
+### Expected: 400 VALIDATION_ERROR with details
+### --------------------------------------------------------------------------
+# @name settingsAssistantLongPrompt
+POST {{baseUrl}}/api/v1/ai/settings-assistant
+Content-Type: {{contentType}}
+Authorization: Bearer {{mintAiToken.response.body.data.token}}
+
+{
+  "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+
+### --------------------------------------------------------------------------
+### 7. AI Token - Customer with no entitlement
+###
+### Setup: Run: docker exec lightlane-backend-dev node scripts/create-no-entitlement-customer.js
+### Expected: 403 ENTITLEMENT_NOT_ACTIVE
+### --------------------------------------------------------------------------
+
+# @name loginNoEntitlement
+POST {{baseUrl}}/api/customers/login
+Content-Type: {{contentType}}
+
+{
+  "email": "no-entitlement@test.local",
+  "password": "test123!"
+}
+
+###
+# @name mintAiTokenNoEntitlement
+POST {{baseUrl}}/api/v1/ai/token
+Content-Type: {{contentType}}
+Authorization: Bearer {{loginNoEntitlement.response.body.token}}

@@ -395,6 +395,7 @@ Starts a 14-day free trial for the authenticated customer. One trial per account
 - Trial entitlements behave like subscriptions: they require lease tokens and support offline refresh
 - After `expiresAt`, the trial becomes unusable (activation/refresh will fail with `ENTITLEMENT_NOT_ACTIVE`)
 - The account can never start another trial — calling this endpoint again returns 409
+- **Retirement on paid purchase:** When customer purchases a paid subscription, the webhook handler calls `retireTrialsForCustomer()` which sets the trial's `status=expired` and `expiresAt=now`. See changelog entry "2026-01-29: Trial Retirement on Paid Purchase" for implementation details.
 
 ### 3.6 Check Trial Eligibility
 

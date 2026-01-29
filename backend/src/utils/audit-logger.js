@@ -381,6 +381,46 @@ const audit = {
     });
   },
 
+  // -------------------------------------------------------------------------
+  // Portal AI API audit events (Stage 1+)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Log AI token mint attempt
+   */
+  aiTokenMint(ctx, { outcome, reason, customerId, entitlementId, jti, error }) {
+    return auditLog("ai_token_mint", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId: entitlementId || null,
+        jti: jti ? jti.slice(0, 8) + "..." : null,
+        error: error || null,
+      },
+    });
+  },
+
+  /**
+   * Log Settings Assistant call
+   * Never logs prompt content or settings values
+   */
+  aiSettingsAssistant(ctx, { outcome, reason, customerId, entitlementId, jti, latencyMs, error }) {
+    return auditLog("ai_settings_assistant", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId: entitlementId || null,
+        jti: jti ? jti.slice(0, 8) + "..." : null,
+        latencyMs: latencyMs || null,
+        error: error || null,
+      },
+    });
+  },
+
   /**
    * Generic audit log
    */
