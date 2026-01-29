@@ -47,5 +47,24 @@ module.exports = {
         middlewares: ["global::ai-auth", "global::ai-rate-limit"],
       },
     },
+
+    // =========================================================================
+    // Stage 2: Engrave Assistant (Image-based)
+    // =========================================================================
+
+    /**
+     * Engrave Assistant endpoint.
+     * Requires AI token (not customer auth).
+     * Accepts multipart/form-data with image + payload JSON string.
+     */
+    {
+      method: "POST",
+      path: "/v1/ai/engrave-assistant",
+      handler: "ai.engraveAssistant",
+      config: {
+        auth: false,
+        middlewares: ["global::ai-auth", "global::ai-rate-limit"],
+      },
+    },
   ],
 };

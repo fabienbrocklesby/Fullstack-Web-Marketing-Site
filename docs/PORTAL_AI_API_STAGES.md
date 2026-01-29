@@ -1,7 +1,7 @@
 # Portal AI API Stages
 
 This is the staged delivery plan for the Portal + AI API layer.
-The goal is to ship Stage 1 + Stage 2, and stop.
+Stage naming is a documentation convention; endpoints remain callable regardless of stage labels.
 
 ## Stage 0 — Baseline + Contract Lock
 
@@ -48,7 +48,7 @@ The goal is to ship Stage 1 + Stage 2, and stop.
 - Unit tests for gating + payload validation.
 - Integration/smoke tests in repo.
 
-## Stage 2 — Background Removal (MVP) via Portal AI API
+## Stage 2 — Background Removal (MVP) via Portal AI API (planned, not implemented)
 
 ### Goals
 
@@ -74,6 +74,23 @@ The goal is to ship Stage 1 + Stage 2, and stop.
   - oversized payload failure
   - provider errors mapped cleanly
 
-## Non-goal: Stage 3
+## Stage 3 — Engrave Assistant (Image-based, implemented)
 
-Stage 3 (“Image Designer”) is intentionally excluded from this project.
+Note: Older docs marked Stage 3 as out of scope, but reality has changed — Engrave Assistant is implemented.
+
+### Goals
+
+- Desktop app can send a single raster image plus an `availableSettings` schema.
+- Portal validates entitlement and proxies to OpenAI.
+- Portal returns a **proposed settings patch** and guidance only (no automatic apply).
+
+### UX/flow note (checkbox behavior)
+
+- The app uses the same chat UI for both assistants.
+- An optional “include image” checkbox adds the image + `availableSettings` payload.
+- The portal returns proposed patch + guidance; the app applies changes only after user confirmation.
+
+### Exit criteria
+
+- End-to-end engrave assistant works reliably with size limits.
+- Tests cover validation and provider error mapping.

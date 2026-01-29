@@ -1,0 +1,65 @@
+### ==========================================================================
+### Stage 3: Engrave Assistant (Image-based) Smoke Tests
+###
+### Prerequisites:
+### 1. Backend running: docker-compose -f docker-compose.dev.yml up -d
+### 2. Test customer seeded: docker exec lightlane-backend-dev node scripts/seed-smoke-test-data.js
+###
+### Run with VS Code REST Client extension or similar .http client
+### ==========================================================================
+
+@baseUrl = http://localhost:1337
+@contentType = application/json
+@imagePath = ../../../frontend/public/LogoHorizontalNoBackground.png
+
+### --------------------------------------------------------------------------
+### 1. Login to get customer token
+### --------------------------------------------------------------------------
+# @name login
+POST {{baseUrl}}/api/customers/login
+Content-Type: {{contentType}}
+
+{
+  "email": "smoketest@example.com",
+  "password": "SmokeTest123!"
+}
+
+### --------------------------------------------------------------------------
+### 2. Mint AI token (requires customer token)
+### --------------------------------------------------------------------------
+# @name mintAiToken
+POST {{baseUrl}}/api/v1/ai/token
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.token}}
+
+### --------------------------------------------------------------------------
+### 3. Engrave Assistant (multipart upload)
+###
+### Expected: 200 OK with proposedPatch
+### Note: For VS Code REST Client, use the shell script instead:
+###   cd backend && ./test-engrave-assistant.sh
+###
+### Alternative: Use curl directly (more reliable for multipart):
+###   See backend/test-engrave-assistant.sh for working example
+### --------------------------------------------------------------------------
+# @name engraveAssistant
+POST {{baseUrl}}/api/v1/ai/engrave-assistant
+Authorization: Bearer {{mintAiToken.response.body.data.token}}
+Content-Type: multipart/form-data; boundary=----LLBoundary
+
+------LLBoundary
+Content-Disposition: form-data; name="payload"
+
+{"prompt":"Make the engraving crisp with clean edges.","context":{"material":"birch plywood","device":"LightLane Pro","currentSettings":{"power":45,"speed":220}},"availableSettings":{"power":{"type":"number","minimum":0,"maximum":100},"speed":{"type":"number","minimum":1,"maximum":300},"passes":{"type":"integer","minimum":1,"maximum":10},"dither":{"type":"boolean"},"mode":{"type":"string","enum":["raster","vector"]}}}
+------LLBoundary
+Content-Disposition: form-data; name="image"; filename="test-engrave.png"
+Content-Type: image/png
+
+< {{imagePath}}
+------LLBoundary--
+
+# For multipart upload with REST Client, curl is more reliable.
+# Run: cd backend && ./test-engrave-assistant.sh
+
+
+

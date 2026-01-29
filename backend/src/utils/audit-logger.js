@@ -422,6 +422,41 @@ const audit = {
   },
 
   /**
+   * Log Engrave Assistant call (image-based)
+   * Never logs prompt or image content
+   */
+  aiEngraveAssistant(ctx, {
+    outcome,
+    reason,
+    customerId,
+    entitlementId,
+    jti,
+    latencyMs,
+    imageBytes,
+    imageType,
+    promptLength,
+    settingsKeysCount,
+    error,
+  }) {
+    return auditLog("ai_engrave_assistant", {
+      ctx,
+      outcome,
+      reason,
+      customerId,
+      metadata: {
+        entitlementId: entitlementId || null,
+        jti: jti ? jti.slice(0, 8) + "..." : null,
+        latencyMs: latencyMs || null,
+        imageBytes: imageBytes || null,
+        imageType: imageType || null,
+        promptLength: promptLength || null,
+        settingsKeysCount: settingsKeysCount || null,
+        error: error || null,
+      },
+    });
+  },
+
+  /**
    * Generic audit log
    */
   log: auditLog,

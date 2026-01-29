@@ -10,6 +10,7 @@ const { mintAiToken } = require("../../../utils/ai-token");
 const { sendOk, sendError, ErrorCodes } = require("../../../utils/api-responses");
 const { audit } = require("../../../utils/audit-logger");
 const settingsAssistantService = require("../services/settings-assistant");
+const engraveAssistantService = require("../services/engrave-assistant");
 
 module.exports = {
   /**
@@ -197,6 +198,126 @@ module.exports = {
     }
 
     // Success
+    return sendOk(ctx, {
+      data: result.data,
+    });
+  },
+
+  /**
+   * POST /api/v1/ai/engrave-assistant
+   *
+   * Image-based settings proposal endpoint - proxies to OpenAI vision.
+   * Requires: ai-auth middleware (ctx.state.ai populated)
+   * Content-Type: multipart/form-data with fields:
+   *  - image (file)
+   *  - payload (JSON string)
+   */
+  async engraveAssistant(ctx) {
+    const { customerId, entitlementId, jti } = ctx.state.ai;
+    const { files, body } = ctx.request || {};
+
+    const imageField = files?.image;
+    const imageFile = Array.isArray(imageField) ? imageField[0] : imageField;
+
+    if (!body || typeof body.payload !== "string") {
+      audit.aiEngraveAssistant(ctx, {
+        outcome: "failure",
+        reason: "validation_error",
+        customerId,
+        entitlementId,
+        jti,
+        imageBytes: imageFile?.size || null,
+        imageType: imageFile?.type || imageFile?.mimetype || null,
+      });
+      return sendError(
+        ctx,
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+        "payload is required and must be a JSON string",
+        { field: "payload" }
+      );
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(body.payload);
+    } catch (error) {
+      audit.aiEngraveAssistant(ctx, {
+        outcome: "failure",
+        reason: "validation_error",
+        customerId,
+        entitlementId,
+        jti,
+        imageBytes: imageFile?.size || null,
+        imageType: imageFile?.type || imageFile?.mimetype || null,
+      });
+      return sendError(
+        ctx,
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+        "payload must be valid JSON",
+        { field: "payload" }
+      );
+    }
+
+    const validation = engraveAssistantService.validateRequest(payload, imageFile);
+    if (!validation.valid) {
+      audit.aiEngraveAssistant(ctx, {
+        outcome: "failure",
+        reason: "validation_error",
+        customerId,
+        entitlementId,
+        jti,
+        imageBytes: imageFile?.size || null,
+        imageType: imageFile?.type || imageFile?.mimetype || null,
+        promptLength: typeof payload?.prompt === "string" ? payload.prompt.trim().length : null,
+        settingsKeysCount: payload?.availableSettings
+          ? Object.keys(payload.availableSettings).length
+          : null,
+      });
+      return sendError(
+        ctx,
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+        validation.error,
+        validation.details
+      );
+    }
+
+    const result = await engraveAssistantService.callOpenAI(payload, imageFile);
+
+    audit.aiEngraveAssistant(ctx, {
+      outcome: result.success ? "success" : "failure",
+      reason: result.success ? null : result.error?.code,
+      customerId,
+      entitlementId,
+      jti,
+      latencyMs: result.latencyMs,
+      imageBytes: imageFile?.size || null,
+      imageType: imageFile?.type || imageFile?.mimetype || null,
+      promptLength: payload.prompt.trim().length,
+      settingsKeysCount: Object.keys(payload.availableSettings || {}).length,
+    });
+
+    if (!result.success) {
+      const errorCode = result.error.code === "PROVIDER_TIMEOUT"
+        ? "PROVIDER_TIMEOUT"
+        : result.error.code === "PROVIDER_RATE_LIMITED"
+          ? "PROVIDER_RATE_LIMITED"
+          : result.error.code === "PROVIDER_ERROR"
+            ? "PROVIDER_ERROR"
+            : result.error.code === "VALIDATION_ERROR"
+              ? ErrorCodes.VALIDATION_ERROR
+              : ErrorCodes.INTERNAL_ERROR;
+
+      return sendError(
+        ctx,
+        result.error.status,
+        errorCode,
+        result.error.message
+      );
+    }
+
     return sendOk(ctx, {
       data: result.data,
     });
