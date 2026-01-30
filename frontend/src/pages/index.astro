@@ -4,6 +4,7 @@ import Footer from "../components/Footer.astro";
 import EasterEgg from "../components/EasterEgg.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import { pricingOffers } from "../data/pricing";
+import { homepageFaq } from "../data/faq";
 import { getSaleBadgeText, getHeroPricingNote } from "../utils/sale-dates";
 
 const saleBadgeText = getSaleBadgeText();
@@ -14,55 +15,39 @@ const siteBase = Astro.site ?? fallbackSite;
 const toAbsolute = (path: string) => new URL(path, siteBase).href;
 
 const homepageKeywords = [
-  "laser engraving software",
-  "laser cutter software",
+  "AI laser engraving software",
+  "AI-powered laser cutter software",
   "laser engraving workflow automation",
-  "laser engraving software for Ruida",
-  "laser cutter job optimizer",
-  "best laser engraving software",
-  "Lightlane laser engraving",
+  "AI image prep for laser engraving",
+  "smart laser engraving settings",
+  "best AI laser engraving software",
+  "Lightlane AI laser engraving",
 ];
 
 const workflowSteps = [
   {
     id: "workflow-step-1",
     anchor: "/#workflow-step-1",
-    name: "Intelligent Import",
+    name: "Import Your Design",
     description:
-      "Drop SVG, DXF, PNG, or JPG assets and Lightlane laser engraving software auto-normalises layers, fonts, and paths with collision checks.",
+      "Drop in SVGs, images, or design files. Lightlane normalizes layers and paths so you can get straight to work.",
     video: "/landing/drag&drop.mp4",
   },
   {
     id: "workflow-step-2",
     anchor: "/#workflow-step-2",
-    name: "Real-time Preview",
+    name: "Set Up Your Job",
     description:
-      "GPU-accelerated preview shows engrave order, power maps, and cutter movement in real time so you catch issues before firing the laser.",
-    video: "/landing/preview.mp4",
+      "Choose your material and tweak power, speed, and passes. Use built-in presets or dial in your own settings.",
+    video: "/landing/materials.mp4",
   },
   {
     id: "workflow-step-3",
     anchor: "/#workflow-step-3",
-    name: "Smart Parameters",
+    name: "Preview & Run",
     description:
-      "Material-aware presets adapt power, speed, and passes to your laser cutter profile while enforcing guardrails against unsafe settings.",
-    video: "/landing/materials.mp4",
-  },
-  {
-    id: "workflow-step-4",
-    anchor: "/#workflow-step-4",
-    name: "Device Streaming",
-    description:
-      "Stream jobs directly to Ruida, GRBL, or G-code controllers with automatic fallbacks to packaged job bundles when you need to go offline.",
-    video: "/landing/stream.mp4",
-  },
-  {
-    id: "workflow-step-5",
-    anchor: "/#workflow-step-5",
-    name: "Analyze & Reuse",
-    description:
-      "Capture run analytics, generate post-job recommendations, and save the entire setup as a reusable laser engraving template.",
-    video: "/landing/templates.mp4",
+      "See exactly what will engrave before you fire. Stream directly to G-code, GRBL, or Ruida controllers.",
+    video: "/landing/preview.mp4",
   },
 ];
 
@@ -78,8 +63,10 @@ const offerSchemas = pricingOffers.map((offer) => {
   };
 
   if (offer.sku) base.sku = offer.sku;
-  if (typeof offer.price === "number") {
-    base.price = offer.price;
+  if (typeof offer.monthlyPrice === "number") {
+    base.price = offer.monthlyPrice;
+    base.billingIncrement = 1;
+    base.billingDuration = "P1M";
   } else {
     base.priceType = "https://schema.org/CallForPrice";
   }
@@ -87,32 +74,8 @@ const offerSchemas = pricingOffers.map((offer) => {
   return base;
 });
 
-const faqEntries = [
-  {
-    question:
-      "Can I run Lightlane fully offline on a dedicated engraving machine?",
-    answer:
-      "Yes - Lightlane is engineered to operate entirely offline. You can activate and manage licenses locally and run full jobs without connectivity, ideal for shop floors, air-gapped or production-only machines.",
-  },
-  {
-    question:
-      "How fast is the workflow compared to other laser engraving software?",
-    answer:
-      "Lightlane trims the import→preview→engrave loop with smart defaults, instant visual feedback, and minimal dialog friction. Typical SVG or image jobs go from drop to ready in seconds with fewer context switches.",
-  },
-  {
-    question:
-      "Which laser cutter controllers does Lightlane currently support?",
-    answer:
-      "Lightlane ships with Ruida (native) and G-code/GRBL style output today. K40 / M2-Nano support is in prototyping and coming soon. The architecture is modular, so new controller targets can be added rapidly.",
-  },
-  {
-    question:
-      "What’s included at launch pricing for the laser engraving licenses?",
-    answer:
-      "Launch pricing is a limited-time lifetime license with no renewal. After purchase, we’ll email your downloads and assist with setup during early beta. Future pricing may increase after the founders window closes.",
-  },
-];
+// FAQ entries imported from shared data/faq.ts for site-wide consistency
+const faqEntries = homepageFaq;
 
 const howToSchema = {
   "@context": "https://schema.org",
@@ -120,9 +83,9 @@ const howToSchema = {
   "@id": `${toAbsolute("/")}#laser-engraving-workflow`,
   name: "How to engrave with Lightlane laser engraving software",
   description:
-    "Five-step workflow for preparing, previewing, and engraving jobs with Lightlane across Ruida, GRBL, and G-code laser cutters.",
+    "Import your design, set up your job with material presets, preview the result, and stream to your laser. Supports G-code, GRBL, and Ruida controllers.",
   image: toAbsolute("/landing/basicscreen.png"),
-  totalTime: "PT5M",
+  totalTime: "PT3M",
   tool: [
     {
       "@type": "HowToTool",
@@ -168,7 +131,7 @@ const structuredData = [
     "@id": `${toAbsolute("/")}#lightlane-software`,
     name: "Lightlane",
     description:
-      "Lightlane laser engraving software: import → preview → engrave in fewer clicks. Modern, fast, device-ready.",
+      "AI-powered laser engraving software: drop an image, tell AI your material and goal, get optimized settings and engrave. Smart, fast, pro-grade.",
     applicationCategory: "DesignApplication",
     operatingSystem: ["Windows", "macOS"],
     softwareRequirements: "Ruida, GRBL/G-code compatible laser engravers",
@@ -185,9 +148,9 @@ const structuredData = [
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${toAbsolute("/")}#lightlane-product`,
-    name: "Lightlane Laser Engraving Software",
+    name: "Lightlane AI Laser Engraving Software",
     description:
-      "Laser engraving workflow software that compresses import → preview → engrave into a single, reliable pipeline.",
+      "AI-powered laser engraving software that handles image prep, suggests optimal settings, and streams to your machine. Full manual control when you want it.",
     brand: {
       "@type": "Brand",
       name: "Lightlane",
@@ -229,8 +192,8 @@ const structuredData = [
 ---
 
 <Layout
-  title="Lightlane - Faster Laser Engraving Workflow"
-  description="Lightlane laser engraving software: import → preview → engrave in fewer clicks. Modern, fast, device-ready."
+  title="Lightlane - AI-Powered Laser Engraving Software"
+  description="AI laser engraving software: drop an image, choose your material, let AI prep and suggest settings, then engrave. Full manual control when you need it."
   keywords={homepageKeywords.join(", ")}
   structuredData={structuredData}
 >
@@ -240,8 +203,16 @@ const structuredData = [
     <section
       class="relative overflow-hidden flex items-center pt-20 md:pt-24 pb-12 md:pb-16"
     >
+      <!-- Gradient background -->
       <div
         class="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(42,158,219,0.2),transparent_60%)]"
+        aria-hidden="true"
+      >
+      </div>
+      <!-- Subtle grid overlay -->
+      <div
+        class="absolute inset-0 opacity-[0.08] pointer-events-none"
+        style="background-image: repeating-linear-gradient(0deg, transparent, transparent 49px, currentColor 49px, currentColor 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, currentColor 49px, currentColor 50px);"
         aria-hidden="true"
       >
       </div>
@@ -255,27 +226,25 @@ const structuredData = [
           </div>
           <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">
             <span class="text-ll-gradient"
-              >Lightning-fast laser engraving software</span
+              >AI-powered laser engraving software</span
             >
           </h1>
           <p class="text-lg md:text-xl text-base-content/80">
-            Lightlane is a laser cutter software built for makers and production
-            shops - streamlining everything from SVG or image import to
-            device-ready engraving on Ruida, GRBL, and G-code controllers. Fewer
-            clicks, smarter defaults, rapid preview, offline activation, and
-            seamless streaming to supported hardware. Download the desktop app
-            and unlock the full-featured free trial instantly.
+            Drop in an image, choose your material and finish goal, and let AI
+            handle image prep and suggest optimal settings. Preview, tweak if
+            you want, then stream to your laser. Full manual control always
+            available.
           </p>
           <p class="text-sm text-base-content/70">
-            {heroPricingNote}
+            G-code & GRBL fully supported. Ruida in Pro (early alpha). K40 on
+            roadmap.
           </p>
           <div class="flex justify-center">
             <div
               class="alert alert-info shadow-sm text-sm max-w-xl mx-auto bg-base-100/80 text-base-content"
             >
               <span class="font-semibold">14-day free trial:</span>
-              Download Lightlane on macOS or Windows and explore every pro feature
-              before you buy.
+              Full access to AI features, all controllers, no credit card required.
             </div>
           </div>
           <div class="flex gap-4 justify-center">
@@ -284,14 +253,14 @@ const structuredData = [
               class="btn btn-gradient"
               data-download-modal-trigger>Start Free Trial</a
             >
-            <a href="/pricing" class="btn btn-outline">View Pricing</a>
+            <a href="#workflow" class="btn btn-outline">How It Works</a>
           </div>
 
           <div id="download-app" class="space-y-3">
             <DownloadButtons align="center" />
             <p class="text-sm text-base-content/70">
-              Pick your platform to install Lightlane. Every download on a new
-              machine unlocks a 14-day pro trial automatically.
+              macOS & Windows. Your 14-day trial starts when you create a free
+              account.
             </p>
           </div>
         </div>
@@ -302,37 +271,37 @@ const structuredData = [
       <div class="container grid gap-12 lg:grid-cols-2 items-center">
         <div class="space-y-6 order-2 lg:order-1" data-animate>
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            The problem with current engraving tools
+            Stop wrestling with image prep and settings
           </h2>
           <ul class="space-y-4 text-base-content/70 text-sm leading-relaxed">
             <li class="flex gap-3">
               <span class="text-accent">•</span><span
-                >Bloated multi-step flows from import to preview waste precious
-                iteration time.</span
+                >Manually removing backgrounds and adjusting contrast for every
+                image wastes time.</span
               >
             </li>
             <li class="flex gap-3">
               <span class="text-accent">•</span><span
-                >Inconsistent SVG handling introduces path errors and manual
-                cleanup.</span
+                >Guessing power and speed settings leads to wasted material and
+                failed jobs.</span
               >
             </li>
             <li class="flex gap-3">
               <span class="text-accent">•</span><span
-                >Device streaming relies on clunky drivers and fragile
-                connection states.</span
+                >Jumping between apps for image editing and engraving breaks
+                your flow.</span
               >
             </li>
             <li class="flex gap-3">
               <span class="text-accent">•</span><span
-                >License models ignore offline or workshop environments with
-                limited connectivity.</span
+                >Most tools offer no help—just endless menus and
+                trial-and-error.</span
               >
             </li>
           </ul>
           <p class="text-base-content/80 text-sm">
-            Lightlane compresses these layers into a unified, resilient pipeline
-            engineered for speed, clarity, and trust.
+            Lightlane's AI Assistant tunes images and suggests settings for your
+            material and laser. You stay in control—override anything, anytime.
           </p>
           <div class="flex flex-wrap gap-4">
             <a
@@ -340,7 +309,7 @@ const structuredData = [
               class="btn btn-gradient"
               data-download-modal-trigger>Start Free Trial</a
             >
-            <a href="#workflow" class="btn btn-outline">See Workflow</a>
+            <a href="#workflow" class="btn btn-outline">How It Works</a>
           </div>
         </div>
         <div class="order-1 lg:order-2 relative overflow-visible" data-animate>
@@ -371,10 +340,10 @@ const structuredData = [
       <div class="container">
         <div class="page-header" data-animate>
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Streamlined 5-step workflow
+            How it works
           </h2>
           <p class="mt-4 text-base-content/70 max-w-2xl mx-auto">
-            From raw asset to engraving in minutes, repeatably and safely.
+            From design file to finished engrave in a streamlined workflow.
           </p>
         </div>
         <div id="workflow-scrollytell" class="relative max-w-5xl mx-auto">
@@ -410,10 +379,11 @@ const structuredData = [
                     </div>
                   </div>
                   <div class="space-y-3">
-                    <h3 class="text-xl font-semibold">1. Intelligent Import</h3>
+                    <h3 class="text-xl font-semibold">Import Your Design</h3>
                     <p class="text-sm text-base-content/70">
-                      Drop SVGs or images. We normalize layers, fonts, and
-                      vector paths instantly with conflict detection.
+                      Drop in SVGs, images, or design files. Lightlane
+                      normalizes layers and paths so you can get straight to
+                      work.
                     </p>
                   </div>
                 </div>
@@ -447,10 +417,10 @@ const structuredData = [
                     </div>
                   </div>
                   <div class="space-y-3 order-1 md:order-2">
-                    <h3 class="text-xl font-semibold">2. Real-time Preview</h3>
+                    <h3 class="text-xl font-semibold">Set Up Your Job</h3>
                     <p class="text-sm text-base-content/70">
-                      GPU-accelerated preview with dynamic resolution scaling
-                      and path integrity overlays.
+                      Choose your material and tweak power, speed, and passes.
+                      Use built-in presets or dial in your own settings.
                     </p>
                   </div>
                 </div>
@@ -484,10 +454,10 @@ const structuredData = [
                     </div>
                   </div>
                   <div class="space-y-3">
-                    <h3 class="text-xl font-semibold">3. Smart Parameters</h3>
+                    <h3 class="text-xl font-semibold">Preview & Run</h3>
                     <p class="text-sm text-base-content/70">
-                      Material presets with adaptive power & speed matrices and
-                      guardrails against unsafe values.
+                      See exactly what will engrave before you fire. Stream
+                      directly to G-code, GRBL, or Ruida controllers.
                     </p>
                   </div>
                 </div>
@@ -521,10 +491,10 @@ const structuredData = [
                     </div>
                   </div>
                   <div class="space-y-3 order-1 md:order-2">
-                    <h3 class="text-xl font-semibold">4. Device Streaming</h3>
+                    <h3 class="text-xl font-semibold">Stream to Your Laser</h3>
                     <p class="text-sm text-base-content/70">
-                      Driverless local streaming where supported or fall back to
-                      packaged G-code style bundles.
+                      Send jobs directly to your machine over USB or network.
+                      Packaged G-code bundles available for offline use.
                     </p>
                   </div>
                 </div>
@@ -558,10 +528,10 @@ const structuredData = [
                     </div>
                   </div>
                   <div class="space-y-3">
-                    <h3 class="text-xl font-semibold">5. Analyze & Reuse</h3>
+                    <h3 class="text-xl font-semibold">Save & Reuse</h3>
                     <p class="text-sm text-base-content/70">
-                      Auto-capture run metadata, generate optimizations, and
-                      save as reusable template with one click.
+                      Capture your settings as reusable templates. Load them
+                      later to repeat successful jobs with one click.
                     </p>
                   </div>
                 </div>
@@ -576,9 +546,9 @@ const structuredData = [
             class="alert alert-info bg-base-100/80 border border-info/30 flex flex-col gap-3 sm:flex-row sm:items-center max-w-2xl"
           >
             <div>
-              <span class="font-semibold">Workflow unlocked:</span>
-              Test every step above with the 14-day pro trial - no credit card, no
-              feature caps.
+              <span class="font-semibold">Full manual control:</span>
+              Every setting is yours to tweak. Presets are a starting point, not
+              a limitation.
             </div>
             <a
               href="#download-app"
@@ -594,10 +564,17 @@ const structuredData = [
       <div class="container grid gap-8 lg:grid-cols-3">
         <div class="lg:col-span-2 space-y-8" data-animate>
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Laser engraving software highlights
+            AI Assistant <span
+              class="badge badge-secondary badge-sm align-middle">Pro</span
+            >
           </h2>
+          <p class="text-base-content/70 max-w-xl">
+            Tell the assistant what you want: <em
+              >"Engrave this on walnut with my Ortur, dark and contrasty."</em
+            > It adjusts the image and suggests settings to match.
+          </p>
           <div class="grid md:grid-cols-3 gap-6">
-            <!-- Path Optimiser -->
+            <!-- AI Image Tuning -->
             <div
               class="p-6 rounded-xl bg-base-200 border border-base-300 space-y-3"
             >
@@ -615,18 +592,18 @@ const structuredData = [
                   stroke-linejoin="round"
                   class="text-primary"
                 >
-                  <path d="M4 4h4v4H4zM16 16h4v4h-4z"></path>
-                  <path d="M8 6c5.5 0 10 4.5 10 10"></path><path
-                    d="M8 10c3.3 0 6 2.7 6 6"></path>
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <circle cx="9" cy="9" r="2"></circle>
+                  <path d="M21 15l-5-5L5 21"></path>
                 </svg>
               </div>
-              <h3 class="font-semibold">Path Optimiser</h3>
+              <h3 class="font-semibold">Image Tuning for Engraving</h3>
               <p class="text-sm text-base-content/70">
-                Reorders & merges paths to cut travel, smooth motion & reduce
-                job time without altering geometry.
+                AI adjusts contrast, tone, and color balance specifically for
+                how lasers interact with materials.
               </p>
             </div>
-            <!-- Preview before cutting -->
+            <!-- AI Settings Suggestions -->
             <div
               class="p-6 rounded-xl bg-base-200 border border-base-300 space-y-3"
             >
@@ -644,17 +621,18 @@ const structuredData = [
                   stroke-linejoin="round"
                   class="text-secondary"
                 >
-                  <circle cx="12" cy="12" r="3"></circle><path
-                    d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"></path>
+                  <path
+                    d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                  ></path>
                 </svg>
               </div>
-              <h3 class="font-semibold">Preview Before Cutting</h3>
+              <h3 class="font-semibold">Smart Settings Suggestions</h3>
               <p class="text-sm text-base-content/70">
-                High-fidelity instant preview & dry-run overlays show order,
-                passes & potential issues pre-engrave.
+                Describe your material and desired look. AI recommends power,
+                speed, and passes as a starting point.
               </p>
             </div>
-            <!-- Processing modes -->
+            <!-- Preview Before Cutting -->
             <div
               class="p-6 rounded-xl bg-base-200 border border-base-300 space-y-3"
             >
@@ -672,17 +650,17 @@ const structuredData = [
                   stroke-linejoin="round"
                   class="text-accent"
                 >
-                  <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"></path>
-                  <path d="M14 17h6M14 21h6M14 13h6"></path>
+                  <circle cx="12" cy="12" r="3"></circle><path
+                    d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"></path>
                 </svg>
               </div>
-              <h3 class="font-semibold">Multi Processing Modes</h3>
+              <h3 class="font-semibold">Real-Time Preview</h3>
               <p class="text-sm text-base-content/70">
-                Outline, Shape & Raster modes auto-select optimal sequencing to
-                preserve edge quality & detail.
+                See exactly what will engrave before firing. Verify paths, catch
+                issues, adjust on the fly.
               </p>
             </div>
-            <!-- Templates / reuse -->
+            <!-- Full Manual Control -->
             <div
               class="p-6 rounded-xl bg-base-200 border border-base-300 space-y-3"
             >
@@ -701,15 +679,15 @@ const structuredData = [
                   class="text-info"
                 >
                   <path
-                    d="M5 4h9l5 5v11a0 0 0 0 1 0 0H5a0 0 0 0 1 0 0V4a0 0 0 0 1 0 0Z"
+                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
                   ></path>
-                  <path d="M9 12h6M9 16h6M9 8h2"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
                 </svg>
               </div>
-              <h3 class="font-semibold">Reusable Templates</h3>
+              <h3 class="font-semibold">Full Manual Control</h3>
               <p class="text-sm text-base-content/70">
-                Save layouts; reopen & drop new images-auto re-positions, scales
-                & restores material + power presets.
+                AI suggests, you decide. Override any parameter—power, speed,
+                passes, layers. Always in control.
               </p>
             </div>
             <!-- Materials DB -->
@@ -740,11 +718,11 @@ const structuredData = [
               </div>
               <h3 class="font-semibold">Materials Database</h3>
               <p class="text-sm text-base-content/70">
-                Curated & editable presets per material: power, speed, passes,
-                safety margins & engraving depth.
+                AI draws from curated presets per material. Power, speed,
+                passes—all tuned for real-world results.
               </p>
             </div>
-            <!-- Cross-platform -->
+            <!-- Material Test Grid -->
             <div
               class="p-6 rounded-xl bg-base-200 border border-base-300 space-y-3"
             >
@@ -762,19 +740,16 @@ const structuredData = [
                   stroke-linejoin="round"
                   class="text-warning"
                 >
-                  <rect x="3" y="4" width="8" height="14" rx="2"></rect><rect
-                    x="13"
-                    y="6"
-                    width="8"
-                    height="12"
-                    rx="2"></rect>
-                  <path d="M7 18v2M17 18v2"></path>
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
                 </svg>
               </div>
-              <h3 class="font-semibold">Windows & Mac Native</h3>
+              <h3 class="font-semibold">Material Test Grid</h3>
               <p class="text-sm text-base-content/70">
-                Optimized builds for both platforms with consistent rendering &
-                driverless streaming where possible.
+                Generate a grid of power/speed tests in one click. Find what
+                works best on a new material, fast.
               </p>
             </div>
           </div>
@@ -791,15 +766,14 @@ const structuredData = [
               class="btn btn-gradient"
               data-download-modal-trigger>Start Free Trial</a
             >
-            <a href="/pricing" class="btn btn-outline">View Pricing</a>
+            <a href="/pricing" class="btn btn-outline">See Plans</a>
           </div>
         </div>
         <div class="space-y-8" data-animate>
-          <h2 class="text-xl font-semibold">Device compatibility</h2>
+          <h2 class="text-xl font-semibold">Controller Support</h2>
           <p class="text-sm text-base-content/70 max-w-sm">
-            Optimized native builds with identical workflow engine. Hardware
-            streaming layer adapts per platform while templates, materials and
-            licensing stay portable.
+            G-code and GRBL controllers are fully supported. Ruida support is
+            included in Pro as early alpha. K40 / M2-Nano is on the roadmap.
           </p>
           <div class="grid grid-cols-2 gap-4 max-w-xs">
             <!-- macOS card -->
@@ -860,19 +834,17 @@ const structuredData = [
           </div>
           <ul class="text-xs text-base-content/60 space-y-1 pt-2">
             <li class="flex gap-2">
-              <span class="text-success">•</span>Shared project + template
-              format
+              <span class="text-success">•</span>G-code & GRBL fully supported
             </li>
             <li class="flex gap-2">
-              <span class="text-success">•</span>Identical path engine &
-              materials DB
+              <span class="text-warning">•</span>Ruida in Pro (early alpha)
             </li>
             <li class="flex gap-2">
-              <span class="text-success">•</span>Driverless streaming where
-              supported
+              <span class="text-info">•</span>K40 / M2-Nano on roadmap
             </li>
             <li class="flex gap-2">
-              <span class="text-success">•</span>Offline activation parity
+              <span class="text-success">•</span>Offline mode for air-gapped
+              setups
             </li>
           </ul>
         </div>
@@ -888,91 +860,20 @@ const structuredData = [
               What makers ask first about using Lightlane day-to-day.
             </p>
           </div>
-          <div class="join join-vertical w-full">
-            <!-- Q1 -->
-            <div
-              class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40"
-            >
-              <input type="radio" name="faq-new" checked />
-              <div class="collapse-title text-sm font-semibold">
-                Can I run Lightlane fully offline on a dedicated engraving
-                machine?
-              </div>
-              <div
-                class="collapse-content text-sm text-base-content/70 leading-relaxed"
-              >
-                Yes - Lightlane is engineered to operate entirely offline. You
-                can activate & manage licenses locally and run full jobs without
-                connectivity, ideal for shop floors, air-gapped or
-                production-only machines.
-              </div>
-            </div>
-            <!-- Q: Free Trial -->
-            <div
-              class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40"
-            >
-              <input type="radio" name="faq-new" />
-              <div class="collapse-title text-sm font-semibold">
-                Does Lightlane include a free trial when I download the app?
-              </div>
-              <div
-                class="collapse-content text-sm text-base-content/70 leading-relaxed"
-              >
-                Yes. Every macOS and Windows download activates a 14-day
-                full-featured trial automatically. No credit card or purchase is
-                required-just sign in and start engraving.
-              </div>
-            </div>
-            <!-- Q2 -->
-            <div
-              class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40"
-            >
-              <input type="radio" name="faq-new" />
-              <div class="collapse-title text-sm font-semibold">
-                How fast is the workflow compared to other engraving software?
-              </div>
-              <div
-                class="collapse-content text-sm text-base-content/70 leading-relaxed"
-              >
-                Lightlane trims the import→preview→engrave loop: smart defaults,
-                instant visual feedback, and minimal dialog friction. Typical
-                SVG/image jobs go from drop to ready in seconds with fewer
-                context switches.
-              </div>
-            </div>
-            <!-- Q3 -->
-            <div
-              class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40"
-            >
-              <input type="radio" name="faq-new" />
-              <div class="collapse-title text-sm font-semibold">
-                Which controllers does Lightlane currently support?
-              </div>
-              <div
-                class="collapse-content text-sm text-base-content/70 leading-relaxed"
-              >
-                Today: Ruida (native) and G-code/GRBL style output. K40 /
-                M2-Nano support is in prototyping and coming soon. The
-                architecture is modular-new controller targets can be added
-                rapidly.
-              </div>
-            </div>
-            <!-- Q4 -->
-            <div
-              class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40"
-            >
-              <input type="radio" name="faq-new" />
-              <div class="collapse-title text-sm font-semibold">
-                What’s included at launch pricing?
-              </div>
-              <div
-                class="collapse-content text-sm text-base-content/70 leading-relaxed"
-              >
-                Launch pricing is a limited-time lifetime license (no renewal).
-                After purchase, we’ll email your downloads and assist with setup
-                during early beta. Future pricing may increase.
-              </div>
-            </div>
+          <div class="join join-vertical w-full" id="faq">
+            {
+              homepageFaq.map((faq, index) => (
+                <div class="collapse collapse-arrow join-item border border-base-300 bg-base-200/40">
+                  <input type="radio" name="faq-home" checked={index === 0} />
+                  <div class="collapse-title text-sm font-semibold">
+                    {faq.question}
+                  </div>
+                  <div class="collapse-content text-sm text-base-content/70 leading-relaxed">
+                    {faq.answer}
+                  </div>
+                </div>
+              ))
+            }
           </div>
           <div class="pt-4 text-center">
             <a
@@ -989,65 +890,81 @@ const structuredData = [
       <div class="container">
         <div class="page-header">
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Why Lightlane laser engraving software
+            Why makers choose Lightlane
           </h2>
           <p class="mt-4 text-base-content/70 max-w-2xl mx-auto">
-            Purpose-built to collapse setup time and shave seconds off every
-            engraving run.
+            Pro tools that speed up your workflow. Full control when you need
+            it.
           </p>
         </div>
         <div class="grid gap-8 md:grid-cols-3">
           <div class="card bg-base-200 border border-base-300">
             <div class="card-body">
-              <h3 class="card-title">Import → Preview → Engrave</h3>
+              <h3 class="card-title">
+                AI Assistant <span class="badge badge-secondary badge-xs"
+                  >Pro</span>
+              </h3>
               <p class="text-sm opacity-80">
-                Optimized flow reduces clicks from file drop to device start.
-                Smart layer parsing, instant sizing, live material presets.
+                Describe your goal and let AI tune contrast, tone, and settings
+                for the material and look you want.
               </p>
             </div>
           </div>
           <div class="card bg-base-200 border border-base-300">
             <div class="card-body">
-              <h3 class="card-title">Device-Ready Streaming</h3>
+              <h3 class="card-title">Smart Settings</h3>
               <p class="text-sm opacity-80">
-                Low-latency, driverless local streaming where supported. Fall
-                back gracefully with robust job packaging.
+                Select your material and finish goal. Get power, speed, and pass
+                recommendations based on your machine profile.
               </p>
             </div>
           </div>
           <div class="card bg-base-200 border border-base-300">
             <div class="card-body">
-              <h3 class="card-title">SVG & Text Engine</h3>
+              <h3 class="card-title">Full Manual Override</h3>
               <p class="text-sm opacity-80">
-                Fast, resilient parsing for complex paths, fonts, kerning,
-                fills, stroke expansion, and node cleanup.
+                AI suggestions are starting points, not mandates. Adjust any
+                parameter. Save custom presets. You're always in charge.
               </p>
             </div>
           </div>
           <div class="card bg-base-200 border border-base-300">
             <div class="card-body">
-              <h3 class="card-title">Template Marketplace</h3>
+              <h3 class="card-title">Real-Time Preview</h3>
               <p class="text-sm opacity-80">
-                Reusable engrave templates, shared presets, and license-gated
-                premium packs.
+                See exactly what will engrave before firing. Verify paths, catch
+                problems, and iterate without wasting material.
               </p>
             </div>
           </div>
           <div class="card bg-base-200 border border-base-300">
             <div class="card-body">
-              <h3 class="card-title">Licenses & Offline Activation</h3>
+              <h3 class="card-title">
+                Material Test Grid <span class="badge badge-secondary badge-xs"
+                  >Pro</span
+                >
+              </h3>
               <p class="text-sm opacity-80">
-                Secure key issuance, offline activation codes, device binding,
-                and portal management.
+                Generate a grid of power/speed tests to quickly dial in settings
+                for new materials. Repeatable results, less waste.
               </p>
             </div>
           </div>
           <div class="card bg-base-200 border border-base-300">
             <div class="card-body">
-              <h3 class="card-title">From Hobby to Pro</h3>
+              <h3 class="card-title">G-code, GRBL & Ruida</h3>
               <p class="text-sm opacity-80">
-                Works great for creators scaling up: multi-license, affiliate
-                referrals, analytics, and customer dashboard.
+                G-code and GRBL fully supported. Ruida available in Pro as early
+                alpha. K40 on the roadmap.
+              </p>
+            </div>
+          </div>
+          <div class="card bg-base-200 border border-base-300">
+            <div class="card-body">
+              <h3 class="card-title">Offline Mode</h3>
+              <p class="text-sm opacity-80">
+                Works fully offline for air-gapped setups. No cloud dependency
+                for day-to-day engraving work.
               </p>
             </div>
           </div>
@@ -1058,11 +975,11 @@ const structuredData = [
       <div class="container max-w-5xl" data-animate>
         <div class="page-header text-center">
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Laser engraving workflow advantages
+            Built for real engraving workflows
           </h2>
           <p class="mt-4 text-base-content/70 max-w-2xl mx-auto">
-            A focused pipeline that turns “import → engrave” into a fast,
-            predictable loop you can trust every time.
+            AI speeds up prep. Pro tools keep you in control. Results you can
+            trust.
           </p>
         </div>
         <div class="grid gap-6 md:grid-cols-3">
@@ -1261,11 +1178,9 @@ const structuredData = [
           Engrave smarter. Ship faster.
         </h2>
         <p class="text-lg text-base-content/70 mb-8">
-          We’ve launched - get yours now. Grandfathered price available for a
-          limited time. After purchase, we’ll email your downloads and provide
-          hands‑on setup support during early beta. Prefer to trial first?
-          Download Lightlane today and explore every pro feature for 14 days,
-          free.
+          Download Lightlane today and explore every Pro feature for 14 days,
+          free. No credit card required. When you're ready, choose the plan that
+          fits your workflow and keep your subscription running.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a
@@ -1273,9 +1188,7 @@ const structuredData = [
             class="btn btn-gradient btn-lg"
             data-download-modal-trigger>Start Free Trial</a
           >
-          <a href="/pricing" class="btn btn-outline btn-lg"
-            >Buy Lifetime License</a
-          >
+          <a href="/pricing" class="btn btn-outline btn-lg">See Plans</a>
         </div>
         <div class="mt-4 flex justify-center">
           <div class="badge badge-outline badge-lg gap-2">

@@ -1,4 +1,4 @@
-export type PricingOfferType = "fixed" | "contact";
+export type PricingOfferType = "subscription" | "contact";
 
 export interface PricingOffer {
   name: string;
@@ -7,13 +7,15 @@ export interface PricingOffer {
   description: string;
   ctaPath: string;
   availability:
-  | "https://schema.org/InStock"
-  | "https://schema.org/PreOrder"
-  | "https://schema.org/OnlineOnly";
+    | "https://schema.org/InStock"
+    | "https://schema.org/PreOrder"
+    | "https://schema.org/OnlineOnly";
   type: PricingOfferType;
   sku?: string;
-  price?: number;
+  monthlyPrice?: number;
   priceId?: string;
+  tier?: "maker" | "pro";
+  popular?: boolean;
 }
 
 // For schema.org priceValidUntil - empty string means no expiry date shown
@@ -23,30 +25,33 @@ export function getPriceValidUntil(): string {
 
 export const pricingOffers: PricingOffer[] = [
   {
-    name: "Hobbyist",
-    schemaName: "Lightlane Hobbyist Plan",
-    sku: "lightlane-hobbyist-lifetime",
+    name: "Maker",
+    schemaName: "Lightlane Maker Plan",
+    sku: "lightlane-maker-subscription",
     priceCurrency: "USD",
-    price: 100,
-    priceId: "price_starter",
+    monthlyPrice: 12,
+    priceId: "price_maker",
+    tier: "maker",
     description:
-      "One-time lifetime license for solo makers who need the core import → preview → engrave pipeline with offline activation.",
-    ctaPath: "/pricing",
+      "Perfect for hobbyists and solo makers. Full access to the core import → preview → engrave pipeline.",
+    ctaPath: "/customer/dashboard",
     availability: "https://schema.org/InStock",
-    type: "fixed",
+    type: "subscription",
   },
   {
     name: "Pro",
     schemaName: "Lightlane Pro Plan",
-    sku: "lightlane-pro-lifetime",
+    sku: "lightlane-pro-subscription",
     priceCurrency: "USD",
-    price: 200,
+    monthlyPrice: 24,
     priceId: "price_pro",
+    tier: "pro",
+    popular: true,
     description:
-      "Adds Ruida controller support, premium templates, device streaming enhancements, and priority support.",
-    ctaPath: "/pricing",
+      "For serious makers and small businesses. Includes AI Assistant, Material Test Grid, Ruida support, and priority support.",
+    ctaPath: "/customer/dashboard",
     availability: "https://schema.org/InStock",
-    type: "fixed",
+    type: "subscription",
   },
   {
     name: "Enterprise",

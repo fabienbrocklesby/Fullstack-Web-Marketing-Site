@@ -9,10 +9,10 @@ export interface Props {
 }
 
 const {
-  text = "Buy Now",
+  text = "Subscribe",
   priceId = "price_default",
   tier,
-  mode = "payment",
+  mode = "subscription",
   className = "",
   variant = "primary",
 } = Astro.props;
@@ -25,10 +25,9 @@ const buttonId = `buy-button-${priceId}`;
   id={buttonId}
   class={`btn btn-${variant} ${className}`}
   data-price-id={priceId}
-  data-tier={tier || (priceId === "price_starter" ? "maker" : "pro")}
+  data-tier={tier || (priceId === "price_maker" ? "maker" : "pro")}
   data-mode={mode}
 >
-  >
   {text}
 </button>
 

@@ -1,8 +1,8 @@
 /**
- * Founders Lifetime pricing utilities
+ * Subscription pricing utilities
  * 
- * Founders Lifetime is available for a limited number of early customers.
- * A new pricing model is coming soon - this rate will be removed when the new pricing goes live.
+ * Lightlane uses a subscription model with monthly and yearly billing options.
+ * 14-day free trial included with all plans - no credit card required.
  */
 
 /**
@@ -17,21 +17,21 @@ export function shouldShowCountdownTimer(): boolean {
  * Get the appropriate title for the pricing page
  */
 export function getSaleTitle(): string {
-  return "Founders Lifetime";
+  return "Start Creating Today";
 }
 
 /**
  * Get the description for the pricing page
  */
 export function getSaleDescription(): string {
-  return 'Founders Lifetime is available for a <span class="font-semibold">limited number</span> of early customers. A new pricing model is coming soon.';
+  return 'Try Lightlane <span class="font-semibold text-primary">free for 14 days</span>. Full access to every feature. No credit card required to start.';
 }
 
 /**
  * Get badge text for homepage
  */
 export function getSaleBadgeText(): string {
-  return "Founders Lifetime available";
+  return "14-day free trial";
 }
 
 /**
@@ -46,5 +46,5 @@ export function getSaleAlertMessage(): string {
  * Get the hero section pricing note
  */
 export function getHeroPricingNote(): string {
-  return "Founders Lifetime pricing for early customers. One-time payment, updates forever.";
+  return "Start your free trial today. Cancel anytime.";
 }

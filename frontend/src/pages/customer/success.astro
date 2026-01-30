@@ -9,7 +9,7 @@ import PortalLayout from "../../layouts/PortalLayout.astro";
 import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
-<PortalLayout title="Purchase Complete - Lightlane" activeTab="dashboard">
+<PortalLayout title="Subscription Active - Lightlane" activeTab="dashboard">
   <div class="max-w-2xl mx-auto">
     <!-- Hero Card -->
     <section class="surface rounded-2xl p-8 text-center mb-6">
@@ -32,7 +32,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
           Processing...
         </h1>
         <p class="text-base-content/60 mb-4">
-          Please wait while we confirm your purchase...
+          Please wait while we activate your subscription...
         </p>
         <span class="loading loading-spinner loading-lg text-primary"></span>
         <p class="text-sm text-base-content/50 mt-4" id="poll-status">
@@ -56,10 +56,10 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
           id="success-title"
           class="text-2xl md:text-3xl font-bold mb-2 text-ll-gradient"
         >
-          Purchase Successful!
+          Subscription Active!
         </h1>
         <p id="success-subtitle" class="text-base-content/60">
-          Your license is ready.
+          Your subscription is ready.
         </p>
       </div>
 
@@ -87,11 +87,11 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
 
     <!-- Details Card -->
     <section class="surface rounded-xl p-6 mb-6">
-      <h2 class="text-lg font-semibold mb-4">Purchase Details</h2>
+      <h2 class="text-lg font-semibold mb-4">Subscription Details</h2>
       <div id="details-content">
         <div class="flex flex-col items-center gap-4 py-6">
           <span class="loading loading-spinner loading-md"></span>
-          <p class="text-base-content/60 text-sm">Verifying purchase...</p>
+          <p class="text-base-content/60 text-sm">Verifying subscription...</p>
         </div>
       </div>
     </section>
@@ -296,31 +296,18 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         ? result.tier.charAt(0).toUpperCase() + result.tier.slice(1)
         : "Pro";
 
-      const accessLabel =
-        result.display?.accessLabel ||
-        (result.isLifetime ? "Lifetime (Founders)" : "Subscription Active");
+      const accessLabel = result.display?.accessLabel || "Subscription Active";
       const billingLabel =
-        result.display?.billingLabel ||
-        (result.isLifetime ? "One-time (Founders)" : "Monthly Subscription");
+        result.display?.billingLabel || "Monthly Subscription";
 
       const successTitle = document.getElementById("success-title")!;
       const successSubtitle = document.getElementById("success-subtitle")!;
 
-      if (isSubscription && !result.isLifetime) {
-        successTitle.textContent = "Subscription Active!";
-        successSubtitle.innerHTML = `Thanks for subscribing to <strong>${tierLabel}</strong>. Manage anytime in your account.`;
-      } else if (result.isLifetime) {
-        successTitle.textContent = "Purchase Successful!";
-        successSubtitle.textContent = `Your ${tierLabel} Founders license is active forever.`;
-      } else {
-        successTitle.textContent = "Purchase Successful!";
-        successSubtitle.textContent = `Your ${tierLabel} license is ready.`;
-      }
+      successTitle.textContent = "Subscription Active!";
+      successSubtitle.innerHTML = `Thanks for subscribing to <strong>${tierLabel}</strong>. Manage anytime in your account.`;
 
       // Render details
-      const accessBadge = result.isLifetime
-        ? `<span class="badge badge-warning">Lifetime (Founders)</span>`
-        : `<span class="badge badge-success">${accessLabel}</span>`;
+      const accessBadge = `<span class="badge badge-success">${accessLabel}</span>`;
 
       detailsContent.innerHTML = `
         <div class="grid grid-cols-2 gap-4 text-sm">
@@ -340,23 +327,17 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
             <span class="text-base-content/60">Access</span>
             <div class="font-medium mt-1">${accessBadge}</div>
           </div>
-          ${
-            isSubscription && !result.isLifetime
-              ? `
           <div class="col-span-2">
             <span class="text-base-content/60">Billing</span>
             <div class="font-medium mt-1">${billingLabel}</div>
           </div>
-          `
-              : ""
-          }
         </div>
       `;
 
       // Clear selected product from localStorage
       localStorage.removeItem("selectedProduct");
     } catch (error) {
-      console.error("❌ Error polling purchase status:", error);
+      console.error("❌ Error polling subscription status:", error);
 
       // Show pending state
       heroLoading.classList.add("hidden");
@@ -366,7 +347,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         <div class="alert alert-warning">
           <div>
             <p class="font-medium">Payment received!</p>
-            <p class="text-sm mt-1">License activation is taking longer than expected. It will appear in your dashboard shortly.</p>
+            <p class="text-sm mt-1">Subscription activation is taking longer than expected. It will appear in your dashboard shortly.</p>
           </div>
         </div>
         <div class="flex gap-2 mt-4">
