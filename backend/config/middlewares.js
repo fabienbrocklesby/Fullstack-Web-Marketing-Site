@@ -59,11 +59,6 @@ const baseMiddlewares = [
   "strapi::session",
   "strapi::favicon",
   "strapi::public",
-  // Security middlewares registered globally
-  {
-    name: "global::admin-internal",
-    config: {},
-  },
   // Rate limiting middlewares - configured in src/middlewares/rate-limit.js
   // These are used by routes that reference them explicitly
 ];
