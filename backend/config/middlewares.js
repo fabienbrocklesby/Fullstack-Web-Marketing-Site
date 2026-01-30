@@ -27,7 +27,7 @@ const prodOrigins = [
 
 const corsOrigins = [...devOrigins, ...prodOrigins];
 
-module.exports = [
+const baseMiddlewares = [
   "strapi::logger",
   "strapi::errors",
   "strapi::security",
@@ -61,13 +61,19 @@ module.exports = [
   "strapi::public",
   // Security middlewares registered globally
   {
-    name: "global::dev-only",
-    config: {},
-  },
-  {
     name: "global::admin-internal",
     config: {},
   },
   // Rate limiting middlewares - configured in src/middlewares/rate-limit.js
   // These are used by routes that reference them explicitly
 ];
+
+module.exports = isDevelopment
+  ? [
+      ...baseMiddlewares,
+      {
+        name: "global::dev-only",
+        config: {},
+      },
+    ]
+  : baseMiddlewares;
