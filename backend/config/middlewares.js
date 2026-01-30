@@ -30,7 +30,21 @@ const corsOrigins = [...devOrigins, ...prodOrigins];
 const baseMiddlewares = [
   "strapi::logger",
   "strapi::errors",
-  "strapi::security",
+  {
+    name: "strapi::security",
+    config: {
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          "script-src": ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com"],
+          "connect-src": ["'self'", "https:"],
+          "img-src": ["'self'", "data:", "blob:", "https:"],
+          "media-src": ["'self'", "data:", "blob:"],
+          upgradeInsecureRequests: null,
+        },
+      },
+    },
+  },
   {
     name: "strapi::cors",
     config: {
