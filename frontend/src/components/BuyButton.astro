@@ -2,13 +2,17 @@
 export interface Props {
   text?: string;
   priceId?: string;
+  tier?: "maker" | "pro";
+  mode?: "payment" | "subscription";
   className?: string;
   variant?: "primary" | "secondary" | "accent" | "ghost";
 }
 
 const {
-  text = "Buy Now",
+  text = "Subscribe",
   priceId = "price_default",
+  tier,
+  mode = "subscription",
   className = "",
   variant = "primary",
 } = Astro.props;
@@ -21,8 +25,9 @@ const buttonId = `buy-button-${priceId}`;
   id={buttonId}
   class={`btn btn-${variant} ${className}`}
   data-price-id={priceId}
+  data-tier={tier || (priceId === "price_maker" ? "maker" : "pro")}
+  data-mode={mode}
 >
-  >
   {text}
 </button>
 
@@ -43,6 +48,8 @@ const buttonId = `buy-button-${priceId}`;
           e.preventDefault();
 
           const priceId = buyButton.getAttribute("data-price-id");
+          const tier = buyButton.getAttribute("data-tier") as "maker" | "pro";
+          const mode = buyButton.getAttribute("data-mode") || "payment";
           const affiliateCode =
             Cookies.get("affiliate_code") ||
             localStorage.getItem("affiliate_code");
@@ -54,6 +61,8 @@ const buttonId = `buy-button-${priceId}`;
               window.location.pathname,
               {
                 priceId: priceId,
+                tier: tier,
+                mode: mode,
                 buttonText: buyButton.textContent?.trim() || "",
                 timestamp: new Date().toISOString(),
               },
@@ -65,6 +74,8 @@ const buttonId = `buy-button-${priceId}`;
             "selectedProduct",
             JSON.stringify({
               priceId,
+              tier,
+              mode,
               timestamp: Date.now(),
               affiliateCode: affiliateCode || null,
             }),
@@ -84,7 +95,11 @@ const buttonId = `buy-button-${priceId}`;
             }
 
             // Customer is logged in, proceed to checkout
-            await proceedToCheckout(priceId || "");
+            if (mode === "subscription") {
+              await proceedToSubscriptionCheckout(tier);
+            } else {
+              await proceedToCheckout(priceId || "");
+            }
           } else {
             // Track registration redirect for logged-out users
             if ((window as any).journeyTracker && affiliateCode) {
@@ -93,13 +108,15 @@ const buttonId = `buy-button-${priceId}`;
                 window.location.pathname,
                 {
                   priceId: priceId,
+                  tier: tier,
+                  mode: mode,
                   timestamp: new Date().toISOString(),
                 },
               );
             }
 
             // Redirect to customer registration with product info and context
-            window.location.href = `/customer/register?from=pricing&product=${encodeURIComponent(priceId ?? "")}&redirect=checkout`;
+            window.location.href = `/customer/register?from=pricing&product=${encodeURIComponent(priceId ?? "")}&tier=${encodeURIComponent(tier || "")}&mode=${encodeURIComponent(mode)}&redirect=checkout`;
           }
         });
       }
@@ -152,8 +169,58 @@ const buttonId = `buy-button-${priceId}`;
     }
   }
 
-  // Make proceedToCheckout available globally for use in other scripts
+  async function proceedToSubscriptionCheckout(tier: "maker" | "pro") {
+    const savedAffiliateCode = Cookies.get("affiliate_code");
+    const customerToken = localStorage.getItem("customerToken");
+
+    try {
+      const cmsUrl =
+        document.documentElement.getAttribute("data-cms-url") ||
+        "http://localhost:1337";
+      const response = await fetch(
+        `${cmsUrl}/api/customer-checkout-subscription`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${customerToken}`,
+          },
+          body: JSON.stringify({
+            tier,
+            affiliateCode: savedAffiliateCode || null,
+            successPath: "/customer/success",
+            cancelPath: "/customer/dashboard",
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Subscription checkout error response:", errorData);
+        throw new Error(
+          errorData.error?.message ||
+            errorData.message ||
+            "Failed to create subscription checkout session",
+        );
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error) {
+      console.error("Subscription checkout error:", error);
+      alert(
+        `Something went wrong: ${error instanceof Error ? error.message : "Please try again."}`,
+      );
+    }
+  }
+
+  // Make functions available globally for use in other scripts
   (window as any).proceedToCheckout = proceedToCheckout;
+  (window as any).proceedToSubscriptionCheckout = proceedToSubscriptionCheckout;
 
   // Track affiliate visit function
   async function trackAffiliateVisit(affiliateCode: string) {

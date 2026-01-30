@@ -174,7 +174,20 @@ import Layout from "../layouts/Layout.astro";
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error?.message || "Registration failed");
+          // Handle structured API errors
+          const code = data?.code || null;
+          const rawMessage = data?.message || data?.error?.message || null;
+
+          let friendlyMessage: string;
+          if (code === "EMAIL_ALREADY_EXISTS" || response.status === 409) {
+            friendlyMessage = "That email is already in use.";
+          } else if (code === "VALIDATION_ERROR" || response.status === 400) {
+            friendlyMessage =
+              rawMessage || "Please check the form fields and try again.";
+          } else {
+            friendlyMessage = "Registration failed. Please try again.";
+          }
+          throw new Error(friendlyMessage);
         }
 
         // Show success message

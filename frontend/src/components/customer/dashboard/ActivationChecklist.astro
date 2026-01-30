@@ -1,0 +1,171 @@
+---
+/**
+ * Activation Checklist - Shows activation progress steps
+ * Used in the dashboard hero section across different states
+ */
+
+interface Props {
+  /**
+   * Unique suffix to avoid ID collisions when multiple checklists exist
+   */
+  suffix: string;
+  /**
+   * Whether step 1 (buy subscription) is complete
+   */
+  step1Complete?: boolean;
+  /**
+   * Whether all steps are complete (shows "Activation complete" header)
+   */
+  allComplete?: boolean;
+  /**
+   * Link text for the advanced/air-gapped tools footer
+   */
+  advancedLinkText?: string;
+}
+
+const {
+  suffix,
+  step1Complete = false,
+  allComplete = false,
+  advancedLinkText = "Need manual or air-gapped activation?",
+} = Astro.props;
+---
+
+<div class="lg:w-72 bg-base-200/50 rounded-xl p-5">
+  {
+    allComplete ? (
+      <h3 class="font-semibold text-sm mb-4 text-base-content/80">
+        Activation complete
+      </h3>
+    ) : (
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-sm text-base-content/80">
+          How to activate
+        </h3>
+        <button
+          id={`checklist-reset-${suffix}`}
+          class="btn btn-xs btn-ghost text-base-content/50"
+          title="Reset checklist"
+        >
+          Reset
+        </button>
+      </div>
+    )
+  }
+
+  <ol class="space-y-3">
+    <!-- Step 1: Buy subscription -->
+    <li class="flex items-start gap-3">
+      {
+        step1Complete || allComplete ? (
+          <>
+            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0">
+              ✓
+            </span>
+            <span class="text-sm text-base-content/70 line-through">
+              Buy a subscription
+            </span>
+          </>
+        ) : (
+          <>
+            <span
+              id={`step1-indicator-${suffix}`}
+              class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0 cursor-default"
+            >
+              1
+            </span>
+            <span class="text-sm text-base-content/70">Buy a subscription</span>
+          </>
+        )
+      }
+    </li>
+
+    <!-- Step 2: Download app -->
+    <li>
+      {
+        allComplete ? (
+          <div class="flex items-start gap-3">
+            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0">
+              ✓
+            </span>
+            <span class="text-sm text-base-content/70 line-through">
+              Download the app
+            </span>
+          </div>
+        ) : (
+          <button
+            id={`step2-row-${suffix}`}
+            type="button"
+            class="flex items-start gap-3 w-full text-left rounded-lg p-1 -m-1 cursor-pointer hover:bg-base-200/60 transition-colors"
+            aria-pressed="false"
+            title="Click to mark as done"
+          >
+            <span
+              id={`step2-toggle-${suffix}`}
+              class:list={[
+                "flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0",
+                step1Complete
+                  ? "bg-primary text-primary-content"
+                  : "bg-base-300",
+              ]}
+            >
+              2
+            </span>
+            <span
+              id={`step2-text-${suffix}`}
+              class:list={[
+                "text-sm",
+                step1Complete ? "font-medium" : "text-base-content/70",
+              ]}
+            >
+              Download the app
+            </span>
+          </button>
+        )
+      }
+    </li>
+
+    <!-- Step 3: Sign in & activate -->
+    <li>
+      {
+        allComplete ? (
+          <div class="flex items-start gap-3">
+            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0">
+              ✓
+            </span>
+            <span class="text-sm text-base-content/70 line-through">
+              Sign in, choose plan, activate
+            </span>
+          </div>
+        ) : (
+          <button
+            id={`step3-row-${suffix}`}
+            type="button"
+            class="flex items-start gap-3 w-full text-left rounded-lg p-1 -m-1 cursor-pointer hover:bg-base-200/60 transition-colors"
+            aria-pressed="false"
+            title="Click to mark as done"
+          >
+            <span
+              id={`step3-toggle-${suffix}`}
+              class="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-xs font-bold shrink-0"
+            >
+              3
+            </span>
+            <span
+              id={`step3-text-${suffix}`}
+              class="text-sm text-base-content/70"
+            >
+              Sign in, choose plan, activate
+            </span>
+          </button>
+        )
+      }
+    </li>
+  </ol>
+
+  <p class="text-xs text-base-content/50 mt-4 pt-3 border-t border-base-300">
+    <a href="#" id={`hero-advanced-link-${suffix}`} class="link link-hover">
+      {advancedLinkText}
+    </a>
+  </p>
+</div>

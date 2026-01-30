@@ -17,7 +17,7 @@ module.exports = {
       affiliate = list[0];
     }
     const code = genCode();
-    const invite = await strapi.entityService.create(
+    await strapi.entityService.create(
       "api::customer-invite.customer-invite",
       {
         data: {
@@ -33,7 +33,7 @@ module.exports = {
       await strapi
         .service("api::journey-tracker.journey-tracker")
         ?.track("invite_issued", { code, email });
-    } catch (e) { }
+    } catch { }
     const joinUrl = `${process.env.PUBLIC_SITE_URL || ""}/join?code=${code}`;
     // Send invite email (non-blocking)
     mailer.sendTemplate({
@@ -136,7 +136,7 @@ module.exports = {
       await strapi
         .service("api::journey-tracker.journey-tracker")
         ?.track("invite_redeemed", { code });
-    } catch (e) { }
+    } catch { }
     ctx.body = { customerId: customer.id };
   },
 };

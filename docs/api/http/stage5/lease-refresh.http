@@ -1,0 +1,53 @@
+# Stage 5: Lease Refresh
+# Online lease token refresh for active devices
+#
+# This is the standard refresh flow for devices with internet connectivity.
+# The app calls this periodically (e.g., every 6 hours) to extend the lease.
+#
+# Prerequisites:
+#   - Run shared/login.http first to get JWT
+#   - Device must be activated first (see stage4/activation.http)
+
+@baseUrl = {{$dotenv API_URL}}
+@token = {{$dotenv JWT}}
+@deviceId = smoke-test-device-001
+@entitlementId = 1
+
+### Refresh lease token (online)
+# Returns a new lease token with extended validity
+# @name leaseRefresh
+POST {{baseUrl}}/api/licence/refresh
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}",
+  "entitlementId": {{entitlementId}}
+}
+
+### Response (200):
+# {
+#   "ok": true,
+#   "status": "active",
+#   "isLifetime": false,
+#   "expiresAt": "2025-12-31T23:59:59.000Z",
+#   "leaseRequired": true,
+#   "leaseToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "leaseExpiresAt": "2025-01-15T18:00:00.000Z",
+#   "serverTime": "2025-01-08T12:00:00.000Z"
+# }
+#
+# Lease token payload (decoded):
+# {
+#   "iss": "lightlane",
+#   "sub": "ent:1:dev:smoke-test-device-001",
+#   "entitlementId": 1,
+#   "deviceId": "smoke-test-device-001",
+#   "tier": "standard",
+#   "exp": 1705337600
+# }
+#
+# Error responses:
+# - 401: Not authenticated
+# - 403: Device not activated for this entitlement
+# - 404: Entitlement not found

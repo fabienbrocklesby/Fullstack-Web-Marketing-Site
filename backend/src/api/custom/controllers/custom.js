@@ -1,13 +1,16 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const { audit, maskSensitive } = require("../../../utils/audit-logger");
+const { determineEntitlementTier } = require("../../../utils/entitlement-mapping");
+const { getRS256PrivateKey } = require("../../../utils/jwt-keys");
+const { processStripeEvent } = require("../../../utils/stripe-webhook-handler");
+const { ErrorCodes, sendOk, sendError, sendRetired } = require("../../../utils/api-responses");
 
 // Helper: generate a unique-ish license key. This used to live in the license-key controller
 // but was referenced here without being in scope, causing a ReferenceError and aborting the
 // purchase processing before creating the license key. We inline it here to ensure availability.
 // Format: <PROD>-<CUST>-<BASE36TIME>-<RANDHEX>
-function generateLicenseKey(productName, customerId, attempt = 0) {
-  const MAX_ATTEMPTS = 5;
+function generateLicenseKey(productName, customerId) {
   const timestamp = Date.now().toString(36).toUpperCase();
   const randomString = crypto.randomBytes(8).toString("hex").toUpperCase();
   const productCode = (productName || "PRD").substring(0, 3).toUpperCase();
@@ -16,28 +19,60 @@ function generateLicenseKey(productName, customerId, attempt = 0) {
   return key;
 }
 
-// Price mappings for development (you'll replace these with real Stripe price IDs)
+// Price configuration from environment or defaults
+// These map frontend priceIds to actual Stripe price IDs
+function getPriceConfig() {
+  return {
+    // One-time payments
+    price_starter: {
+      stripeId: process.env.STRIPE_PRICE_ID_MAKER_ONETIME || "price_starter_test",
+      amount: 9900, // $99.00 in cents (fallback)
+      name: "Hobbyist Plan",
+      tier: "maker",
+      description: "Complete source code with basic documentation and email support",
+    },
+    price_pro: {
+      stripeId: process.env.STRIPE_PRICE_ID_PRO_ONETIME || "price_pro_test",
+      amount: 19900, // $199.00 in cents (fallback)
+      name: "Pro Plan",
+      tier: "pro",
+      description: "Everything in Hobbyist plus premium components and priority support",
+    },
+    // Subscription prices
+    price_starter_sub: {
+      stripeId: process.env.STRIPE_PRICE_ID_MAKER_SUB_MONTHLY || null,
+      name: "Hobbyist Monthly",
+      tier: "maker",
+      description: "Monthly subscription for Hobbyist tier",
+    },
+    price_pro_sub: {
+      stripeId: process.env.STRIPE_PRICE_ID_PRO_SUB_MONTHLY || null,
+      name: "Pro Monthly",
+      tier: "pro",
+      description: "Monthly subscription for Pro tier",
+    },
+  };
+}
+
+// Legacy PRICE_MAPPINGS for backward compatibility
 const PRICE_MAPPINGS = {
   price_starter: {
     id: "price_starter_test",
-    amount: 9900, // $99.00 in cents
+    amount: 9900,
     name: "Starter Plan",
-    description:
-      "Complete source code with basic documentation and email support",
+    description: "Complete source code with basic documentation and email support",
   },
   price_pro: {
     id: "price_pro_test",
-    amount: 19900, // $199.00 in cents
+    amount: 19900,
     name: "Pro Plan",
-    description:
-      "Everything in Starter plus premium components and priority support",
+    description: "Everything in Starter plus premium components and priority support",
   },
   price_enterprise: {
     id: "price_enterprise_test",
-    amount: 49900, // $499.00 in cents
+    amount: 49900,
     name: "Enterprise Plan",
-    description:
-      "Everything in Pro plus custom integrations and 1-on-1 consultation",
+    description: "Everything in Pro plus custom integrations and 1-on-1 consultation",
   },
 };
 
@@ -222,12 +257,14 @@ module.exports = {
           },
         ],
         mode: "payment",
-        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&price_id=${priceId}&amount=${priceInfo.amount}`,
+        // Simplified success URL - only session_id, no amount/price to prevent tampering
+        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: cancelUrl,
         metadata: {
           affiliateCode: affiliateCode || "",
-          originalPriceId: priceId,
-          priceAmount: priceInfo.amount.toString(),
+          priceId: priceId,
+          tier: priceId === "price_starter" ? "maker" : "pro",
+          purchaseMode: "payment",
           customerId: customerId.toString(),
           customerEmail: customer.email,
         },
@@ -255,45 +292,56 @@ module.exports = {
     const sig = ctx.request.headers["stripe-signature"];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    // Require webhook secret - no bypass even in development
+    if (!webhookSecret) {
+      console.error("[Webhook] STRIPE_WEBHOOK_SECRET not configured");
+      ctx.status = 500;
+      ctx.body = { error: "Webhook not configured" };
+      return;
+    }
+
+    // Get raw body for signature verification
+    // This is set by the stripe-raw-body middleware
+    const rawBody = ctx.request.rawBody;
+    if (!rawBody) {
+      console.error("[Webhook] Raw body not available - stripe-raw-body middleware may not be configured correctly");
+      console.error("[Webhook] Middleware order in config/middlewares.js: stripe-raw-body MUST come before strapi::body");
+      ctx.status = 400;
+      ctx.body = { error: "Raw body required for signature verification" };
+      return;
+    }
+
+    if (!sig) {
+      console.error("[Webhook] Missing stripe-signature header");
+      ctx.status = 400;
+      ctx.body = { error: "Missing stripe-signature header" };
+      return;
+    }
+
     let event;
-
-    // In development, if webhook secret is not properly configured,
-    // we'll skip signature verification and trust the payload
-    if (
-      process.env.NODE_ENV === "development" &&
-      (!webhookSecret || webhookSecret === "whsec_your_webhook_secret")
-    ) {
-      console.log(
-        "🟡 Development mode: Skipping webhook signature verification",
-      );
-      event = ctx.request.body;
-    } else {
-      try {
-        event = stripe.webhooks.constructEvent(
-          ctx.request.body,
-          sig,
-          webhookSecret,
-        );
-      } catch (err) {
-        console.error("Webhook signature verification failed:", err.message);
-        return ctx.badRequest("Webhook signature verification failed");
-      }
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    } catch (err) {
+      console.error("[Webhook] Signature verification failed:", err.message);
+      ctx.status = 400;
+      ctx.body = { error: "Webhook signature verification failed" };
+      return;
     }
 
-    console.log("📧 Received webhook event:", event.type);
+    console.log(`[Webhook] ✅ Verified event: ${event.type} (${event.id})`);
 
-    // Handle the event
-    switch (event.type) {
-      case "checkout.session.completed":
-        const session = event.data.object;
-        console.log("💳 Processing checkout session:", session.id);
-        await handleSuccessfulPayment(session);
-        break;
-      default:
-        console.log(`❓ Unhandled event type ${event.type}`);
+    try {
+      const result = await processStripeEvent(event);
+      console.log(`[Webhook] Processed: ${JSON.stringify(result)}`);
+      // Return 200 quickly to acknowledge receipt
+      ctx.status = 200;
+      ctx.body = { received: true, ...result };
+    } catch (err) {
+      console.error(`[Webhook] Error processing event ${event.id}:`, err.message);
+      // Return 500 so Stripe retries
+      ctx.status = 500;
+      ctx.body = { error: "Failed to process webhook event" };
     }
-
-    ctx.body = { received: true };
   },
 
   // Development-only endpoint to manually create purchase records
@@ -399,7 +447,7 @@ module.exports = {
       console.log("✅ Purchase created successfully:", purchase.id);
 
       ctx.body = {
-        success: true,
+        ok: true,
         purchase: purchase,
         affiliate: affiliate,
         message: "Purchase created successfully in development mode",
@@ -493,25 +541,75 @@ module.exports = {
     }
   },
 
+  /**
+   * DEPRECATED: Frontend fulfillment endpoint
+   * Fulfillment is now handled by Stripe webhook (server truth)
+   * Returns 410 Gone to signal clients to use polling instead
+   */
   async processCustomerPurchase(ctx) {
+    console.warn("[DEPRECATED] processCustomerPurchase called - fulfillment now handled by webhook");
+    ctx.status = 410;
+    ctx.body = {
+      error: "Gone",
+      message: "Purchase fulfillment is now handled by webhook. Use GET /api/customer/purchase-status?session_id=... to poll for completion.",
+      deprecated: true,
+    };
+  },
+
+  /**
+   * Subscription Checkout: Create a subscription checkout session
+   * POST /api/customer-checkout-subscription
+   *
+   * Input: { tier: 'maker' | 'pro', successPath?, cancelPath?, affiliateCode? }
+   * Output: { url, sessionId }
+   */
+  async customerCheckoutSubscription(ctx) {
     try {
-      const { sessionId, priceId, amount, affiliateCode } = ctx.request.body;
+      const { tier, affiliateCode, successPath, cancelPath } = ctx.request.body;
       const customerId = ctx.state.customer?.id;
 
       if (!customerId) {
         return ctx.unauthorized("Customer authentication required");
       }
 
-      if (!sessionId || !priceId || !amount) {
-        return ctx.badRequest("Session ID, price ID, and amount are required");
+      // ============================================================
+      // Step 1: Validate all required config BEFORE doing anything
+      // ============================================================
+      const missingConfig = [];
+      if (!process.env.STRIPE_SECRET_KEY) {
+        missingConfig.push("STRIPE_SECRET_KEY");
+      }
+      if (!process.env.STRIPE_PRICE_MAKER_MONTHLY) {
+        missingConfig.push("STRIPE_PRICE_MAKER_MONTHLY");
+      }
+      if (!process.env.STRIPE_PRICE_PRO_MONTHLY) {
+        missingConfig.push("STRIPE_PRICE_PRO_MONTHLY");
+      }
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4321";
+      if (!frontendUrl) {
+        missingConfig.push("FRONTEND_URL");
       }
 
-      console.log("🔄 Processing customer purchase:", {
-        sessionId,
-        priceId,
-        amount,
-        customerId,
-      });
+      if (missingConfig.length > 0) {
+        console.error(`[SubscriptionCheckout] Missing config: ${missingConfig.join(", ")}`);
+        ctx.status = 500;
+        ctx.body = {
+          error: "Server configuration error",
+          message: `Missing required environment variables: ${missingConfig.join(", ")}`,
+          missingKeys: missingConfig,
+        };
+        return;
+      }
+
+      // Validate tier
+      if (!tier || !["maker", "pro"].includes(tier)) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "Invalid tier",
+          message: "tier must be 'maker' or 'pro'",
+        };
+        return;
+      }
 
       // Get customer details
       const customer = await strapi.entityService.findOne(
@@ -522,492 +620,586 @@ module.exports = {
         return ctx.notFound("Customer not found");
       }
 
-      // Find affiliate if code exists
-      let affiliate = null;
-      if (affiliateCode) {
-        const affiliates = await strapi.entityService.findMany(
-          "api::affiliate.affiliate",
-          {
-            filters: { code: affiliateCode, isActive: true },
-          },
-        );
-        affiliate = affiliates.length > 0 ? affiliates[0] : null;
-        console.log("🔗 Found affiliate:", affiliate ? affiliate.code : "None");
+      // ============================================================
+      // Step 2: Get subscription price ID from tier
+      // ============================================================
+      const { getSubscriptionPriceId, normalizeTierKey } =
+        require("../../../utils/stripe-pricing");
+
+      // Normalize tier (accepts hobbyists/starter as aliases for maker)
+      const normalizedTier = normalizeTierKey(tier);
+      if (!normalizedTier) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "Invalid tier",
+          message: "tier must be 'maker' or 'pro' (or aliases: hobbyists, starter)",
+        };
+        return;
       }
 
-      // Calculate commission using affiliate's actual rate
-      const commissionRate = affiliate?.commissionRate || 0.1;
-      const commissionAmount = affiliate ? (amount / 100) * commissionRate : 0;
+      // Get the Stripe Price ID directly from env vars
+      let stripePriceId;
+      try {
+        stripePriceId = getSubscriptionPriceId(normalizedTier);
+        console.log(`[SubscriptionCheckout] Using price ID: ${stripePriceId} for tier: ${normalizedTier}`);
+      } catch (priceError) {
+        console.error(`[SubscriptionCheckout] Failed to get subscription price for tier ${normalizedTier}:`, priceError.message);
+        ctx.status = 500;
+        ctx.body = {
+          error: "Price not configured",
+          message: priceError.message,
+        };
+        return;
+      }
 
-      console.log(
-        `💰 Commission calculation: ${affiliate ? affiliate.commissionRate * 100 : 0}% rate = $${commissionAmount.toFixed(2)}`,
+      // ============================================================
+      // Step 3: Get or create Stripe customer
+      // ============================================================
+      let stripeCustomerId = customer.stripeCustomerId;
+      if (!stripeCustomerId) {
+        try {
+          const stripeCustomer = await stripe.customers.create({
+            email: customer.email,
+            name: `${customer.firstName || ""} ${customer.lastName || ""}`.trim() || customer.email,
+            metadata: {
+              strapiCustomerId: customerId.toString(),
+            },
+          });
+          stripeCustomerId = stripeCustomer.id;
+
+          // Save Stripe customer ID to Strapi
+          await strapi.entityService.update(
+            "api::customer.customer",
+            customerId,
+            { data: { stripeCustomerId } }
+          );
+          console.log(`[SubscriptionCheckout] Created Stripe customer ${stripeCustomerId} for ${customer.email}`);
+        } catch (customerErr) {
+          console.error(`[SubscriptionCheckout] Failed to create Stripe customer:`, {
+            message: customerErr.message,
+            type: customerErr.type,
+            code: customerErr.code,
+          });
+          ctx.status = 500;
+          ctx.body = {
+            error: "Failed to create Stripe customer",
+            message: customerErr.message,
+          };
+          return;
+        }
+      }
+
+      // ============================================================
+      // Step 4: Build checkout URLs
+      // ============================================================
+      const successUrl = `${frontendUrl}${successPath || "/customer/success"}?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${frontendUrl}${cancelPath || "/customer/dashboard"}`;
+
+      console.log(`[SubscriptionCheckout] Creating session:`, {
+        customer: stripeCustomerId,
+        price: stripePriceId,
+        tier: normalizedTier,
+        successUrl,
+        cancelUrl,
+      });
+
+      // ============================================================
+      // Step 5: Create subscription checkout session with detailed error handling
+      // ============================================================
+      let session;
+      try {
+        session = await stripe.checkout.sessions.create({
+          customer: stripeCustomerId,
+          client_reference_id: customerId.toString(),
+          payment_method_types: ["card"],
+          line_items: [
+            {
+              price: stripePriceId,
+              quantity: 1,
+            },
+          ],
+          mode: "subscription",
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          metadata: {
+            affiliateCode: affiliateCode || "",
+            tier: normalizedTier,
+            priceId: stripePriceId,
+            purchaseMode: "subscription",
+            customerId: customerId.toString(),
+            customerEmail: customer.email,
+          },
+        });
+      } catch (stripeErr) {
+        // Log detailed Stripe error information
+        console.error(`[SubscriptionCheckout] Stripe checkout.sessions.create failed:`, {
+          message: stripeErr.message,
+          type: stripeErr.type,
+          code: stripeErr.code,
+          param: stripeErr.param,
+          statusCode: stripeErr.statusCode,
+          rawMessage: stripeErr.raw?.message,
+          rawParam: stripeErr.raw?.param,
+          rawCode: stripeErr.raw?.code,
+          rawStatusCode: stripeErr.raw?.statusCode,
+        });
+
+        // Build a helpful error message
+        let userMessage = stripeErr.raw?.message || stripeErr.message;
+        
+        // Add hints for common errors
+        if (stripeErr.code === "resource_missing" || userMessage.includes("No such price")) {
+          userMessage += `. Check that ${stripePriceId} exists in your Stripe account and matches the API key mode (test vs live).`;
+        } else if (userMessage.includes("not a recurring price") || userMessage.includes("one-time")) {
+          userMessage += `. The price ${stripePriceId} must be a recurring monthly price, not a one-time price.`;
+        } else if (stripeErr.code === "api_key_invalid" || userMessage.includes("Invalid API Key")) {
+          userMessage = "Invalid Stripe API key. Check STRIPE_SECRET_KEY is correct.";
+        }
+
+        ctx.status = stripeErr.statusCode || 500;
+        ctx.body = {
+          error: "Stripe checkout failed",
+          message: userMessage,
+          stripeCode: stripeErr.code,
+        };
+        return;
+      }
+
+      console.log(`[SubscriptionCheckout] Session created: ${session.id} for tier=${normalizedTier}`);
+
+      ctx.body = {
+        url: session.url,
+        sessionId: session.id,
+      };
+    } catch (error) {
+      // Catch-all for unexpected errors
+      console.error("[SubscriptionCheckout] Unexpected error:", {
+        message: error.message,
+        stack: error.stack,
+        type: error.type,
+        code: error.code,
+      });
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to create subscription checkout session",
+        message: error.message,
+      };
+    }
+  },
+
+  /**
+   * Billing Portal: Create a session for customer to manage subscription
+   * POST /api/stripe/billing-portal
+   */
+  async stripeBillingPortal(ctx) {
+    try {
+      const { returnUrl } = ctx.request.body;
+      const customerId = ctx.state.customer?.id;
+
+      if (!customerId) {
+        return ctx.unauthorized("Customer authentication required");
+      }
+
+      const customer = await strapi.entityService.findOne(
+        "api::customer.customer",
+        customerId,
       );
 
-      // Get product info
-      const priceInfo = PRICE_MAPPINGS[priceId] || {
-        name: "Unknown Product",
-        description: "Product purchase",
-      };
+      if (!customer || !customer.stripeCustomerId) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "No Stripe customer found",
+          message: "You must have an active subscription to access the billing portal",
+        };
+        return;
+      }
 
-      // Check if purchase already exists
-      const existingPurchases = await strapi.entityService.findMany(
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customer.stripeCustomerId,
+        return_url: returnUrl || `${process.env.FRONTEND_URL || "http://localhost:4321"}/customer/dashboard`,
+      });
+
+      ctx.body = {
+        url: session.url,
+      };
+    } catch (error) {
+      console.error("Billing portal error:", error);
+      ctx.status = 500;
+      ctx.body = {
+        error: "Failed to create billing portal session",
+        message: error.message,
+      };
+    }
+  },
+
+  /**
+   * Purchase Status: Poll for purchase/subscription completion (webhook fulfillment)
+   * GET /api/customer/purchase-status?session_id=cs_...
+   *
+   * Handles both:
+   * - Legacy one-time purchases (checks Purchase record)
+   * - Subscriptions (checks Entitlement directly via Stripe session)
+   */
+  async purchaseStatus(ctx) {
+    try {
+      const { session_id: sessionId } = ctx.query;
+      const customerId = ctx.state.customer?.id;
+
+      if (!customerId) {
+        return ctx.unauthorized("Customer authentication required");
+      }
+
+      if (!sessionId) {
+        ctx.status = 400;
+        ctx.body = { error: "session_id query parameter required" };
+        return;
+      }
+
+      // Get customer details
+      const customer = await strapi.entityService.findOne(
+        "api::customer.customer",
+        customerId
+      );
+      if (!customer) {
+        return ctx.notFound("Customer not found");
+      }
+
+      // ============================================================
+      // Step 1: Retrieve Stripe Checkout Session to determine mode
+      // ============================================================
+      let stripeSession;
+      try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+          throw new Error("STRIPE_SECRET_KEY not configured");
+        }
+        const stripeClient = require("stripe")(process.env.STRIPE_SECRET_KEY);
+        stripeSession = await stripeClient.checkout.sessions.retrieve(sessionId, {
+          expand: ["subscription", "customer"],
+        });
+      } catch (stripeErr) {
+        console.error(`[PurchaseStatus] Failed to retrieve Stripe session ${sessionId}:`, stripeErr.message);
+        // If we can't get the session, fall back to legacy behavior
+        stripeSession = null;
+      }
+
+      // ============================================================
+      // Step 2: Verify session belongs to this customer (strong identifiers only)
+      // ============================================================
+      if (stripeSession) {
+        const sessionStripeCustomerId = stripeSession.customer?.id || stripeSession.customer;
+        const metadataCustomerId = stripeSession.metadata?.customerId;
+
+        // SECURITY: Only accept strong identifiers - no email fallback
+        // 1. metadata.customerId (authoritative - set during checkout)
+        // 2. stripeCustomerId match (fallback for existing Stripe customers)
+        const isOwner = 
+          (metadataCustomerId && String(metadataCustomerId) === String(customerId)) ||
+          (sessionStripeCustomerId && customer.stripeCustomerId && sessionStripeCustomerId === customer.stripeCustomerId);
+
+        if (!isOwner) {
+          console.warn(`[PurchaseStatus] Ownership check failed for session ${sessionId}: ` +
+            `metadata.customerId=${metadataCustomerId || "none"}, authCustomerId=${customerId}, ` +
+            `sessionStripeId=${sessionStripeCustomerId || "none"}, customerStripeId=${customer.stripeCustomerId || "none"}`);
+          ctx.status = 403;
+          ctx.body = { error: "Access denied" };
+          return;
+        }
+      }
+
+      // ============================================================
+      // Step 3: Handle based on session mode
+      // ============================================================
+      const isSubscription = stripeSession?.mode === "subscription";
+
+      if (isSubscription) {
+        // ----- SUBSCRIPTION MODE (READ-ONLY) -----
+        // Entitlements are ONLY created by webhook (checkout.session.completed)
+        // This endpoint just checks if webhook has processed yet
+        console.log(`[PurchaseStatus] Subscription mode for session ${sessionId}`);
+
+        // Get subscription ID from session
+        const subscriptionId = stripeSession.subscription?.id || stripeSession.subscription;
+        const expectedTier = stripeSession.metadata?.tier || null;
+
+        if (!subscriptionId) {
+          console.warn(`[PurchaseStatus] No subscription ID in session ${sessionId}`);
+          ctx.body = {
+            status: "pending",
+            mode: "subscription",
+            message: "Subscription is being created. Please wait...",
+          };
+          return;
+        }
+
+        // Query for entitlement created by webhook - ONLY match by stripeSubscriptionId
+        // This is the ONLY reliable way to match subscription entitlements
+        const entitlements = await strapi.entityService.findMany(
+          "api::entitlement.entitlement",
+          {
+            filters: {
+              stripeSubscriptionId: subscriptionId,
+              $or: [
+                { isArchived: { $null: true } },
+                { isArchived: false },
+              ],
+            },
+            populate: ["licenseKey", "customer"],
+          }
+        );
+
+        const matchingEntitlement = entitlements[0] || null;
+
+        if (matchingEntitlement) {
+          console.log(`[PurchaseStatus] Subscription complete: entitlement ${matchingEntitlement.id}, tier=${matchingEntitlement.tier}, subscriptionId=${subscriptionId}`);
+          
+          // Verify entitlement is linked to the authenticated customer
+          const entitlementCustomerId = matchingEntitlement.customer?.id || matchingEntitlement.customer;
+          
+          // REPAIR LOGIC: Link orphaned entitlement to customer IF ownership is proven
+          // This handles cases where the webhook failed to associate the customer
+          // Gated behind ENABLE_PURCHASE_REPAIR env var for safety (default: enabled)
+          const repairEnabled = process.env.ENABLE_PURCHASE_REPAIR !== "false";
+          
+          if (!entitlementCustomerId && repairEnabled) {
+            // Strict ownership verification before repair:
+            // 1. session.metadata.customerId must match authenticated customer id, OR
+            // 2. Stripe customer from session must match customer's stored stripeCustomerId
+            const metadataCustomerId = stripeSession.metadata?.customerId;
+            const sessionStripeCustomerId = stripeSession.customer?.id || stripeSession.customer;
+            
+            const ownershipProven = 
+              (metadataCustomerId && String(metadataCustomerId) === String(customerId)) ||
+              (sessionStripeCustomerId && customer.stripeCustomerId && sessionStripeCustomerId === customer.stripeCustomerId);
+            
+            if (ownershipProven) {
+              console.log(`[PurchaseStatus] REPAIR: Linking orphaned entitlement ${matchingEntitlement.id} to customer ${customerId} (ownership verified)`);
+              try {
+                await strapi.entityService.update(
+                  "api::entitlement.entitlement",
+                  matchingEntitlement.id,
+                  { data: { customer: customerId } }
+                );
+                console.log(`[PurchaseStatus] REPAIR SUCCESS: Entitlement ${matchingEntitlement.id} now linked to customer ${customerId}`);
+              } catch (repairErr) {
+                console.error(`[PurchaseStatus] REPAIR FAILED: Could not link entitlement ${matchingEntitlement.id}:`, repairErr.message);
+              }
+            } else {
+              // Ownership cannot be verified - do NOT repair
+              console.warn(`[PurchaseStatus] REPAIR BLOCKED: Cannot verify ownership for entitlement ${matchingEntitlement.id}. ` +
+                `metadataCustomerId=${metadataCustomerId}, authCustomerId=${customerId}, ` +
+                `sessionStripeId=${sessionStripeCustomerId}, customerStripeId=${customer.stripeCustomerId || "none"}`);
+            }
+          } else if (entitlementCustomerId && entitlementCustomerId !== customerId) {
+            // Different customer - this is a security concern, log and return 403
+            console.error(`[PurchaseStatus] SECURITY: Entitlement ${matchingEntitlement.id} belongs to customer ${entitlementCustomerId}, not authenticated customer ${customerId}.`);
+            ctx.status = 403;
+            ctx.body = { error: "Access denied" };
+            return;
+          }
+          
+          // Build display labels based on entitlement flags (NOT tier)
+          // IMPORTANT: Pro/Maker does NOT imply lifetime - only isLifetime flag does
+          const accessLabel = matchingEntitlement.isLifetime === true
+            ? "Lifetime (Founders)"
+            : "Subscription Active";
+          
+          // Price labels for display
+          const tierPriceMap = {
+            maker: "$12/month",
+            pro: "$24/month",
+          };
+          const billingLabel = matchingEntitlement.isLifetime
+            ? "One-time (Founders)"
+            : tierPriceMap[matchingEntitlement.tier] || "Monthly Subscription";
+
+          ctx.body = {
+            status: "complete",
+            mode: "subscription",
+            entitlementId: matchingEntitlement.id,
+            licenseKeyId: matchingEntitlement.licenseKey?.id || null,
+            licenseKey: matchingEntitlement.licenseKey?.key || null,
+            tier: matchingEntitlement.tier,
+            isLifetime: matchingEntitlement.isLifetime || false,
+            subscriptionId: subscriptionId,
+            // Full entitlement details for frontend display
+            entitlement: {
+              id: matchingEntitlement.id,
+              tier: matchingEntitlement.tier,
+              status: matchingEntitlement.status,
+              isLifetime: matchingEntitlement.isLifetime || false,
+              currentPeriodEnd: matchingEntitlement.currentPeriodEnd || null,
+              maxDevices: matchingEntitlement.maxDevices || 1,
+            },
+            // Display labels (derived from isLifetime, NOT from tier)
+            display: {
+              accessLabel,
+              billingLabel,
+            },
+          };
+          return;
+        }
+
+        // No entitlement found - webhook hasn't processed yet
+        console.log(`[PurchaseStatus] Subscription pending: no entitlement found for subscriptionId=${subscriptionId}`);
+        ctx.body = {
+          status: "pending",
+          mode: "subscription",
+          message: "Subscription is being activated. Please wait...",
+          subscriptionId: subscriptionId,
+          debug: process.env.NODE_ENV === "development" ? {
+            sessionId,
+            subscriptionId,
+            expectedTier,
+            hint: "Waiting for webhook to create entitlement. Is stripe listen running?",
+          } : undefined,
+        };
+        return;
+      }
+
+      // ----- LEGACY ONE-TIME PURCHASE MODE -----
+      console.log(`[PurchaseStatus] One-time purchase mode for session ${sessionId}`);
+
+      // Find purchase by stripeSessionId
+      const purchases = await strapi.entityService.findMany(
         "api::purchase.purchase",
         {
           filters: { stripeSessionId: sessionId },
-        },
+          populate: ["licenseKey", "licenseKey.entitlement"],
+        }
       );
 
-      if (existingPurchases.length > 0) {
-        const existingPurchase = existingPurchases[0];
-        const existingLicenseKey = await strapi.entityService.findMany(
-          "api::license-key.license-key",
-          {
-            filters: { purchase: existingPurchase.id },
-          },
-        );
-
+      if (purchases.length === 0) {
+        // Purchase not yet created by webhook
         ctx.body = {
-          success: true,
-          purchase: existingPurchase,
-          licenseKey: existingLicenseKey[0] || null,
-          affiliate: affiliate,
-          message: "Purchase already processed",
+          status: "pending",
+          mode: "payment",
+          message: "Purchase is being processed. Please wait...",
         };
         return;
       }
 
-      // Create purchase record
-      const purchase = await strapi.entityService.create(
-        "api::purchase.purchase",
-        {
-          data: {
-            stripeSessionId: sessionId,
-            amount: amount / 100, // Convert from cents
-            customerEmail: customer.email,
-            priceId: priceId,
-            customer: customer.id,
-            affiliate: affiliate ? affiliate.id : null,
-            commissionAmount,
-            status: "completed",
-            metadata: {
-              processedVia: "customer-purchase-endpoint",
-              timestamp: new Date().toISOString(),
-            },
-          },
-        },
-      );
+      const purchase = purchases[0];
 
-      // Generate license key
-      let licenseKeyRecord = null;
-      try {
-        const licenseKey = generateLicenseKey(priceInfo.name, customer.id);
-        console.log("🔑 Generated license key candidate:", licenseKey);
-        licenseKeyRecord = await strapi.entityService.create(
-          "api::license-key.license-key",
-          {
-            data: {
-              key: licenseKey,
-              productName: priceInfo.name,
-              priceId: priceId,
-              customer: customer.id,
-              purchase: purchase.id,
-              // status will start as 'unused' per schema default unless we explicitly set active state
-              status: "unused",
-              isActive: true,
-              isUsed: false,
-              maxActivations: 1,
-              currentActivations: 0,
-            },
-          },
-        );
-        console.log(
-          "✅ License key record created with id:",
-          licenseKeyRecord.id,
-        );
-      } catch (licenseErr) {
-        console.error("❌ Failed to create license key record:", licenseErr);
-      }
-
-      // Update purchase with license key
-      if (licenseKeyRecord?.id) {
-        try {
-          await strapi.entityService.update(
-            "api::purchase.purchase",
-            purchase.id,
-            {
-              data: {
-                licenseKey: licenseKeyRecord.id,
-              },
-            },
-          );
-          console.log(
-            "🔗 Linked license key",
-            licenseKeyRecord.id,
-            "to purchase",
-            purchase.id,
-          );
-        } catch (linkErr) {
-          console.error(
-            "⚠️ Failed linking license key to purchase",
-            purchase.id,
-            linkErr,
-          );
-        }
-      } else {
-        console.warn(
-          "⚠️ Skipping purchase->license link because license key record was not created",
-          purchase.id,
-        );
-      }
-
-      // Update affiliate earnings
-      if (affiliate) {
-        await strapi.entityService.update(
-          "api::affiliate.affiliate",
-          affiliate.id,
-          {
-            data: {
-              totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
-            },
-          },
-        );
-        console.log(
-          "💰 Updated affiliate earnings:",
-          affiliate.totalEarnings + commissionAmount,
-        );
-      }
-
-      console.log("✅ Customer purchase processed successfully:", purchase.id);
-      if (licenseKeyRecord?.key) {
-        console.log("🔐 License key created:", licenseKeyRecord.key);
+      // Verify customer owns this purchase
+      if (purchase.customer && purchase.customer !== customerId) {
+        ctx.status = 403;
+        ctx.body = { error: "Access denied" };
+        return;
       }
 
       ctx.body = {
-        success: true,
-        purchase: purchase,
-        licenseKey: licenseKeyRecord,
-        affiliate: affiliate,
-        message: licenseKeyRecord
-          ? "Purchase processed successfully"
-          : "Purchase processed (license key creation failed)",
+        status: "complete",
+        mode: "payment",
+        purchaseId: purchase.id,
+        licenseKeyId: purchase.licenseKey?.id || null,
+        licenseKey: purchase.licenseKey?.key || null,
+        entitlementId: purchase.licenseKey?.entitlement?.id || null,
+        tier: purchase.licenseKey?.entitlement?.tier || null,
+        isLifetime: purchase.licenseKey?.entitlement?.isLifetime || false,
       };
     } catch (error) {
-      console.error("❌ Error processing customer purchase:", error);
+      console.error("Purchase status error:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to process purchase",
+        error: "Failed to check purchase status",
         message: error.message,
-        details:
-          process.env.NODE_ENV === "development" ? error.stack : undefined,
       };
     }
   },
 
   /**
-   * License Portal: Activate a license key
+   * Get Pricing: Returns current price IDs for frontend
+   * GET /api/pricing
+   */
+  async getPricing(ctx) {
+    const config = getPriceConfig();
+
+    ctx.body = {
+      oneTime: {
+        maker: {
+          priceId: "price_starter",
+          stripeId: config.price_starter.stripeId,
+          name: config.price_starter.name,
+        },
+        pro: {
+          priceId: "price_pro",
+          stripeId: config.price_pro.stripeId,
+          name: config.price_pro.name,
+        },
+      },
+      subscription: {
+        maker: {
+          priceId: "price_starter_sub",
+          stripeId: config.price_starter_sub.stripeId,
+          available: !!config.price_starter_sub.stripeId,
+        },
+        pro: {
+          priceId: "price_pro_sub",
+          stripeId: config.price_pro_sub.stripeId,
+          available: !!config.price_pro_sub.stripeId,
+        },
+      },
+    };
+  },
+
+  // =========================================================================
+  // LEGACY MAC-BASED ENDPOINTS - RETIRED (Stage 5.5 Cutover)
+  // These return 410 Gone. All activation uses Stage 4/5 device-based system.
+  // =========================================================================
+
+  /**
+   * RETIRED: Legacy MAC-based license activation
    * POST /api/license/activate
+   * 
+   * Use instead:
+   *   1. POST /api/device/register
+   *   2. POST /api/licence/activate
    */
-  async licenseActivate(ctx) {
-    const jwt = require("jsonwebtoken");
-    const { v4: uuidv4 } = require("uuid");
-    const crypto = require("crypto");
-
-    try {
-      const { licenceKey, machineId } = ctx.request.body;
-
-      // Validate input
-      if (!licenceKey || !machineId) {
-        ctx.status = 400;
-        ctx.body = { error: "licenceKey and machineId are required" };
-        return;
-      }
-
-      // Find the license by key
-      const license = await strapi.entityService.findMany(
-        "api::license-key.license-key",
-        {
-          filters: { key: licenceKey },
-          limit: 1,
-        },
-      );
-
-      if (!license || license.length === 0) {
-        ctx.status = 404;
-        ctx.body = { error: "License key not found" };
-        return;
-      }
-
-      const licenseRecord = license[0];
-
-      // Check if license is already active
-      if (licenseRecord.status === "active") {
-        ctx.status = 400;
-        ctx.body = { error: "License is already active on another device" };
-        return;
-      }
-
-      // For trial licenses, only allow one-time activation
-      if (licenseRecord.typ === "trial" && licenseRecord.status !== "unused") {
-        ctx.status = 400;
-        ctx.body = { error: "Trial license has already been used" };
-        return;
-      }
-
-      // Generate new license key and deactivation code for security
-      const generateShortKey = () => {
-        const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // No confusing chars like 0,O,1,I
-        let result = "";
-        for (let i = 0; i < 12; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-          if (i === 3 || i === 7) result += "-"; // Add dashes for readability
-        }
-        return result;
-      };
-
-      const generateDeactivationCode = () => {
-        const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-        let result = "";
-        for (let i = 0; i < 8; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-      };
-
-      // Map license types to proper prefixes
-      const getPrefix = (typ) => {
-        const prefixMap = {
-          trial: "TRIAL",
-          starter: "STARTER",
-          pro: "PRO",
-          enterprise: "ENTERPRISE",
-          paid: "PAID",
-        };
-        return prefixMap[typ] || typ.toUpperCase();
-      };
-
-      // Generate new identifiers
-      const jti = uuidv4();
-      const newLicenseKey = `${getPrefix(licenseRecord.typ)}-${generateShortKey()}`;
-      const deactivationCode = generateDeactivationCode();
-      const now = new Date();
-      const trialStart = licenseRecord.typ === "trial" ? now : undefined;
-
-      // Encrypt deactivation code using license key as encryption key
-      const encryptDeactivationCode = (code, licenseKey) => {
-        const algorithm = "aes-256-cbc";
-        const key = crypto.createHash("sha256").update(licenseKey).digest();
-        const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv(algorithm, key, iv);
-        let encrypted = cipher.update(code, "utf8", "hex");
-        encrypted += cipher.final("hex");
-        return iv.toString("hex") + ":" + encrypted;
-      };
-
-      const encryptedDeactivationCode = encryptDeactivationCode(
-        deactivationCode,
-        newLicenseKey,
-      );
-
-      // Update license record with new key and encrypted deactivation code
-      const updatedLicense = await strapi.entityService.update(
-        "api::license-key.license-key",
-        licenseRecord.id,
-        {
-          data: {
-            key: newLicenseKey, // Generate new key to prevent reuse
-            status: "active",
-            jti,
-            machineId,
-            trialStart,
-            activatedAt: now,
-            isUsed: true,
-            deactivationCode: encryptedDeactivationCode, // Store encrypted deactivation code
-            currentActivations: 1, // Always 1 for single device
-            maxActivations: 1, // Always 1 for single device
-          },
-        },
-      );
-
-      // Create JWT payload with deactivation code
-      const payload = {
-        iss: process.env.JWT_ISSUER || `https://${ctx.request.host}`,
-        sub: licenseRecord.id.toString(),
-        jti,
-        typ: licenseRecord.typ,
-        machineId,
-        deactivationCode, // Include deactivation code in JWT
-        licenseKey: newLicenseKey,
-        iat: Math.floor(now.getTime() / 1000),
-      };
-
-      // Add trialStart for trial licenses
-      if (licenseRecord.typ === "trial") {
-        payload.trialStart = Math.floor(now.getTime() / 1000);
-      }
-
-      // Get private key from environment
-      const privateKey = process.env.JWT_PRIVATE_KEY;
-      if (!privateKey) {
-        console.error("JWT_PRIVATE_KEY not found in environment");
-        ctx.status = 500;
-        ctx.body = { error: "JWT private key not configured" };
-        return;
-      }
-
-      // Sign JWT with RS256
-      const token = jwt.sign(payload, privateKey, {
-        algorithm: "RS256",
-        noTimestamp: true, // We set iat manually
-      });
-
-      console.log(
-        `✅ License activated: ${newLicenseKey} for machine: ${machineId}`,
-      );
-
-      ctx.status = 200;
-      ctx.body = {
-        jwt: token,
-        jti,
-        machineId,
-        licenseKey: newLicenseKey, // Return new license key
-        deactivationCode, // Return deactivation code
-        ...(licenseRecord.typ === "trial" && { trialStart: now.toISOString() }),
-      };
-    } catch (error) {
-      console.error("License activation error:", error);
-      console.error("Error stack:", error.stack);
-      ctx.status = 500;
-      ctx.body = { error: "Internal server error", details: error.message };
-    }
+  async licenseActivateLegacyRetired(ctx) {
+    strapi.log.warn(`[RETIRED] POST /api/license/activate called - legacy MAC-based activation`);
+    sendRetired(ctx, "This endpoint has been retired. Please use the new device-based activation system.", {
+      guide: "1) Register your device: POST /api/device/register, 2) Activate entitlement: POST /api/licence/activate",
+      replacement: {
+        register: "POST /api/device/register",
+        activate: "POST /api/licence/activate",
+        refresh: "POST /api/licence/refresh",
+        deactivate: "POST /api/licence/deactivate",
+      },
+    });
   },
 
   /**
-   * License Portal: Deactivate a license key
+   * RETIRED: Legacy MAC-based license deactivation
    * POST /api/license/deactivate
+   * 
+   * Use instead: POST /api/licence/deactivate
    */
-  async licenseDeactivate(ctx) {
-    try {
-      const { licenceKey, deactivationCode } = ctx.request.body;
-
-      // Validate input
-      if (!licenceKey || !deactivationCode) {
-        ctx.status = 400;
-        ctx.body = { error: "licenceKey and deactivationCode are required" };
-        return;
-      }
-
-      // Find the active license (without checking deactivation code yet)
-      const license = await strapi.entityService.findMany(
-        "api::license-key.license-key",
-        {
-          filters: {
-            key: licenceKey,
-            status: "active",
-          },
-          limit: 1,
-        },
-      );
-
-      if (!license || license.length === 0) {
-        ctx.status = 404;
-        ctx.body = { error: "License key not found or not active" };
-        return;
-      }
-
-      const licenseRecord = license[0];
-
-      // Decrypt and verify deactivation code
-      const decryptDeactivationCode = (encryptedCode, licenseKey) => {
-        try {
-          const algorithm = "aes-256-cbc";
-          const key = crypto.createHash("sha256").update(licenseKey).digest();
-          const parts = encryptedCode.split(":");
-          if (parts.length !== 2) return null;
-          const iv = Buffer.from(parts[0], "hex");
-          const encrypted = parts[1];
-          const decipher = crypto.createDecipheriv(algorithm, key, iv);
-          let decrypted = decipher.update(encrypted, "hex", "utf8");
-          decrypted += decipher.final("utf8");
-          return decrypted;
-        } catch (error) {
-          return null; // Invalid encryption/decryption
-        }
-      };
-
-      const decryptedCode = decryptDeactivationCode(
-        licenseRecord.deactivationCode,
-        licenceKey,
-      );
-
-      if (!decryptedCode || decryptedCode !== deactivationCode) {
-        ctx.status = 400;
-        ctx.body = { error: "Invalid deactivation code" };
-        return;
-      }
-
-      // Generate new unused license key for future use
-      const generateShortKey = () => {
-        const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // No confusing chars
-        let result = "";
-        for (let i = 0; i < 12; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-          if (i === 3 || i === 7) result += "-";
-        }
-        return result;
-      };
-
-      // Map license types to proper prefixes
-      const getPrefix = (typ) => {
-        const prefixMap = {
-          trial: "TRIAL",
-          starter: "STARTER",
-          pro: "PRO",
-          enterprise: "ENTERPRISE",
-          paid: "PAID",
-        };
-        return prefixMap[typ] || typ.toUpperCase();
-      };
-
-      const newLicenseKey = `${getPrefix(licenseRecord.typ)}-${generateShortKey()}`;
-
-      // Deactivate and reset the license with new key
-      await strapi.entityService.update(
-        "api::license-key.license-key",
-        licenseRecord.id,
-        {
-          data: {
-            key: newLicenseKey, // New license key for reuse
-            status: "unused",
-            jti: null,
-            machineId: null,
-            trialStart: null,
-            activatedAt: null,
-            isUsed: false,
-            deactivationCode: null, // Clear the encrypted deactivation code
-            currentActivations: 0,
-          },
-        },
-      );
-
-      console.log(
-        `✅ License deactivated and reset: ${licenceKey} -> ${newLicenseKey}`,
-      );
-
-      ctx.status = 200;
-      ctx.body = {
-        success: true,
-        message: "License deactivated successfully",
-        newLicenseKey: newLicenseKey,
-      };
-    } catch (error) {
-      console.error("License deactivation error:", error);
-      ctx.status = 500;
-      ctx.body = {
-        error: "Failed to deactivate license",
-        details: error.message,
-      };
-    }
+  async licenseDeactivateLegacyRetired(ctx) {
+    strapi.log.warn(`[RETIRED] POST /api/license/deactivate called - legacy MAC-based deactivation`);
+    sendRetired(ctx, "This endpoint has been retired. Please use POST /api/licence/deactivate with your deviceId.", {
+      guide: "Use POST /api/licence/deactivate with { entitlementId, deviceId }",
+      replacement: "POST /api/licence/deactivate",
+    });
   },
+
+  // =========================================================================
+  // LEGACY MAC-BASED CODE REMOVED (Stage 5.5 Cutover - 2026-01-21)
+  // =========================================================================
+  // The following functions were previously preserved for reference but have
+  // been removed in Stage 5.5 to eliminate all legacy MAC/machineId code paths:
+  //   - licenseActivate() - Legacy MAC-based activation
+  //   - licenseDeactivate() - Legacy MAC-based deactivation
+  //
+  // All activation now uses the Stage 4/5 device-based system:
+  //   - POST /api/device/register
+  //   - POST /api/licence/activate
+  //   - POST /api/licence/refresh
+  //   - POST /api/licence/deactivate
+  //
+  // Legacy endpoints POST /api/license/activate and /api/license/deactivate
+  // are handled by licenseActivateLegacyRetired() and licenseDeactivateLegacyRetired()
+  // which return 410 Gone with migration guidance.
+  // =========================================================================
 
   /**
    * License Portal: Reset all licenses to unused state (for testing)
@@ -1044,7 +1236,7 @@ module.exports = {
 
       ctx.status = 200;
       ctx.body = {
-        success: true,
+        ok: true,
         message: `Reset ${licenses.length} licenses to unused state`,
         licenses: licenses.map((l) => ({ key: l.key, typ: l.typ })),
       };
@@ -1157,7 +1349,7 @@ module.exports = {
       }
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Commission amounts recalculated successfully",
         summary: {
           totalPurchases: purchases.length,
@@ -1171,7 +1363,8 @@ module.exports = {
       console.error("❌ Error recalculating commissions:", error);
       ctx.status = 500;
       ctx.body = {
-        success: false,
+        ok: false,
+        code: "INTERNAL_ERROR",
         error: "Failed to recalculate commissions",
         details: process.env.NODE_ENV === "development" ? error.message : {},
       };
@@ -1266,15 +1459,16 @@ module.exports = {
       }
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Visit tracked successfully",
       };
     } catch (error) {
       console.error("Error tracking affiliate visit:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to track visit",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to track visit",
       };
     }
   },
@@ -1337,15 +1531,16 @@ module.exports = {
       );
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Conversion event tracked successfully",
       };
     } catch (error) {
       console.error("Error tracking conversion event:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to track conversion event",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to track conversion event",
       };
     }
   },
@@ -1372,7 +1567,7 @@ module.exports = {
         user = await strapi.query("plugin::users-permissions.user").findOne({
           where: { id: decoded.id },
         });
-      } catch (error) {
+      } catch {
         return ctx.unauthorized("Invalid token");
       }
 
@@ -1621,7 +1816,7 @@ module.exports = {
       );
 
       ctx.body = {
-        success: true,
+        ok: true,
         visitorId: visitorId,
         message: "Journey tracked successfully",
       };
@@ -1629,8 +1824,9 @@ module.exports = {
       console.error("Error tracking visitor journey:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to track visitor journey",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to track visitor journey",
       };
     }
   },
@@ -1656,7 +1852,7 @@ module.exports = {
         user = await strapi.query("plugin::users-permissions.user").findOne({
           where: { id: decoded.id },
         });
-      } catch (error) {
+      } catch {
         return ctx.unauthorized("Invalid token");
       }
 
@@ -1696,15 +1892,16 @@ module.exports = {
       );
 
       ctx.body = {
-        success: true,
+        ok: true,
         message: "Visitor journey data cleared successfully",
       };
     } catch (error) {
       console.error("Error clearing visitor data:", error);
       ctx.status = 500;
       ctx.body = {
-        error: "Failed to clear visitor journey data",
-        message: error.message,
+        ok: false,
+        code: "INTERNAL_ERROR",
+        message: "Failed to clear visitor journey data",
       };
     }
   },
@@ -1730,7 +1927,7 @@ module.exports = {
         user = await strapi.query("plugin::users-permissions.user").findOne({
           where: { id: decoded.id },
         });
-      } catch (error) {
+      } catch {
         return ctx.unauthorized("Invalid token");
       }
 
@@ -1972,13 +2169,13 @@ module.exports = {
         data: { licenseKey: licenseKeyRecord.id },
       });
       ctx.body = {
-        success: true,
+        ok: true,
         purchaseId: purchase.id,
         licenseKey: licenseKeyRecord.key,
       };
     } catch (e) {
       ctx.status = 500;
-      ctx.body = { error: e.message };
+      ctx.body = { ok: false, code: "INTERNAL_ERROR", message: e.message };
     }
   },
 
@@ -2003,6 +2200,2042 @@ module.exports = {
     } catch (e) {
       ctx.status = 500;
       ctx.body = { error: e.message };
+    }
+  },
+
+  // ===========================================================================
+  // Stage 4: Unified Device-Based Activation API
+  // These endpoints use customer auth + deviceId (not MAC-based legacy)
+  // ===========================================================================
+
+  /**
+   * POST /api/device/register
+   * Register a device for the authenticated customer
+   * Body: { deviceId: string, publicKey?: string, deviceName?: string, platform?: string }
+   * Note: publicKey is optional for portal-initiated registrations
+   */
+  async deviceRegister(ctx) {
+    const crypto = require("crypto");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { deviceId, publicKey, deviceName, platform } = ctx.request.body;
+
+      // Validate required fields
+      if (!deviceId || typeof deviceId !== "string" || deviceId.length < 3) {
+        audit.deviceRegister(ctx, {
+          outcome: "failure",
+          reason: "invalid_device_id",
+          customerId: customer.id,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deviceId is required and must be at least 3 characters", {
+          field: "deviceId",
+        });
+      }
+
+      // publicKey is now optional - portal registrations may not have one
+      // but if provided, validate it
+      let publicKeyHash = null;
+      if (publicKey && typeof publicKey === "string") {
+        if (publicKey.length < 32) {
+          audit.deviceRegister(ctx, {
+            outcome: "failure",
+            reason: "invalid_public_key",
+            customerId: customer.id,
+            deviceId,
+          });
+          return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "If provided, publicKey must be at least 32 characters", {
+            field: "publicKey",
+          });
+        }
+        // Hash the public key for storage (truncated for audit logs)
+        publicKeyHash = crypto
+          .createHash("sha256")
+          .update(publicKey)
+          .digest("hex")
+          .slice(0, 16);
+      }
+
+      // Check if device already exists
+      const existingDevices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer"],
+        }
+      );
+
+      if (existingDevices.length > 0) {
+        const existingDevice = existingDevices[0];
+
+        // Device exists - check if it belongs to the same customer
+        const existingCustomerId = existingDevice.customer?.id || existingDevice.customer;
+
+        if (existingCustomerId && existingCustomerId !== customer.id) {
+          // Device is linked to a different customer - reject
+          audit.deviceRegister(ctx, {
+            outcome: "failure",
+            reason: "device_owned_by_another",
+            customerId: customer.id,
+            deviceIdHash: publicKeyHash,
+          });
+          return sendError(ctx, 409, ErrorCodes.DEVICE_NOT_OWNED, "Device is registered to another account");
+        }
+
+        // Device belongs to this customer - update it
+        const updatedDevice = await strapi.entityService.update(
+          "api::device.device",
+          existingDevice.id,
+          {
+            data: {
+              publicKey,
+              publicKeyHash,
+              deviceName: deviceName || existingDevice.deviceName,
+              platform: platform || existingDevice.platform || "unknown",
+              lastSeenAt: new Date(),
+              status: existingDevice.status === "blocked" ? "blocked" : "active",
+            },
+          }
+        );
+
+        audit.deviceRegister(ctx, {
+          outcome: "success",
+          reason: "device_updated",
+          customerId: customer.id,
+          deviceIdHash: publicKeyHash,
+        });
+
+        return sendOk(ctx, {
+          deviceId: updatedDevice.deviceId,
+          status: updatedDevice.status,
+          message: "Device updated",
+        });
+      }
+
+      // Create new device
+      const newDevice = await strapi.entityService.create(
+        "api::device.device",
+        {
+          data: {
+            deviceId,
+            publicKey,
+            publicKeyHash,
+            deviceName: deviceName || null,
+            platform: platform || "unknown",
+            customer: customer.id,
+            status: "active",
+            lastSeenAt: new Date(),
+          },
+        }
+      );
+
+      audit.deviceRegister(ctx, {
+        outcome: "success",
+        reason: "device_created",
+        customerId: customer.id,
+        deviceIdHash: publicKeyHash,
+      });
+
+      return sendOk(ctx, {
+        deviceId: newDevice.deviceId,
+        status: newDevice.status,
+        message: "Device registered",
+      });
+    } catch (err) {
+      strapi.log.error(`[deviceRegister] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/activate
+   * Activate an entitlement on a device
+   * Body: { entitlementId: number, deviceId: string }
+   */
+  async licenceActivate(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { entitlementId, deviceId } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "missing_entitlement_id",
+          customerId: customer.id,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId is required", {
+          field: "entitlementId",
+        });
+      }
+
+      if (!deviceId || typeof deviceId !== "string") {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "missing_device_id",
+          customerId: customer.id,
+          entitlementId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deviceId is required", {
+          field: "deviceId",
+        });
+      }
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer", "devices"] }
+      );
+
+      if (!entitlement) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      // Verify ownership
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
+      }
+
+      // Check entitlement is usable
+      const allowedStatuses = ["active"];
+      if (!entitlement.isLifetime && !allowedStatuses.includes(entitlement.status)) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
+      }
+
+      // Load device and verify ownership
+      const devices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer", "entitlement"],
+        }
+      );
+
+      if (devices.length === 0) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not registered. Please register device first.");
+      }
+
+      const device = devices[0];
+
+      // Verify device ownership
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Check device is not blocked
+      if (device.status === "blocked") {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "device_blocked",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Device is blocked");
+      }
+
+      // Check if device is already bound to this entitlement (idempotent)
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (deviceEntitlementId === entitlement.id && device.status === "active") {
+        // Already bound - update lastSeenAt and return success
+        await strapi.entityService.update(
+          "api::device.device",
+          device.id,
+          { data: { lastSeenAt: new Date() } }
+        );
+
+        audit.deviceActivate(ctx, {
+          outcome: "success",
+          reason: "already_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+
+        return sendOk(ctx, {
+          message: "Device already activated",
+          entitlement: {
+            id: entitlement.id,
+            tier: entitlement.tier,
+            status: entitlement.status,
+            isLifetime: entitlement.isLifetime,
+            expiresAt: entitlement.expiresAt,
+            currentPeriodEnd: entitlement.currentPeriodEnd,
+            maxDevices: entitlement.maxDevices,
+          },
+          device: {
+            deviceId: device.deviceId,
+            boundAt: device.boundAt,
+          },
+        });
+      }
+
+      // Enforce maxDevices limit
+      // Count active device bindings for this entitlement
+      const activeDevices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: {
+            entitlement: entitlement.id,
+            status: "active",
+          },
+        }
+      );
+
+      // Filter out the current device if it's already in the list
+      const otherActiveDevices = activeDevices.filter(d => d.id !== device.id);
+
+      if (otherActiveDevices.length >= entitlement.maxDevices) {
+        audit.deviceActivate(ctx, {
+          outcome: "failure",
+          reason: "max_devices_exceeded",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 409, ErrorCodes.MAX_DEVICES_EXCEEDED, `Maximum devices limit reached. Please deactivate another device first.`, {
+          maxDevices: entitlement.maxDevices,
+          activeDevices: otherActiveDevices.length,
+        });
+      }
+
+      // Create binding - update device with entitlement link
+      const now = new Date();
+      await strapi.entityService.update(
+        "api::device.device",
+        device.id,
+        {
+          data: {
+            entitlement: entitlement.id,
+            status: "active",
+            boundAt: now,
+            lastSeenAt: now,
+            deactivatedAt: null,
+          },
+        }
+      );
+
+      audit.deviceActivate(ctx, {
+        outcome: "success",
+        reason: "activated",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      return sendOk(ctx, {
+        message: "Device activated",
+        entitlement: {
+          id: entitlement.id,
+          tier: entitlement.tier,
+          status: entitlement.status,
+          isLifetime: entitlement.isLifetime,
+          expiresAt: entitlement.expiresAt,
+          currentPeriodEnd: entitlement.currentPeriodEnd,
+          maxDevices: entitlement.maxDevices,
+        },
+        device: {
+          deviceId: device.deviceId,
+          boundAt: now,
+        },
+      });
+    } catch (err) {
+      strapi.log.error(`[licenceActivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/refresh
+   * Refresh an entitlement binding (heartbeat) and issue lease token
+   * Body: { entitlementId: number, deviceId: string, nonce?: string, signature?: string }
+   *
+   * Stage 5: Returns lease token for subscriptions. Lifetime entitlements get leaseRequired:false.
+   */
+  async licenceRefresh(ctx) {
+    const { mintLeaseToken } = require("../../../utils/lease-token");
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { entitlementId, deviceId, nonce, signature } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId || !deviceId) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "missing_fields",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId and deviceId are required", {
+          fields: ["entitlementId", "deviceId"],
+        });
+      }
+
+      // Load device with entitlement
+      const devices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer", "entitlement"],
+        }
+      );
+
+      if (devices.length === 0) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+
+      // Verify device ownership
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Verify device is bound to the specified entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== parseInt(entitlementId, 10)) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
+      }
+
+      // Verify device is active
+      if (device.status !== "active") {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Device is not active", {
+          status: device.status,
+        });
+      }
+
+      // Load entitlement to check status
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      // Check entitlement is still valid
+      const isValid = entitlement.isLifetime || entitlement.status === "active";
+      if (!isValid) {
+        audit.deviceRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_valid",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is no longer active", {
+          status: entitlement.status,
+        });
+      }
+
+      // Stage 5: Nonce/signature validation logged but not enforced yet
+      // Future: verify device signature over nonce to prevent replay
+      if (nonce) {
+        strapi.log.debug(`[licenceRefresh] Nonce provided: ${nonce.slice(0, 8)}...`);
+      }
+
+      // Update lastSeenAt on device
+      const now = new Date();
+      await strapi.entityService.update(
+        "api::device.device",
+        device.id,
+        { data: { lastSeenAt: now } }
+      );
+
+      // Stage 5: Mint lease token for subscriptions
+      let leaseData = {
+        leaseRequired: false,
+        leaseToken: null,
+        leaseExpiresAt: null,
+      };
+
+      if (!entitlement.isLifetime) {
+        // Subscription-based entitlement: mint a lease token
+        const lease = mintLeaseToken({
+          entitlementId: entitlement.id,
+          customerId: customer.id,
+          deviceId,
+          tier: entitlement.tier,
+          isLifetime: false,
+        });
+
+        if (lease) {
+          leaseData = {
+            leaseRequired: true,
+            leaseToken: lease.token,
+            leaseExpiresAt: lease.expiresAt,
+          };
+
+          // Log lease issuance
+          audit.leaseIssued(ctx, {
+            outcome: "success",
+            reason: "online_refresh",
+            customerId: customer.id,
+            entitlementId: entitlement.id,
+            deviceId,
+            jti: lease.jti,
+          });
+        }
+      }
+
+      audit.deviceRefresh(ctx, {
+        outcome: "success",
+        reason: "refreshed",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      return sendOk(ctx, {
+        status: entitlement.status,
+        isLifetime: entitlement.isLifetime,
+        expiresAt: entitlement.expiresAt,
+        currentPeriodEnd: entitlement.currentPeriodEnd,
+        serverTime: now.toISOString(),
+        // Stage 5: Lease token fields
+        ...leaseData,
+      });
+    } catch (err) {
+      strapi.log.error(`[licenceRefresh] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/deactivate
+   * Deactivate an entitlement from a device
+   * Body: { entitlementId: number, deviceId: string, deactivationCode?: string }
+   */
+  async licenceDeactivate(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { entitlementId, deviceId, deactivationCode } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId || !deviceId) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "missing_fields",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId and deviceId are required", {
+          fields: ["entitlementId", "deviceId"],
+        });
+      }
+
+      // Load device with entitlement
+      const devices = await strapi.entityService.findMany(
+        "api::device.device",
+        {
+          filters: { deviceId },
+          populate: ["customer", "entitlement"],
+        }
+      );
+
+      if (devices.length === 0) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+
+      // Verify device ownership
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Verify device is bound to the specified entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== parseInt(entitlementId, 10)) {
+        audit.deviceDeactivate(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
+      }
+
+      // TODO Stage 5: Verify deactivationCode for offline proof
+      // For now, just log if provided
+      if (deactivationCode) {
+        strapi.log.debug(`[licenceDeactivate] Deactivation code provided (Stage 5 will verify): ${deactivationCode.slice(0, 8)}...`);
+      }
+
+      // Deactivate - remove entitlement link, set status to deactivated
+      const now = new Date();
+      await strapi.entityService.update(
+        "api::device.device",
+        device.id,
+        {
+          data: {
+            entitlement: null,
+            status: "deactivated",
+            deactivatedAt: now,
+          },
+        }
+      );
+
+      audit.deviceDeactivate(ctx, {
+        outcome: "success",
+        reason: "deactivated",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      return sendOk(ctx, {
+        message: "Device deactivated",
+      });
+    } catch (err) {
+      strapi.log.error(`[licenceDeactivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  // =========================================================================
+  // Stage 5: Offline Refresh (Challenge/Response) + Lease Token Verification
+  // =========================================================================
+
+  /**
+   * POST /api/licence/offline-challenge
+   * Generate a challenge token for offline refresh flow.
+   * Auth: customer-auth required (portal user)
+   * Body: { entitlementId: number, deviceId: string, publicKey?: string, deviceName?: string }
+   */
+  async offlineChallenge(ctx) {
+    const { mintOfflineChallenge } = require("../../../utils/lease-token");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { entitlementId, deviceId, publicKey, deviceName } = ctx.request.body;
+
+      // Validate required fields
+      if (!entitlementId || !deviceId) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "missing_fields",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId and deviceId are required", {
+          fields: ["entitlementId", "deviceId"],
+        });
+      }
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
+      }
+
+      // Check entitlement is active
+      if (entitlement.status !== "active") {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
+      }
+
+      // Offline refresh is only available for subscription entitlements
+      // Lifetime/Founders licenses are online-only and don't need lease tokens
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          isLifetime: entitlement.isLifetime,
+          leaseRequired: entitlement.leaseRequired,
+        });
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.");
+      }
+
+      // Verify device is registered to customer
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineChallenge(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Mint challenge
+      const challengeData = mintOfflineChallenge({
+        entitlementId: parseInt(entitlementId, 10),
+        customerId: customer.id,
+        deviceId,
+      });
+
+      audit.offlineChallenge(ctx, {
+        outcome: "success",
+        reason: "challenge_issued",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        nonce: challengeData.nonce,
+      });
+
+      return sendOk(ctx, {
+        challengeToken: challengeData.challenge,
+        challengeExpiresAt: challengeData.expiresAt,
+        serverTime: challengeData.serverTime,
+        // Include entitlement info for display
+        entitlement: {
+          id: entitlement.id,
+          tier: entitlement.tier,
+          isLifetime: entitlement.isLifetime,
+        },
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineChallenge] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/offline-refresh
+   * Redeem a challenge token for a new lease token.
+   * Auth: customer-auth required (portal user logged in)
+   * Body: { challenge: string }
+   */
+  async offlineRefresh(ctx) {
+    const { verifyOfflineChallenge, mintLeaseToken } = require("../../../utils/lease-token");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { challenge } = ctx.request.body;
+
+      if (!challenge) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "missing_challenge",
+          customerId: customer.id,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "challenge is required", {
+          field: "challenge",
+        });
+      }
+
+      // Verify challenge
+      let decoded;
+      try {
+        decoded = verifyOfflineChallenge(challenge);
+      } catch (verifyErr) {
+        const errorCode = verifyErr.code === "CHALLENGE_EXPIRED" ? ErrorCodes.CHALLENGE_EXPIRED : ErrorCodes.CHALLENGE_INVALID;
+        const errorMsg = verifyErr.code === "CHALLENGE_EXPIRED" ? "Challenge has expired" : "Invalid challenge";
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: verifyErr.code === "CHALLENGE_EXPIRED" ? "challenge_expired" : "invalid_challenge",
+          customerId: customer.id,
+          error: verifyErr.message,
+        });
+        return sendError(ctx, 400, errorCode, errorMsg);
+      }
+
+      const { entitlementId, deviceId, nonce } = decoded;
+      const jti = decoded.jti || nonce; // jti is the nonce
+
+      // Check replay: has this challenge been used before?
+      const existingUse = await strapi.entityService.findMany(
+        "api::offline-challenge.offline-challenge",
+        { filters: { jti }, limit: 1 }
+      );
+
+      if (existingUse && existingUse.length > 0) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "replay_rejected",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          jti,
+        });
+        return sendError(ctx, 409, ErrorCodes.REPLAY_REJECTED, "Challenge has already been used (replay rejected)");
+      }
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
+      }
+
+      // Check entitlement is active (or lifetime)
+      const isValid = entitlement.isLifetime || entitlement.status === "active";
+      if (!isValid) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
+      }
+
+      // Offline refresh is only available for subscription entitlements
+      // Lifetime/Founders licenses are online-only and don't need lease tokens
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          isLifetime: entitlement.isLifetime,
+          leaseRequired: entitlement.leaseRequired,
+        });
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline refresh is only available for subscription entitlements. Lifetime/Founders licenses are online-only.");
+      }
+
+      // Verify device exists and is owned by customer
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Record challenge usage for replay protection
+      const now = new Date();
+      await strapi.entityService.create("api::offline-challenge.offline-challenge", {
+        data: {
+          jti,
+          entitlementId,
+          deviceId,
+          customerId: customer.id,
+          usedAt: now,
+          challengeIssuedAt: decoded.iat ? new Date(decoded.iat * 1000) : null,
+          challengeExpiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null,
+        },
+      });
+
+      // Mint lease token for subscription (lifetime entitlements already rejected above)
+      const lease = mintLeaseToken({
+        entitlementId,
+        customerId: customer.id,
+        deviceId,
+        tier: entitlement.tier,
+        isLifetime: false,
+      });
+
+      audit.offlineRefresh(ctx, {
+        outcome: "success",
+        reason: "lease_issued",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        leaseJti: lease.jti,
+      });
+
+      // Update device lastSeenAt
+      await strapi.entityService.update("api::device.device", device.id, {
+        data: { lastSeenAt: now },
+      });
+
+      return sendOk(ctx, {
+        leaseRequired: true,
+        leaseToken: lease.token,
+        leaseExpiresAt: lease.expiresAt,
+        serverTime: now.toISOString(),
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineRefresh] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/verify-lease
+   * Debug endpoint to verify a lease token.
+   * Auth: customer-auth required
+   * Body: { leaseToken: string }
+   */
+  async verifyLease(ctx) {
+    const { verifyLeaseToken } = require("../../../utils/lease-token");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { leaseToken } = ctx.request.body;
+
+      if (!leaseToken) {
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "leaseToken is required", {
+          field: "leaseToken",
+        });
+      }
+
+      try {
+        const decoded = verifyLeaseToken(leaseToken);
+
+        // Verify the token belongs to this customer
+        if (decoded.customerId !== customer.id) {
+          return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Lease token does not belong to your account");
+        }
+
+        return sendOk(ctx, {
+          claims: {
+            entitlementId: decoded.entitlementId,
+            customerId: decoded.customerId,
+            deviceId: decoded.deviceId,
+            tier: decoded.tier,
+            isLifetime: decoded.isLifetime,
+            issuedAt: new Date(decoded.iat * 1000).toISOString(),
+            expiresAt: new Date(decoded.exp * 1000).toISOString(),
+            jti: decoded.jti,
+          },
+          serverTime: new Date().toISOString(),
+        });
+      } catch (verifyErr) {
+        const errorCode = verifyErr.code === "LEASE_EXPIRED" ? ErrorCodes.CHALLENGE_EXPIRED : ErrorCodes.CHALLENGE_INVALID;
+        return sendError(ctx, 400, errorCode, verifyErr.message, {
+          expiredAt: verifyErr.expiredAt ? verifyErr.expiredAt.toISOString() : null,
+        });
+      }
+    } catch (err) {
+      strapi.log.error(`[verifyLease] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  // =========================================================================
+  // Air-Gapped Offline Activation Flow (USB/Copy-Paste Codes)
+  // These endpoints support fully offline devices using cryptographic codes.
+  // =========================================================================
+
+  /**
+   * POST /api/licence/offline-provision
+   * Provision an air-gapped device for offline operation.
+   * Accepts a device setup code, registers the device, binds to entitlement,
+   * and returns an activation package with activation token + lease token.
+   *
+   * Auth: customer-auth required
+   * Body: { deviceSetupCode: string, entitlementId: number }
+   */
+  async offlineProvision(ctx) {
+    const { mintLeaseToken } = require("../../../utils/lease-token");
+    const { getRS256PrivateKey } = require("../../../utils/jwt-keys");
+    const jwt = require("jsonwebtoken");
+    const {
+      parseDeviceSetupCode,
+      importEd25519PublicKey,
+      computePublicKeyHash,
+      buildActivationPackage,
+      getOfflineActivationTtlSeconds,
+    } = require("../../../utils/offline-codes");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { deviceSetupCode, entitlementId } = ctx.request.body;
+
+      // Validate required fields
+      if (!deviceSetupCode || typeof deviceSetupCode !== "string") {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "missing_setup_code",
+          customerId: customer.id,
+          entitlementId,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deviceSetupCode is required", {
+          field: "deviceSetupCode",
+        });
+      }
+
+      if (!entitlementId) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "missing_entitlement_id",
+          customerId: customer.id,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "entitlementId is required", {
+          field: "entitlementId",
+        });
+      }
+
+      // Parse and validate setup code
+      const parseResult = parseDeviceSetupCode(deviceSetupCode);
+      if (!parseResult.ok) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "invalid_setup_code",
+          customerId: customer.id,
+          entitlementId,
+          error: parseResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_SETUP_CODE, parseResult.error);
+      }
+
+      const setupData = parseResult.data;
+      const { deviceId, deviceName, platform, publicKey: publicKeyBase64, createdAt } = setupData;
+
+      // Import and validate Ed25519 public key
+      const keyResult = importEd25519PublicKey(publicKeyBase64);
+      if (!keyResult.ok) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "invalid_public_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          error: keyResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_PUBLIC_KEY, keyResult.error);
+      }
+
+      // Compute public key hash for binding verification
+      const devicePublicKeyHash = computePublicKeyHash(publicKeyBase64);
+
+      // Load entitlement and verify ownership
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer", "devices"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      // Verify ownership
+      const entitlementCustomerId = entitlement.customer?.id || entitlement.customer;
+      if (entitlementCustomerId !== customer.id) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "not_owner",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "You do not own this entitlement");
+      }
+
+      // Check entitlement is active
+      if (entitlement.status !== "active") {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
+      }
+
+      // Offline provisioning is only for subscriptions, not lifetime
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          isLifetime: entitlement.isLifetime,
+        });
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline provisioning is only available for subscription entitlements. Lifetime licenses are online-only.");
+      }
+
+      // Check if device already exists
+      const existingDevices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      let device = null;
+
+      if (existingDevices.length > 0) {
+        const existingDevice = existingDevices[0];
+        const existingCustomerId = existingDevice.customer?.id || existingDevice.customer;
+
+        // If device belongs to another customer, reject
+        if (existingCustomerId && existingCustomerId !== customer.id) {
+          audit.offlineProvision(ctx, {
+            outcome: "failure",
+            reason: "device_owned_by_another",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+          });
+          return sendError(ctx, 403, ErrorCodes.FORBIDDEN, "Device is registered to another account");
+        }
+
+        // Update existing device with new public key and info
+        device = await strapi.entityService.update("api::device.device", existingDevice.id, {
+          data: {
+            publicKey: publicKeyBase64,
+            publicKeyHash: devicePublicKeyHash,
+            deviceName: deviceName || existingDevice.deviceName,
+            platform: platform || existingDevice.platform,
+            lastSeenAt: new Date(),
+          },
+        });
+        device = { ...device, customer: existingDevice.customer, entitlement: existingDevice.entitlement };
+      } else {
+        // Create new device
+        device = await strapi.entityService.create("api::device.device", {
+          data: {
+            deviceId,
+            deviceName: deviceName || null,
+            platform: platform || "unknown",
+            publicKey: publicKeyBase64,
+            publicKeyHash: devicePublicKeyHash,
+            customer: customer.id,
+            status: "active",
+            lastSeenAt: new Date(),
+          },
+        });
+      }
+
+      // Check if already bound to this entitlement (idempotent)
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      const alreadyBound = deviceEntitlementId === entitlement.id;
+
+      if (!alreadyBound) {
+        // Enforce maxDevices limit
+        const activeDevices = await strapi.entityService.findMany("api::device.device", {
+          filters: {
+            entitlement: entitlement.id,
+            status: "active",
+          },
+        });
+        const otherActiveDevices = activeDevices.filter(d => d.id !== device.id);
+
+        if (otherActiveDevices.length >= entitlement.maxDevices) {
+          audit.offlineProvision(ctx, {
+            outcome: "failure",
+            reason: "max_devices_exceeded",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+          });
+          return sendError(ctx, 409, ErrorCodes.MAX_DEVICES_EXCEEDED, "Maximum devices limit reached. Please deactivate another device first.", {
+            maxDevices: entitlement.maxDevices,
+            activeDevices: otherActiveDevices.length,
+          });
+        }
+
+        // Bind device to entitlement
+        const now = new Date();
+        await strapi.entityService.update("api::device.device", device.id, {
+          data: {
+            entitlement: entitlement.id,
+            status: "active",
+            boundAt: now,
+            lastSeenAt: now,
+            deactivatedAt: null,
+          },
+        });
+      }
+
+      // Create activation token (RS256 JWT)
+      const privateKey = getRS256PrivateKey();
+      if (!privateKey) {
+        audit.offlineProvision(ctx, {
+          outcome: "failure",
+          reason: "jwt_key_not_configured",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "Server configuration error");
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const activationTtl = getOfflineActivationTtlSeconds();
+      const activationExp = now + activationTtl;
+      const activationJti = crypto.randomUUID();
+
+      const activationPayload = {
+        iss: process.env.JWT_ISSUER || "lightlane",
+        sub: `offline_activation:${entitlementId}:${deviceId}`,
+        jti: activationJti,
+        iat: now,
+        exp: activationExp,
+        typ: "offline_activation",
+        customerId: customer.id,
+        entitlementId: parseInt(entitlementId, 10),
+        deviceId,
+        devicePublicKeyHash,
+      };
+
+      const activationToken = jwt.sign(activationPayload, privateKey, { algorithm: "RS256" });
+
+      // Mint lease token
+      const lease = mintLeaseToken({
+        entitlementId: parseInt(entitlementId, 10),
+        customerId: customer.id,
+        deviceId,
+        tier: entitlement.tier,
+        isLifetime: false,
+      });
+
+      // Build activation package
+      const activationPackage = buildActivationPackage({
+        activationToken,
+        leaseToken: lease.token,
+        leaseExpiresAt: lease.expiresAt,
+        entitlementExpiresAt: entitlement.expiresAt || null,
+      });
+
+      audit.offlineProvision(ctx, {
+        outcome: "success",
+        reason: "provisioned",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        jti: activationJti,
+      });
+
+      return sendOk(ctx, {
+        activationPackage,
+        leaseExpiresAt: lease.expiresAt,
+        serverTime: new Date().toISOString(),
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineProvision] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/offline-lease-refresh
+   * Refresh a lease for an air-gapped device using a signed request code.
+   * Verifies the device's Ed25519 signature and issues a new lease token.
+   *
+   * Auth: customer-auth required
+   * Body: { requestCode: string }
+   */
+  async offlineLeaseRefresh(ctx) {
+    const { mintLeaseToken } = require("../../../utils/lease-token");
+    const {
+      parseLeaseRefreshRequestCode,
+      importEd25519PublicKey,
+      buildLeaseRefreshSignatureMessage,
+      verifyEd25519Signature,
+      recordJtiOrReplay,
+      buildRefreshResponseCode,
+    } = require("../../../utils/offline-codes");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { requestCode } = ctx.request.body;
+
+      if (!requestCode || typeof requestCode !== "string") {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "missing_request_code",
+          customerId: customer.id,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "requestCode is required", {
+          field: "requestCode",
+        });
+      }
+
+      // Parse and validate request code
+      const parseResult = parseLeaseRefreshRequestCode(requestCode);
+      if (!parseResult.ok) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "invalid_request_code",
+          customerId: customer.id,
+          error: parseResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_REQUEST_CODE, parseResult.error);
+      }
+
+      const { deviceId, entitlementId, jti, iat, sig } = parseResult.data;
+
+      // Load device and verify ownership
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Load stored public key
+      if (!device.publicKey) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "no_public_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_PUBLIC_KEY, "Device does not have a stored public key. Re-provision the device.");
+      }
+
+      // Import public key
+      const keyResult = importEd25519PublicKey(device.publicKey);
+      if (!keyResult.ok) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "invalid_stored_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          error: keyResult.error,
+        });
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "Device public key is corrupted");
+      }
+
+      // Build and verify signature
+      const message = buildLeaseRefreshSignatureMessage({
+        deviceId,
+        entitlementId,
+        jti,
+        iat,
+      });
+
+      const sigValid = verifyEd25519Signature(message, sig, keyResult.publicKey);
+      if (!sigValid) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "signature_invalid",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          jti,
+        });
+        return sendError(ctx, 403, ErrorCodes.SIGNATURE_VERIFICATION_FAILED, "Signature verification failed");
+      }
+
+      // Verify device is bound to entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== entitlementId) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
+      }
+
+      // Load entitlement to verify it's active and subscription-based
+      const entitlement = await strapi.entityService.findOne(
+        "api::entitlement.entitlement",
+        entitlementId,
+        { populate: ["customer"] }
+      );
+
+      if (!entitlement) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.ENTITLEMENT_NOT_FOUND, "Entitlement not found");
+      }
+
+      if (entitlement.status !== "active") {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "entitlement_not_active",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.ENTITLEMENT_NOT_ACTIVE, "Entitlement is not active", {
+          status: entitlement.status,
+        });
+      }
+
+      if (entitlement.isLifetime === true || entitlement.leaseRequired === false) {
+        audit.offlineLeaseRefresh(ctx, {
+          outcome: "failure",
+          reason: "lifetime_not_supported",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.LIFETIME_NOT_SUPPORTED, "Offline lease refresh is only available for subscription entitlements.");
+      }
+
+      // Replay protection
+      const replayResult = await recordJtiOrReplay(strapi, {
+        jti,
+        kind: "LEASE_REFRESH_REQUEST",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      if (!replayResult.ok) {
+        if (replayResult.replay) {
+          audit.offlineLeaseRefresh(ctx, {
+            outcome: "failure",
+            reason: "replay_rejected",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+            jti,
+          });
+          return sendError(ctx, 409, ErrorCodes.REPLAY_REJECTED, "Request code has already been used (replay rejected)");
+        }
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, replayResult.error);
+      }
+
+      // Mint new lease token
+      const lease = mintLeaseToken({
+        entitlementId,
+        customerId: customer.id,
+        deviceId,
+        tier: entitlement.tier,
+        isLifetime: false,
+      });
+
+      // Update device lastSeenAt
+      await strapi.entityService.update("api::device.device", device.id, {
+        data: { lastSeenAt: new Date() },
+      });
+
+      // Build refresh response code
+      const refreshResponseCode = buildRefreshResponseCode({
+        leaseToken: lease.token,
+        leaseExpiresAt: lease.expiresAt,
+        entitlementExpiresAt: entitlement.expiresAt || null,
+      });
+
+      audit.offlineLeaseRefresh(ctx, {
+        outcome: "success",
+        reason: "lease_issued",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        jti,
+        leaseJti: lease.jti,
+      });
+
+      return sendOk(ctx, {
+        refreshResponseCode,
+        leaseExpiresAt: lease.expiresAt,
+        serverTime: new Date().toISOString(),
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineLeaseRefresh] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/licence/offline-deactivate
+   * Deactivate an air-gapped device using a signed deactivation code.
+   * Verifies the device's Ed25519 signature and unbinds the device.
+   *
+   * Auth: customer-auth required
+   * Body: { deactivationCode: string }
+   */
+  async offlineDeactivate(ctx) {
+    const {
+      parseDeactivationCode,
+      importEd25519PublicKey,
+      buildDeactivationSignatureMessage,
+      verifyEd25519Signature,
+      recordJtiOrReplay,
+    } = require("../../../utils/offline-codes");
+
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      const { deactivationCode } = ctx.request.body;
+
+      if (!deactivationCode || typeof deactivationCode !== "string") {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "missing_deactivation_code",
+          customerId: customer.id,
+        });
+        return sendError(ctx, 400, ErrorCodes.VALIDATION_ERROR, "deactivationCode is required", {
+          field: "deactivationCode",
+        });
+      }
+
+      // Parse and validate deactivation code
+      const parseResult = parseDeactivationCode(deactivationCode);
+      if (!parseResult.ok) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "invalid_deactivation_code",
+          customerId: customer.id,
+          error: parseResult.error,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_DEACTIVATION_CODE, parseResult.error);
+      }
+
+      const { deviceId, entitlementId, jti, iat, sig } = parseResult.data;
+
+      // Load device and verify ownership
+      const devices = await strapi.entityService.findMany("api::device.device", {
+        filters: { deviceId },
+        populate: ["customer", "entitlement"],
+      });
+
+      if (devices.length === 0) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_found",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 404, ErrorCodes.DEVICE_NOT_FOUND, "Device not found");
+      }
+
+      const device = devices[0];
+      const deviceCustomerId = device.customer?.id || device.customer;
+
+      if (deviceCustomerId !== customer.id) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "device_not_owned",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 403, ErrorCodes.DEVICE_NOT_OWNED, "Device is not registered to your account");
+      }
+
+      // Load stored public key
+      if (!device.publicKey) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "no_public_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.INVALID_PUBLIC_KEY, "Device does not have a stored public key.");
+      }
+
+      // Import public key
+      const keyResult = importEd25519PublicKey(device.publicKey);
+      if (!keyResult.ok) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "invalid_stored_key",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          error: keyResult.error,
+        });
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "Device public key is corrupted");
+      }
+
+      // Build and verify signature
+      const message = buildDeactivationSignatureMessage({
+        deviceId,
+        entitlementId,
+        jti,
+        iat,
+      });
+
+      const sigValid = verifyEd25519Signature(message, sig, keyResult.publicKey);
+      if (!sigValid) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "signature_invalid",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+          jti,
+        });
+        return sendError(ctx, 403, ErrorCodes.SIGNATURE_VERIFICATION_FAILED, "Signature verification failed");
+      }
+
+      // Verify device is bound to entitlement
+      const deviceEntitlementId = device.entitlement?.id || device.entitlement;
+      if (!deviceEntitlementId || deviceEntitlementId !== entitlementId) {
+        audit.offlineDeactivate(ctx, {
+          outcome: "failure",
+          reason: "not_bound",
+          customerId: customer.id,
+          entitlementId,
+          deviceId,
+        });
+        return sendError(ctx, 400, ErrorCodes.DEVICE_NOT_BOUND, "Device is not activated for this entitlement");
+      }
+
+      // Replay protection
+      const replayResult = await recordJtiOrReplay(strapi, {
+        jti,
+        kind: "DEACTIVATION_CODE",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+      });
+
+      if (!replayResult.ok) {
+        if (replayResult.replay) {
+          audit.offlineDeactivate(ctx, {
+            outcome: "failure",
+            reason: "replay_rejected",
+            customerId: customer.id,
+            entitlementId,
+            deviceId,
+            jti,
+          });
+          return sendError(ctx, 409, ErrorCodes.REPLAY_REJECTED, "Deactivation code has already been used (replay rejected)");
+        }
+        return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, replayResult.error);
+      }
+
+      // Unbind device (same logic as online deactivate)
+      const now = new Date();
+      await strapi.entityService.update("api::device.device", device.id, {
+        data: {
+          entitlement: null,
+          status: "deactivated",
+          deactivatedAt: now,
+        },
+      });
+
+      audit.offlineDeactivate(ctx, {
+        outcome: "success",
+        reason: "deactivated",
+        customerId: customer.id,
+        entitlementId,
+        deviceId,
+        jti,
+      });
+
+      return sendOk(ctx, {
+        message: "Device deactivated",
+      });
+    } catch (err) {
+      strapi.log.error(`[offlineDeactivate] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * POST /api/trial/start
+   * Start a 14-day free trial for the authenticated customer.
+   * One trial per account (ever) - returns 409 if trial already used.
+   *
+   * Creates an entitlement with:
+   * - tier: "trial"
+   * - status: "active"
+   * - isLifetime: false (requires lease token like subscriptions)
+   * - expiresAt: now + 14 days
+   * - maxDevices: 1
+   * - source: "manual" (not from purchase or subscription)
+   */
+  async trialStart(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      // Check if customer has ever had a trial entitlement (any status)
+      const existingTrial = await strapi.entityService.findMany(
+        "api::entitlement.entitlement",
+        {
+          filters: {
+            customer: customer.id,
+            tier: "trial",
+          },
+          limit: 1,
+        }
+      );
+
+      if (existingTrial && existingTrial.length > 0) {
+        audit.log("trial_start", {
+          ctx,
+          outcome: "failure",
+          reason: "trial_already_used",
+          customerId: customer.id,
+          metadata: { existingTrialId: existingTrial[0].id },
+        });
+        return sendError(ctx, 409, ErrorCodes.TRIAL_ALREADY_USED, "Trial already used on this account.");
+      }
+
+      // Create trial entitlement
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days
+
+      const trialEntitlement = await strapi.entityService.create(
+        "api::entitlement.entitlement",
+        {
+          data: {
+            customer: customer.id,
+            tier: "trial",
+            status: "active",
+            isLifetime: false,
+            expiresAt: expiresAt.toISOString(),
+            maxDevices: 1,
+            source: "manual",
+            // Stripe fields intentionally null for trial
+            stripeCustomerId: null,
+            stripeSubscriptionId: null,
+            stripePriceId: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+          },
+        }
+      );
+
+      audit.log("trial_start", {
+        ctx,
+        outcome: "success",
+        reason: "trial_created",
+        customerId: customer.id,
+        metadata: {
+          entitlementId: trialEntitlement.id,
+          expiresAt: expiresAt.toISOString(),
+        },
+      });
+
+      // Return the created entitlement in the same shape as other endpoints
+      return sendOk(ctx, {
+        entitlement: {
+          id: trialEntitlement.id,
+          tier: trialEntitlement.tier,
+          status: trialEntitlement.status,
+          isLifetime: trialEntitlement.isLifetime,
+          expiresAt: trialEntitlement.expiresAt,
+          maxDevices: trialEntitlement.maxDevices,
+          source: trialEntitlement.source,
+          createdAt: trialEntitlement.createdAt,
+          leaseRequired: true, // Trial requires lease like subscriptions
+        },
+        message: "Trial started successfully. Your 14-day trial expires on " + expiresAt.toISOString().split("T")[0] + ".",
+      }, 201);
+    } catch (err) {
+      strapi.log.error(`[trialStart] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
+    }
+  },
+
+  /**
+   * GET /api/trial/status
+   * Check if customer is eligible to start a trial.
+   * Eligibility: customer has never had ANY entitlements AND has never used a trial.
+   */
+  async trialStatus(ctx) {
+    try {
+      const customer = ctx.state.customer;
+      if (!customer) {
+        return sendError(ctx, 401, ErrorCodes.UNAUTHENTICATED, "Authentication required");
+      }
+
+      // Count ALL entitlements (any status, any tier) for this customer
+      const totalEntitlements = await strapi.entityService.count(
+        "api::entitlement.entitlement",
+        {
+          filters: {
+            customer: customer.id,
+          },
+        }
+      );
+
+      // Check if any of those entitlements is a trial
+      const trialCount = await strapi.entityService.count(
+        "api::entitlement.entitlement",
+        {
+          filters: {
+            customer: customer.id,
+            tier: "trial",
+          },
+        }
+      );
+
+      const hasEverHadEntitlements = totalEntitlements > 0;
+      const hasUsedTrial = trialCount > 0;
+      const trialEligible = !hasEverHadEntitlements && !hasUsedTrial;
+
+      return sendOk(ctx, {
+        trialEligible,
+        hasEverHadEntitlements,
+        hasUsedTrial,
+      });
+    } catch (err) {
+      strapi.log.error(`[trialStatus] Error: ${err.message}`);
+      strapi.log.error(err.stack);
+      return sendError(ctx, 500, ErrorCodes.INTERNAL_ERROR, "An internal error occurred");
     }
   },
 };

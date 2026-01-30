@@ -5,6 +5,7 @@ const {
   normalizeEmail,
   linkPendingLicensesToCustomer,
 } = require("../../../utils/license-linker");
+const { ErrorCodes, sendError } = require("../../../utils/api-responses");
 
 const getSanitizedCustomer = async (strapi, customerId) => {
   if (!customerId) {
@@ -23,6 +24,7 @@ const getSanitizedCustomer = async (strapi, customerId) => {
     return null;
   }
 
+  // eslint-disable-next-line no-unused-vars
   const { password, ...customerData } = customer;
   return customerData;
 };
@@ -55,27 +57,35 @@ module.exports = createCoreController(
           );
         }
 
-        // Check if customer already exists
+        // Normalize email: trim whitespace and lowercase for case-insensitive uniqueness
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Check if customer already exists (case-insensitive)
         const existingCustomer = await strapi.entityService.findMany(
           "api::customer.customer",
           {
-            filters: { email: email.toLowerCase() },
+            filters: { email: normalizedEmail },
           },
         );
 
         if (existingCustomer.length > 0) {
-          return ctx.badRequest("Customer already exists with this email");
+          return sendError(
+            ctx,
+            409,
+            ErrorCodes.EMAIL_ALREADY_EXISTS,
+            "An account with this email already exists. Try signing in.",
+          );
         }
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Create customer
+        // Create customer with normalized email
         const customer = await strapi.entityService.create(
           "api::customer.customer",
           {
             data: {
-              email: email.toLowerCase(),
+              email: normalizedEmail,
               password: hashedPassword,
               firstName,
               lastName,
@@ -99,6 +109,7 @@ module.exports = createCoreController(
         );
 
         // Remove password from response
+        // eslint-disable-next-line no-unused-vars
         const { password: _, ...customerData } = customer;
 
         const hydratedCustomer =
@@ -124,11 +135,14 @@ module.exports = createCoreController(
           return ctx.badRequest("Email and password are required");
         }
 
+        // Normalize email: trim whitespace and lowercase for case-insensitive lookup
+        const normalizedEmail = email.trim().toLowerCase();
+
         // Find customer
         const customers = await strapi.entityService.findMany(
           "api::customer.customer",
           {
-            filters: { email: email.toLowerCase() },
+            filters: { email: normalizedEmail },
           },
         );
 
@@ -155,6 +169,7 @@ module.exports = createCoreController(
 
         await linkPendingLicensesToCustomer(strapi, customer.id, customer.email);
 
+        // eslint-disable-next-line no-unused-vars
         const { password: __, ...customerData } = customer;
 
         const hydratedCustomer =
@@ -209,6 +224,7 @@ module.exports = createCoreController(
         }
 
         // Remove password from response
+        // eslint-disable-next-line no-unused-vars
         const { password: _, ...customerData } = customer;
 
         ctx.body = { customer: customerData };
@@ -230,17 +246,25 @@ module.exports = createCoreController(
 
         const { firstName, lastName, email } = ctx.request.body;
 
+        // Normalize email if provided
+        const normalizedEmail = email ? email.trim().toLowerCase() : null;
+
         // If email is being updated, check if it's already taken
-        if (email && email !== ctx.state.customer.email) {
+        if (normalizedEmail && normalizedEmail !== ctx.state.customer.email) {
           const existingCustomer = await strapi.entityService.findMany(
             "api::customer.customer",
             {
-              filters: { email: email.toLowerCase() },
+              filters: { email: normalizedEmail },
             },
           );
 
           if (existingCustomer.length > 0) {
-            return ctx.badRequest("Email already taken");
+            return sendError(
+              ctx,
+              409,
+              ErrorCodes.EMAIL_ALREADY_EXISTS,
+              "An account with this email already exists.",
+            );
           }
         }
 
@@ -251,7 +275,7 @@ module.exports = createCoreController(
             data: {
               firstName: firstName || undefined,
               lastName: lastName || undefined,
-              email: email ? email.toLowerCase() : undefined,
+              email: normalizedEmail || undefined,
             },
           },
         );
@@ -262,6 +286,7 @@ module.exports = createCoreController(
           updatedCustomer.email,
         );
 
+        // eslint-disable-next-line no-unused-vars
         const { password: __, ...customerData } = updatedCustomer;
 
         const hydratedCustomer =
@@ -325,6 +350,368 @@ module.exports = createCoreController(
         console.error("Change password error:", error);
         ctx.status = 500;
         ctx.body = { error: "Failed to change password" };
+      }
+    },
+
+    // Get customer entitlements
+    async entitlements(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        // Fetch entitlements for this customer with linked license-key
+        // Exclude archived entitlements from the list
+        // SECURITY: Filter strictly by customer relation (authoritative ownership)
+        const entitlements = await strapi.entityService.findMany(
+          "api::entitlement.entitlement",
+          {
+            filters: {
+              customer: customerId,
+              $or: [
+                { isArchived: { $null: true } },
+                { isArchived: false },
+              ],
+            },
+            populate: ["licenseKey", "customer"],
+            // Sort: isLifetime desc, status active first, expiresAt desc, createdAt desc
+            sort: { createdAt: "desc" },
+          }
+        );
+
+        // SECURITY ASSERTION: Verify each entitlement belongs to the authenticated customer
+        // This is a defense-in-depth check - the DB filter should already enforce this
+        const verifiedEntitlements = entitlements.filter((e) => {
+          const entCustomerId = e.customer?.id || e.customer;
+          if (entCustomerId !== customerId) {
+            // This should NEVER happen if DB filter is correct
+            console.error(`[Entitlements] SECURITY: Entitlement ${e.id} has customer=${entCustomerId}, expected ${customerId}. EXCLUDING from response.`);
+            return false;
+          }
+          return true;
+        });
+
+        // Apply additional sorting in code for complex sort logic
+        // Priority: isLifetime=true first, then active status, then by expiresAt, then createdAt
+        const sortedEntitlements = [...verifiedEntitlements].sort((a, b) => {
+          // 1. isLifetime: true comes first
+          if (a.isLifetime && !b.isLifetime) return -1;
+          if (!a.isLifetime && b.isLifetime) return 1;
+
+          // 2. status: active comes first
+          const statusOrder = { active: 0, inactive: 1, expired: 2, canceled: 3 };
+          const aStatusOrder = statusOrder[a.status] ?? 99;
+          const bStatusOrder = statusOrder[b.status] ?? 99;
+          if (aStatusOrder !== bStatusOrder) return aStatusOrder - bStatusOrder;
+
+          // 3. expiresAt: later dates first (null means no expiry, treat as far future)
+          const aExpires = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
+          const bExpires = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
+          if (aExpires !== bExpires) return bExpires - aExpires;
+
+          // 4. createdAt: newer first
+          const aCreated = new Date(a.createdAt).getTime();
+          const bCreated = new Date(b.createdAt).getTime();
+          return bCreated - aCreated;
+        });
+
+        // Safety check: Dedupe ONLY by entitlement.id (in case Strapi returns true duplicates)
+        // This does NOT collapse different entitlements - customers CAN have multiple entitlements
+        const seenIds = new Set();
+        const dedupedEntitlements = sortedEntitlements.filter((e) => {
+          if (seenIds.has(e.id)) {
+            // True duplicate row from DB - remove silently
+            return false;
+          }
+          seenIds.add(e.id);
+          return true;
+        });
+
+        // Safety warning: Log if multiple entitlements share the same stripeSubscriptionId
+        // This would indicate a data integrity issue (should not happen in normal operation)
+        const subIdCounts = new Map();
+        for (const e of dedupedEntitlements) {
+          if (e.stripeSubscriptionId) {
+            subIdCounts.set(e.stripeSubscriptionId, (subIdCounts.get(e.stripeSubscriptionId) || 0) + 1);
+          }
+        }
+        for (const [subId, count] of subIdCounts) {
+          if (count > 1) {
+            console.warn(`[Entitlements] WARNING: ${count} entitlements share stripeSubscriptionId=${subId} for customer ${customerId}. This may indicate data integrity issue.`);
+          }
+        }
+
+        // Sanitize output - return only public-facing fields
+        // In development, include additional debug fields
+        const isDev = process.env.NODE_ENV === "development";
+        
+        const sanitizedEntitlements = dedupedEntitlements.map((e) => ({
+          id: e.id,
+          tier: e.tier,
+          status: e.status,
+          isLifetime: e.isLifetime,
+          expiresAt: e.expiresAt,
+          maxDevices: e.maxDevices,
+          source: e.source,
+          createdAt: e.createdAt,
+          // Stage 5.5: Compute leaseRequired server-side
+          // Lifetime entitlements NEVER require lease refresh
+          // Subscriptions always require lease refresh
+          leaseRequired: !e.isLifetime,
+          // Subscription-specific fields for dashboard display
+          currentPeriodEnd: e.currentPeriodEnd || null,
+          cancelAtPeriodEnd: e.cancelAtPeriodEnd || false,
+          // Include the linked license-key info (1:1 relationship)
+          licenseKey: e.licenseKey ? {
+            id: e.licenseKey.id,
+            key: e.licenseKey.key,
+            typ: e.licenseKey.typ,
+            isActive: e.licenseKey.isActive,
+          } : null,
+          // Debug fields (only in development)
+          ...(isDev ? {
+            stripeSubscriptionId: e.stripeSubscriptionId || null,
+            stripeCustomerId: e.stripeCustomerId || null,
+            stripePriceId: e.stripePriceId || null,
+          } : {}),
+          // Note: tier is feature tier (maker/pro/education/enterprise)
+          // isLifetime=true means "founders lifetime" billing, leaseRequired=false
+        }));
+
+        ctx.body = {
+          ok: true,
+          entitlements: sanitizedEntitlements,
+          meta: {
+            total: sanitizedEntitlements.length,
+            hasActiveEntitlement: sanitizedEntitlements.some(
+              (e) => e.status === "active"
+            ),
+          },
+        };
+      } catch (error) {
+        console.error("Get entitlements error:", error);
+        ctx.status = 500;
+        ctx.body = { ok: false, code: "INTERNAL_ERROR", message: "Failed to fetch entitlements" };
+      }
+    },
+
+    // Get primary/best entitlement for subscription UI card
+    async primaryEntitlement(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        // Fetch all entitlements for this customer (excluding archived)
+        const entitlements = await strapi.entityService.findMany(
+          "api::entitlement.entitlement",
+          {
+            filters: {
+              customer: customerId,
+              $or: [
+                { isArchived: { $null: true } },
+                { isArchived: false },
+              ],
+            },
+            sort: { createdAt: "desc" },
+          }
+        );
+
+        if (!entitlements || entitlements.length === 0) {
+          ctx.body = {
+            ok: true,
+            hasEntitlement: false,
+            tier: null,
+            status: null,
+            isLifetime: false,
+            expiresAt: null,
+            currentPeriodEnd: null,
+            maxDevices: null,
+            cancelAtPeriodEnd: false,
+          };
+          return;
+        }
+
+        // Find the "best" entitlement:
+        // 1. Prefer active over inactive/expired/canceled
+        // 2. Among active, prefer lifetime
+        // 3. Among active non-lifetime, prefer one with furthest expiry
+        const activeEntitlements = entitlements.filter((e) => e.status === "active");
+        
+        let primary = null;
+        
+        if (activeEntitlements.length > 0) {
+          // First check for lifetime
+          const lifetime = activeEntitlements.find((e) => e.isLifetime === true);
+          if (lifetime) {
+            primary = lifetime;
+          } else {
+            // Sort by currentPeriodEnd or expiresAt (furthest first)
+            const sorted = activeEntitlements.sort((a, b) => {
+              const dateA = a.currentPeriodEnd || a.expiresAt || "";
+              const dateB = b.currentPeriodEnd || b.expiresAt || "";
+              return new Date(dateB).getTime() - new Date(dateA).getTime();
+            });
+            primary = sorted[0];
+          }
+        } else {
+          // No active entitlements, return the most recent one
+          primary = entitlements[0];
+        }
+
+        ctx.body = {
+          ok: true,
+          hasEntitlement: true,
+          tier: primary.tier || null,
+          status: primary.status || null,
+          isLifetime: primary.isLifetime || false,
+          expiresAt: primary.expiresAt || null,
+          currentPeriodEnd: primary.currentPeriodEnd || null,
+          maxDevices: primary.maxDevices || null,
+          cancelAtPeriodEnd: primary.cancelAtPeriodEnd || false,
+          source: primary.source || null,
+        };
+      } catch (error) {
+        console.error("Get primary entitlement error:", error);
+        ctx.status = 500;
+        ctx.body = { ok: false, code: "INTERNAL_ERROR", message: "Failed to fetch entitlement" };
+      }
+    },
+
+    // Get customer's registered devices and their entitlement bindings
+    // GET /api/customers/me/devices
+    async devices(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        // Fetch all devices for this customer
+        const devices = await strapi.entityService.findMany(
+          "api::device.device",
+          {
+            filters: {
+              customer: customerId,
+            },
+            populate: ["entitlement"],
+            sort: { lastSeenAt: "desc" },
+          }
+        );
+
+        // Sanitize output
+        const sanitizedDevices = devices.map((d) => ({
+          id: d.id,
+          deviceId: d.deviceId,
+          name: d.deviceName || null,
+          platform: d.platform || null,
+          lastSeen: d.lastSeenAt || null,
+          createdAt: d.createdAt,
+          // Binding info
+          entitlement: d.entitlement ? {
+            id: d.entitlement.id,
+            tier: d.entitlement.tier,
+            status: d.entitlement.status,
+            isLifetime: d.entitlement.isLifetime || false,
+          } : null,
+          isActivated: !!d.entitlement,
+        }));
+
+        ctx.body = {
+          ok: true,
+          devices: sanitizedDevices,
+          meta: {
+            total: sanitizedDevices.length,
+            activatedCount: sanitizedDevices.filter((d) => d.isActivated).length,
+          },
+        };
+      } catch (error) {
+        console.error("Get devices error:", error);
+        ctx.status = 500;
+        ctx.body = { ok: false, code: "INTERNAL_ERROR", message: "Failed to fetch devices" };
+      }
+    },
+
+    // Create Stripe billing portal session
+    async billingPortal(ctx) {
+      try {
+        const customerId = ctx.state.customer?.id;
+        const { returnUrl } = ctx.request.body || {};
+
+        if (!customerId) {
+          return ctx.unauthorized("Not authenticated");
+        }
+
+        const customer = await strapi.entityService.findOne(
+          "api::customer.customer",
+          customerId,
+        );
+
+        if (!customer) {
+          return ctx.notFound("Customer not found");
+        }
+
+        // Check if customer has a Stripe customer ID
+        if (!customer.stripeCustomerId) {
+          // Check if they have any entitlements - if lifetime only, no billing portal needed
+          const entitlements = await strapi.entityService.findMany(
+            "api::entitlement.entitlement",
+            {
+              filters: {
+                customer: customerId,
+                status: "active",
+                $or: [
+                  { isArchived: { $null: true } },
+                  { isArchived: false },
+                ],
+              },
+            }
+          );
+
+          const hasOnlyLifetime = entitlements.length > 0 && 
+            entitlements.every((e) => e.isLifetime === true);
+
+          if (hasOnlyLifetime) {
+            ctx.status = 400;
+            ctx.body = {
+              error: "No billing portal available",
+              message: "Lifetime accounts do not have recurring billing to manage.",
+            };
+            return;
+          }
+
+          ctx.status = 400;
+          ctx.body = {
+            error: "No Stripe customer found",
+            message: "You must have an active subscription to access the billing portal.",
+          };
+          return;
+        }
+
+        // Create Stripe billing portal session
+        const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4321";
+        
+        const session = await stripe.billingPortal.sessions.create({
+          customer: customer.stripeCustomerId,
+          return_url: returnUrl || `${frontendUrl}/customer/dashboard`,
+        });
+
+        ctx.body = {
+          url: session.url,
+        };
+      } catch (error) {
+        console.error("Billing portal error:", error);
+        ctx.status = 500;
+        ctx.body = {
+          error: "Failed to create billing portal session",
+          message: error.message,
+        };
       }
     },
   }),

@@ -1,0 +1,32 @@
+{
+  "kind": "collectionType",
+  "collectionName": "stripe_events",
+  "info": {
+    "singularName": "stripe-event",
+    "pluralName": "stripe-events",
+    "displayName": "Stripe Event",
+    "description": "Processed Stripe webhook events for idempotency"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "eventId": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "eventType": {
+      "type": "string",
+      "required": true
+    },
+    "processedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "payload": {
+      "type": "json"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "offline_code_uses",
+  "info": {
+    "singularName": "offline-code-use",
+    "pluralName": "offline-code-uses",
+    "displayName": "Offline Code Use",
+    "description": "Tracks used offline codes (lease refresh requests, deactivation codes) for replay protection"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "jti": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "kind": {
+      "type": "enumeration",
+      "enum": [
+        "LEASE_REFRESH_REQUEST",
+        "DEACTIVATION_CODE"
+      ],
+      "required": true
+    },
+    "customerId": {
+      "type": "integer",
+      "required": true
+    },
+    "entitlementId": {
+      "type": "integer",
+      "required": true
+    },
+    "deviceId": {
+      "type": "string",
+      "required": true
+    },
+    "usedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "expiresAt": {
+      "type": "datetime"
+    }
+  }
+}

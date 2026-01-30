@@ -26,6 +26,8 @@ services:
       dockerfile: Dockerfile.backend.dev
     container_name: lightlane-backend-dev
     restart: unless-stopped
+    env_file:
+      - backend/.env
     environment:
       NODE_ENV: development
       DATABASE_CLIENT: postgres
@@ -45,6 +47,7 @@ services:
     working_dir: /workspace/backend
     volumes:
       - .:/workspace:cached
+      - root_node_modules:/workspace/node_modules
       - backend_node_modules:/workspace/backend/node_modules
       - pnpm_store:/root/.local/share/pnpm/store
       - uploads_dev:/workspace/backend/public/uploads
@@ -68,6 +71,7 @@ services:
     working_dir: /workspace/frontend
     volumes:
       - .:/workspace:cached
+      - root_node_modules:/workspace/node_modules
       - frontend_node_modules:/workspace/frontend/node_modules
       - pnpm_store:/root/.local/share/pnpm/store
     ports:
@@ -77,6 +81,7 @@ services:
 
 volumes:
   postgres_data_dev:
+  root_node_modules:
   backend_node_modules:
   frontend_node_modules:
   pnpm_store:

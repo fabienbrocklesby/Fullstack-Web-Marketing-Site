@@ -1,0 +1,45 @@
+# Stage 5.5: Legacy Endpoints (Retired)
+# These endpoints return HTTP 410 Gone.
+# All activation now uses Stage 4/5 device-based endpoints.
+#
+# Migration:
+#   POST /api/license/activate  → Use POST /api/licence/activate (with deviceId)
+#   POST /api/license/deactivate → Use POST /api/licence/deactivate (with deviceId)
+#
+# Active endpoints:
+#   - POST /api/device/register
+#   - POST /api/licence/activate
+#   - POST /api/licence/refresh
+#   - POST /api/licence/deactivate
+#   - POST /api/licence/offline-challenge (subscriptions only)
+#   - POST /api/licence/offline-refresh (subscriptions only)
+
+@baseUrl = {{$dotenv API_URL}}
+
+### Legacy activation (RETIRED) - Returns 410 Gone
+POST {{baseUrl}}/api/license/activate
+Content-Type: application/json
+
+{}
+
+### Expected response (410):
+# {
+#   "error": "Legacy MAC-based activation retired",
+#   "message": "This endpoint has been retired. Please use the new device-based activation system.",
+#   "migration": "Use POST /api/licence/activate with deviceId"
+# }
+
+###
+
+### Legacy deactivation (RETIRED) - Returns 410 Gone
+POST {{baseUrl}}/api/license/deactivate
+Content-Type: application/json
+
+{}
+
+### Expected response (410):
+# {
+#   "error": "Legacy MAC-based deactivation retired",
+#   "message": "This endpoint has been retired. Please use POST /api/licence/deactivate with your deviceId.",
+#   "migration": "Use POST /api/licence/deactivate with deviceId"
+# }

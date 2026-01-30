@@ -1,0 +1,79 @@
+# Stage 4: Device Activation Flow
+# Full device activation lifecycle: register → activate → refresh → deactivate
+#
+# Prerequisites:
+#   - Run shared/login.http first to get JWT
+#   - Run shared/entitlements.http to get an entitlement ID
+
+@baseUrl = {{$dotenv API_URL}}
+@token = {{$dotenv JWT}}
+@deviceId = smoke-test-device-001
+@publicKey = smoke-test-public-key-12345678901234567890
+@entitlementId = 1
+
+### 1. Register Device
+# Creates or updates device record for this customer
+# @name registerDevice
+POST {{baseUrl}}/api/device/register
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}",
+  "publicKey": "{{publicKey}}",
+  "platform": "macos",
+  "deviceName": "My MacBook Pro"
+}
+
+### 2. Activate License
+# Links entitlement to device, returns lease token
+# @name activate
+POST {{baseUrl}}/api/licence/activate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}",
+  "entitlementId": {{entitlementId}}
+}
+
+### 3. Refresh Lease Token
+# Extends lease validity, returns new token
+# @name refresh
+POST {{baseUrl}}/api/licence/refresh
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}",
+  "entitlementId": {{entitlementId}}
+}
+
+### 4. Deactivate Device
+# Removes device from entitlement, frees up device slot
+# @name deactivate
+POST {{baseUrl}}/api/licence/deactivate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}",
+  "entitlementId": {{entitlementId}}
+}
+
+### Response Examples:
+#
+# Register Device (200):
+# { "ok": true, "message": "Device registered", "device": { "deviceId": "...", "platform": "macos" } }
+#
+# Activate (200):
+# { "ok": true, "message": "Device activated", "entitlement": {...}, "device": { "deviceId": "...", "boundAt": "..." } }
+#
+# Refresh (200):
+# { "ok": true, "status": "active", "leaseToken": "eyJ...", "leaseExpiresAt": "2025-01-15T18:00:00Z" }
+#
+# Deactivate (200):
+# { "ok": true, "message": "Device deactivated" }
+#
+# Activation blocked (409 - maxDevices reached):
+# { "error": "Maximum devices reached for this entitlement" }

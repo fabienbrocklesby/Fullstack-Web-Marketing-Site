@@ -40,6 +40,12 @@
       "relation": "oneToOne",
       "target": "api::purchase.purchase"
     },
+    "entitlement": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::entitlement.entitlement",
+      "mappedBy": "licenseKey"
+    },
     "isActive": {
       "type": "boolean",
       "default": true

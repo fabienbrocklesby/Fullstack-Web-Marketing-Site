@@ -17,6 +17,23 @@
       "required": true,
       "unique": true
     },
+    "stripePaymentIntentId": {
+      "type": "string"
+    },
+    "stripeInvoiceId": {
+      "type": "string"
+    },
+    "stripeSubscriptionId": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "enumeration",
+      "enum": [
+        "payment",
+        "subscription"
+      ],
+      "default": "payment"
+    },
     "isManual": {
       "type": "boolean",
       "default": false

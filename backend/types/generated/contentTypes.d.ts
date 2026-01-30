@@ -1043,6 +1043,16 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
     metadata: Attribute.JSON;
     originEnquiryId: Attribute.String;
     affiliateCodeAtSignup: Attribute.String;
+    entitlements: Attribute.Relation<
+      'api::customer.customer',
+      'oneToMany',
+      'api::entitlement.entitlement'
+    >;
+    devices: Attribute.Relation<
+      'api::customer.customer',
+      'oneToMany',
+      'api::device.device'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1112,6 +1122,61 @@ export interface ApiCustomerInviteCustomerInvite extends Schema.CollectionType {
   };
 }
 
+export interface ApiDeviceDevice extends Schema.CollectionType {
+  collectionName: 'devices';
+  info: {
+    singularName: 'device';
+    pluralName: 'devices';
+    displayName: 'Device';
+    description: 'Customer device registrations for entitlement tracking';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    customer: Attribute.Relation<
+      'api::device.device',
+      'manyToOne',
+      'api::customer.customer'
+    >;
+    entitlement: Attribute.Relation<
+      'api::device.device',
+      'manyToOne',
+      'api::entitlement.entitlement'
+    >;
+    deviceId: Attribute.String & Attribute.Required & Attribute.Unique;
+    deviceName: Attribute.String;
+    publicKey: Attribute.Text;
+    publicKeyHash: Attribute.String;
+    status: Attribute.Enumeration<
+      ['active', 'blocked', 'revoked', 'deactivated']
+    > &
+      Attribute.Required &
+      Attribute.DefaultTo<'active'>;
+    boundAt: Attribute.DateTime;
+    lastSeenAt: Attribute.DateTime;
+    deactivatedAt: Attribute.DateTime;
+    platform: Attribute.Enumeration<['windows', 'macos', 'linux', 'unknown']> &
+      Attribute.DefaultTo<'unknown'>;
+    appVersion: Attribute.String;
+    metadata: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::device.device',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::device.device',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiEnquiryEnquiry extends Schema.CollectionType {
   collectionName: 'enquiries';
   info: {
@@ -1144,6 +1209,87 @@ export interface ApiEnquiryEnquiry extends Schema.CollectionType {
       Attribute.Private;
     updatedBy: Attribute.Relation<
       'api::enquiry.enquiry',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiEntitlementEntitlement extends Schema.CollectionType {
+  collectionName: 'entitlements';
+  info: {
+    singularName: 'entitlement';
+    pluralName: 'entitlements';
+    displayName: 'Entitlement';
+    description: 'Per-license entitlements for subscription-ready access control (1:1 with license-key)';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    customer: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'manyToOne',
+      'api::customer.customer'
+    >;
+    licenseKey: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToOne',
+      'api::license-key.license-key'
+    >;
+    purchase: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToOne',
+      'api::purchase.purchase'
+    >;
+    tier: Attribute.Enumeration<
+      ['trial', 'maker', 'pro', 'education', 'enterprise']
+    > &
+      Attribute.Required;
+    status: Attribute.Enumeration<
+      ['active', 'inactive', 'expired', 'canceled']
+    > &
+      Attribute.Required &
+      Attribute.DefaultTo<'active'>;
+    isLifetime: Attribute.Boolean &
+      Attribute.Required &
+      Attribute.DefaultTo<false>;
+    expiresAt: Attribute.DateTime;
+    maxDevices: Attribute.Integer &
+      Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      > &
+      Attribute.DefaultTo<1>;
+    source: Attribute.Enumeration<
+      ['legacy_purchase', 'manual', 'subscription']
+    > &
+      Attribute.DefaultTo<'legacy_purchase'>;
+    stripeCustomerId: Attribute.String;
+    stripeSubscriptionId: Attribute.String;
+    stripePriceId: Attribute.String;
+    currentPeriodEnd: Attribute.DateTime;
+    cancelAtPeriodEnd: Attribute.Boolean & Attribute.DefaultTo<false>;
+    metadata: Attribute.JSON;
+    devices: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToMany',
+      'api::device.device'
+    >;
+    isArchived: Attribute.Boolean & Attribute.DefaultTo<false>;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::entitlement.entitlement',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::entitlement.entitlement',
       'oneToOne',
       'admin::user'
     > &
@@ -1190,35 +1336,6 @@ export interface ApiLeadLead extends Schema.CollectionType {
   };
 }
 
-export interface ApiLicenseLicense extends Schema.CollectionType {
-  collectionName: 'licenses';
-  info: {
-    singularName: 'license';
-    pluralName: 'licenses';
-    displayName: 'License (JWT Portal)';
-    description: 'JWT-based license management for offline applications';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::license.license',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::license.license',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
 export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
   collectionName: 'license_keys';
   info: {
@@ -1244,6 +1361,11 @@ export interface ApiLicenseKeyLicenseKey extends Schema.CollectionType {
       'api::license-key.license-key',
       'oneToOne',
       'api::purchase.purchase'
+    >;
+    entitlement: Attribute.Relation<
+      'api::license-key.license-key',
+      'oneToOne',
+      'api::entitlement.entitlement'
     >;
     isActive: Attribute.Boolean & Attribute.DefaultTo<true>;
     status: Attribute.Enumeration<['unused', 'active']> &
@@ -1335,6 +1457,82 @@ export interface ApiMailingListSignupMailingListSignup
   };
 }
 
+export interface ApiOfflineChallengeOfflineChallenge
+  extends Schema.CollectionType {
+  collectionName: 'offline_challenges';
+  info: {
+    singularName: 'offline-challenge';
+    pluralName: 'offline-challenges';
+    displayName: 'Offline Challenge';
+    description: 'Tracks used offline challenge tokens for replay protection (Stage 5)';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    jti: Attribute.String & Attribute.Required & Attribute.Unique;
+    entitlementId: Attribute.Integer & Attribute.Required;
+    deviceId: Attribute.String & Attribute.Required;
+    customerId: Attribute.Integer;
+    usedAt: Attribute.DateTime & Attribute.Required;
+    challengeIssuedAt: Attribute.DateTime;
+    challengeExpiresAt: Attribute.DateTime;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::offline-challenge.offline-challenge',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::offline-challenge.offline-challenge',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiOfflineCodeUseOfflineCodeUse extends Schema.CollectionType {
+  collectionName: 'offline_code_uses';
+  info: {
+    singularName: 'offline-code-use';
+    pluralName: 'offline-code-uses';
+    displayName: 'Offline Code Use';
+    description: 'Tracks used offline codes (lease refresh requests, deactivation codes) for replay protection';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    jti: Attribute.String & Attribute.Required & Attribute.Unique;
+    kind: Attribute.Enumeration<
+      ['LEASE_REFRESH_REQUEST', 'DEACTIVATION_CODE']
+    > &
+      Attribute.Required;
+    customerId: Attribute.Integer & Attribute.Required;
+    entitlementId: Attribute.Integer & Attribute.Required;
+    deviceId: Attribute.String & Attribute.Required;
+    usedAt: Attribute.DateTime & Attribute.Required;
+    expiresAt: Attribute.DateTime;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::offline-code-use.offline-code-use',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::offline-code-use.offline-code-use',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiPagePage extends Schema.CollectionType {
   collectionName: 'pages';
   info: {
@@ -1393,6 +1591,11 @@ export interface ApiPurchasePurchase extends Schema.CollectionType {
   };
   attributes: {
     stripeSessionId: Attribute.String & Attribute.Required & Attribute.Unique;
+    stripePaymentIntentId: Attribute.String;
+    stripeInvoiceId: Attribute.String;
+    stripeSubscriptionId: Attribute.String;
+    mode: Attribute.Enumeration<['payment', 'subscription']> &
+      Attribute.DefaultTo<'payment'>;
     isManual: Attribute.Boolean & Attribute.DefaultTo<false>;
     manualReason: Attribute.Text;
     createdByAdmin: Attribute.Relation<
@@ -1474,6 +1677,39 @@ export interface ApiReleaseRelease extends Schema.CollectionType {
   };
 }
 
+export interface ApiStripeEventStripeEvent extends Schema.CollectionType {
+  collectionName: 'stripe_events';
+  info: {
+    singularName: 'stripe-event';
+    pluralName: 'stripe-events';
+    displayName: 'Stripe Event';
+    description: 'Processed Stripe webhook events for idempotency';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    eventId: Attribute.String & Attribute.Required & Attribute.Unique;
+    eventType: Attribute.String & Attribute.Required;
+    processedAt: Attribute.DateTime & Attribute.Required;
+    payload: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::stripe-event.stripe-event',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::stripe-event.stripe-event',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 declare module '@strapi/types' {
   export module Shared {
     export interface ContentTypes {
@@ -1499,14 +1735,18 @@ declare module '@strapi/types' {
       'api::contact-message.contact-message': ApiContactMessageContactMessage;
       'api::customer.customer': ApiCustomerCustomer;
       'api::customer-invite.customer-invite': ApiCustomerInviteCustomerInvite;
+      'api::device.device': ApiDeviceDevice;
       'api::enquiry.enquiry': ApiEnquiryEnquiry;
+      'api::entitlement.entitlement': ApiEntitlementEntitlement;
       'api::lead.lead': ApiLeadLead;
-      'api::license.license': ApiLicenseLicense;
       'api::license-key.license-key': ApiLicenseKeyLicenseKey;
       'api::mailing-list-signup.mailing-list-signup': ApiMailingListSignupMailingListSignup;
+      'api::offline-challenge.offline-challenge': ApiOfflineChallengeOfflineChallenge;
+      'api::offline-code-use.offline-code-use': ApiOfflineCodeUseOfflineCodeUse;
       'api::page.page': ApiPagePage;
       'api::purchase.purchase': ApiPurchasePurchase;
       'api::release.release': ApiReleaseRelease;
+      'api::stripe-event.stripe-event': ApiStripeEventStripeEvent;
     }
   }
 }

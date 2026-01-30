@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "offline_challenges",
+  "info": {
+    "singularName": "offline-challenge",
+    "pluralName": "offline-challenges",
+    "displayName": "Offline Challenge",
+    "description": "Tracks used offline challenge tokens for replay protection (Stage 5)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "jti": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "entitlementId": {
+      "type": "integer",
+      "required": true
+    },
+    "deviceId": {
+      "type": "string",
+      "required": true
+    },
+    "customerId": {
+      "type": "integer"
+    },
+    "usedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "challengeIssuedAt": {
+      "type": "datetime"
+    },
+    "challengeExpiresAt": {
+      "type": "datetime"
+    }
+  }
+}

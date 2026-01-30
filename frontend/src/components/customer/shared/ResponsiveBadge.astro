@@ -1,0 +1,43 @@
+---
+/**
+ * ResponsiveBadge - A badge component that never clips on narrow viewports.
+ * Use this for badges in headings, tight rows, or anywhere text might wrap.
+ */
+interface Props {
+  text: string;
+  variant?: "accent" | "success" | "warning" | "neutral" | "ghost" | "primary";
+  size?: "xs" | "sm" | "md";
+  class?: string;
+  id?: string;
+}
+
+const {
+  text,
+  variant = "neutral",
+  size = "sm",
+  class: className = "",
+  id,
+} = Astro.props;
+
+const variantClass = `badge-${variant}`;
+const sizeClass = `badge-${size}`;
+---
+
+<span
+  id={id}
+  class:list={[
+    "badge",
+    variantClass,
+    sizeClass,
+    // Prevent clipping and ensure readability
+    "whitespace-nowrap",
+    "h-auto",
+    "py-0.5",
+    "leading-tight",
+    "max-w-full",
+    "shrink-0",
+    className,
+  ]}
+>
+  {text}
+</span>

@@ -1,0 +1,36 @@
+# Customer Login
+# Returns JWT token for authenticated requests
+# 
+# Usage:
+#   1. Set @email and @password variables below
+#   2. Run this request
+#   3. Copy the token value for use in other requests
+#
+# Environment: Uses .env file values if available
+
+@baseUrl = {{$dotenv API_URL}}
+@email = {{$dotenv TEST_CUSTOMER_EMAIL}}
+@password = {{$dotenv TEST_CUSTOMER_PASSWORD}}
+
+### Login (get JWT token)
+# @name login
+POST {{baseUrl}}/api/customers/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Response will contain:
+# {
+#   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "customer": {
+#     "id": 1,
+#     "email": "smoketest@example.com",
+#     ...
+#   }
+# }
+#
+# Use the token value in Authorization header:
+#   Authorization: Bearer {{login.response.body.token}}

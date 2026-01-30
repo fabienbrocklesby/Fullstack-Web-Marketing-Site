@@ -1,0 +1,78 @@
+{
+  "kind": "collectionType",
+  "collectionName": "devices",
+  "info": {
+    "singularName": "device",
+    "pluralName": "devices",
+    "displayName": "Device",
+    "description": "Customer device registrations for entitlement tracking"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::customer.customer",
+      "inversedBy": "devices"
+    },
+    "entitlement": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::entitlement.entitlement",
+      "inversedBy": "devices"
+    },
+    "deviceId": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "deviceName": {
+      "type": "string"
+    },
+    "publicKey": {
+      "type": "text"
+    },
+    "publicKeyHash": {
+      "type": "string"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "blocked",
+        "revoked",
+        "deactivated"
+      ],
+      "default": "active",
+      "required": true
+    },
+    "boundAt": {
+      "type": "datetime"
+    },
+    "lastSeenAt": {
+      "type": "datetime"
+    },
+    "deactivatedAt": {
+      "type": "datetime"
+    },
+    "platform": {
+      "type": "enumeration",
+      "enum": [
+        "windows",
+        "macos",
+        "linux",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "appVersion": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

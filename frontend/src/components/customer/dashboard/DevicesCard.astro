@@ -1,0 +1,63 @@
+---
+/**
+ * Devices Summary Card - Compact device overview for the main dashboard
+ */
+import DashboardIcon from "./DashboardIcon.astro";
+import ResponsiveBadge from "../shared/ResponsiveBadge.astro";
+---
+
+<section class="surface rounded-xl p-6">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-lg font-semibold flex items-center gap-2">
+      <DashboardIcon name="computer" class="w-5 h-5 text-primary" />
+      Devices
+      <ResponsiveBadge id="devices-count" text="0" variant="ghost" size="sm" />
+    </h2>
+    <button id="overview-register-btn" class="btn btn-sm btn-ghost">
+      <DashboardIcon name="plus" class="w-4 h-4 mr-1" />
+      Register
+    </button>
+  </div>
+
+  <div id="devices-overview-loading" class="flex items-center gap-3 py-4">
+    <span class="loading loading-spinner loading-sm"></span>
+    <span class="text-sm text-base-content/60">Loading devices...</span>
+  </div>
+
+  <div id="devices-overview-empty" class="hidden text-center py-6">
+    <p class="text-base-content/60 mb-3">No devices registered</p>
+    <button id="devices-empty-register" class="btn btn-primary btn-sm">
+      Register Your First Device
+    </button>
+  </div>
+
+  <div id="devices-overview-list" class="hidden">
+    <!-- Quick device cards populated by JS -->
+  </div>
+
+  <div id="devices-overview-more" class="hidden mt-4 text-center">
+    <button id="view-all-devices" class="btn btn-ghost btn-sm">
+      View All in Advanced Tab →
+    </button>
+  </div>
+
+  <!-- Devices Overview Pagination -->
+  <div
+    id="devices-overview-pagination"
+    class="hidden mt-4 pt-4 border-t border-base-300"
+  >
+    <div class="flex items-center justify-center gap-2">
+      <button id="devices-overview-prev" class="btn btn-sm btn-ghost" disabled>
+        <DashboardIcon name="arrow-left" class="w-4 h-4" />
+        Previous
+      </button>
+      <span id="devices-overview-page-info" class="text-sm text-base-content/60"
+        >Page 1 of 1</span
+      >
+      <button id="devices-overview-next" class="btn btn-sm btn-ghost" disabled>
+        Next
+        <DashboardIcon name="arrow-right" class="w-4 h-4" />
+      </button>
+    </div>
+  </div>
+</section>

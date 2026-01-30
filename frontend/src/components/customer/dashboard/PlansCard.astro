@@ -1,0 +1,71 @@
+---
+/**
+ * Plans Summary Card - Displays user's entitlements/subscriptions
+ */
+import DashboardIcon from "./DashboardIcon.astro";
+import ResponsiveBadge from "../shared/ResponsiveBadge.astro";
+---
+
+<section class="surface rounded-xl p-6">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-lg font-semibold flex items-center gap-2">
+      <DashboardIcon name="ticket" class="w-5 h-5 text-primary" />
+      Plans
+      <ResponsiveBadge id="plans-count" text="0" variant="ghost" size="sm" />
+    </h2>
+    <div class="flex items-center gap-2">
+      <button
+        id="how-to-activate-btn"
+        class="btn btn-xs btn-ghost"
+        title="How to activate a plan"
+      >
+        <DashboardIcon name="help" class="w-4 h-4" />
+        How to activate
+      </button>
+      <button
+        id="refresh-data-btn"
+        class="btn btn-xs btn-ghost"
+        title="Refresh"
+      >
+        <DashboardIcon name="refresh" class="w-4 h-4" />
+      </button>
+      <button id="add-plan-btn" class="btn btn-sm btn-ghost">
+        <DashboardIcon name="plus" class="w-4 h-4 mr-1" />
+        Add Plan
+      </button>
+    </div>
+  </div>
+
+  <div id="plans-loading" class="flex items-center gap-3 py-4">
+    <span class="loading loading-spinner loading-sm"></span>
+    <span class="text-sm text-base-content/60">Loading plans...</span>
+  </div>
+
+  <div id="plans-empty" class="hidden text-center py-6">
+    <p class="text-base-content/60 mb-3">No active plans</p>
+    <button id="plans-empty-buy" class="btn btn-primary btn-sm">
+      Get Your First License
+    </button>
+  </div>
+
+  <div id="plans-list" class="hidden space-y-3">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Plans Pagination -->
+  <div id="plans-pagination" class="hidden mt-4 pt-4 border-t border-base-300">
+    <div class="flex items-center justify-center gap-2">
+      <button id="plans-prev" class="btn btn-sm btn-ghost" disabled>
+        <DashboardIcon name="arrow-left" class="w-4 h-4" />
+        Previous
+      </button>
+      <span id="plans-page-info" class="text-sm text-base-content/60"
+        >Page 1 of 1</span
+      >
+      <button id="plans-next" class="btn btn-sm btn-ghost" disabled>
+        Next
+        <DashboardIcon name="arrow-right" class="w-4 h-4" />
+      </button>
+    </div>
+  </div>
+</section>

@@ -70,6 +70,18 @@
     },
     "affiliateCodeAtSignup": {
       "type": "string"
+    },
+    "entitlements": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::entitlement.entitlement",
+      "mappedBy": "customer"
+    },
+    "devices": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::device.device",
+      "mappedBy": "customer"
     }
   }
 }

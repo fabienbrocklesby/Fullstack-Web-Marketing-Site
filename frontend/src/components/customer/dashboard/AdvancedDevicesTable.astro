@@ -1,0 +1,88 @@
+---
+/**
+ * Advanced Devices Table - Full device management in the Advanced tab
+ */
+import DashboardIcon from "./DashboardIcon.astro";
+---
+
+<section class="surface rounded-xl p-6">
+  <div
+    class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5"
+  >
+    <div>
+      <h2 class="text-lg font-semibold flex items-center gap-2">
+        <DashboardIcon name="computer" class="w-5 h-5 text-primary" />
+        Device Management
+      </h2>
+      <p class="text-sm text-base-content/60 mt-1">
+        Register, activate, and manage your devices
+      </p>
+    </div>
+    <button id="adv-register-device-btn" class="btn btn-primary btn-sm">
+      <DashboardIcon name="plus" class="w-4 h-4 mr-1" />
+      Register Device
+    </button>
+  </div>
+
+  <div id="adv-devices-loading" class="flex items-center justify-center py-8">
+    <span class="loading loading-spinner loading-lg"></span>
+  </div>
+
+  <div id="adv-devices-error" class="hidden">
+    <div class="alert alert-error">
+      <DashboardIcon name="error" class="w-5 h-5" />
+      <span id="adv-devices-error-text">Failed to load devices</span>
+    </div>
+  </div>
+
+  <div id="adv-devices-empty" class="hidden text-center py-8">
+    <DashboardIcon
+      name="computer"
+      class="w-12 h-12 mx-auto mb-4 text-base-content/30"
+    />
+    <p class="text-lg font-medium mb-2">No devices registered</p>
+    <p class="text-sm text-base-content/60 mb-4">
+      Sign in from the Lightlane app to link your device automatically
+    </p>
+    <button id="adv-devices-empty-register" class="btn btn-primary">
+      Manual Registration
+    </button>
+  </div>
+
+  <div id="adv-devices-table" class="hidden overflow-x-auto">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>Device</th>
+          <th>Platform</th>
+          <th>Status</th>
+          <th>Last Seen</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="adv-devices-tbody">
+        <!-- Populated by JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Advanced Devices Pagination -->
+  <div
+    id="adv-devices-pagination"
+    class="hidden mt-4 pt-4 border-t border-base-300"
+  >
+    <div class="flex items-center justify-center gap-2">
+      <button id="adv-devices-prev" class="btn btn-sm btn-ghost" disabled>
+        <DashboardIcon name="arrow-left" class="w-4 h-4" />
+        Previous
+      </button>
+      <span id="adv-devices-page-info" class="text-sm text-base-content/60"
+        >Page 1 of 1</span
+      >
+      <button id="adv-devices-next" class="btn btn-sm btn-ghost" disabled>
+        Next
+        <DashboardIcon name="arrow-right" class="w-4 h-4" />
+      </button>
+    </div>
+  </div>
+</section>

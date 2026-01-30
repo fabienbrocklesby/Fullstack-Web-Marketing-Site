@@ -103,8 +103,37 @@ Edit `backend/.env` with your values:
 DATABASE_URL=postgresql://user:password@localhost:5432/strapi
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRODUCT_ID_MAKER=prod_...
+STRIPE_PRODUCT_ID_PRO=prod_...
 FRONTEND_URL=http://localhost:4321
 ```
+
+> **Note:** `STRIPE_PRODUCT_ID_*` are Stripe Product IDs (not Price IDs). The backend resolves the active monthly recurring Price ID dynamically.
+
+### Admin Internal Token
+
+Some endpoints (e.g., license management, internal tools) are protected by an admin token for server-to-server requests.
+
+**Setup:**
+
+1. Generate a secure token: `openssl rand -hex 32`
+2. Set `ADMIN_INTERNAL_TOKEN` in your backend `.env` file
+3. Pass the token via the `X-Admin-Token` header when calling protected endpoints
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:1337/api/internal/some-endpoint \
+  -H "X-Admin-Token: your-secret-token" \
+  -H "Content-Type: application/json"
+```
+
+**Behaviour:**
+
+- **Production**: Requests without a valid token receive `403 Forbidden`
+- **Development**: If `ADMIN_INTERNAL_TOKEN` is not set, access is allowed with a warning logged
+
+**Note:** This is for server-to-server communication only. Never expose this token to frontend code or client-side requests.
 
 ### 3. Development
 
@@ -179,6 +208,29 @@ After running `pnpm demo:complete`, you'll have:
 - License keys for Starter ($29), Pro ($99), and Enterprise ($299) plans
 - Realistic activation data and device information
 - Commission tracking linked to affiliates
+- Entitlements linked to license keys (tier-based access control)
+
+### Entitlement System (Stage 2)
+
+The licensing system uses **Entitlements as the source of truth** for access control:
+
+- **Entitlement** represents a customer's access rights (tier, device limit, lifetime vs subscription)
+- **License Key** is linked to an Entitlement and enforces it during activation
+- **Tiers**: maker (1 device), pro (1), education (5), enterprise (10)
+- **Founders** purchases (before 2026-01-12) get `isLifetime: true`
+- **Legacy MAC activation retired** (returns 410 Gone). Use Stage 4/5 device-based activation.
+
+**Backfill existing license keys:**
+
+```bash
+# Preview migration
+cd backend && node scripts/backfill-entitlements.js --dry-run
+
+# Apply migration
+cd backend && node scripts/backfill-entitlements.js --apply
+```
+
+See `docs/licensing-portal-current-state.md` for detailed technical documentation.
 
 #### 📄 **Demo Pages**
 

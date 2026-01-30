@@ -27,8 +27,17 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         class="hidden w-full lg:absolute lg:top-4 lg:left-0 lg:right-0"
       >
         <div class="container mx-auto px-5">
-          <div role="alert" class="alert alert-info">
-            <span> Please create an account first to buy your license.</span>
+          <div role="alert" class="alert alert-success">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span
+              >Create your free account to start your 14-day trial. No credit
+              card required.</span
+            >
           </div>
         </div>
       </div>
@@ -55,9 +64,19 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
             Create your account to start using Lightlane.
           </p>
           <div role="alert" class="alert alert-info mt-3">
+            <svg
+              class="w-5 h-5 shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd"></path>
+            </svg>
             <span>
-              Download now - free trial is built in. Create an account to manage
-              your license and checkout faster when ready.
+              <strong>14-day free trial included.</strong> Create an account to unlock
+              full access — no credit card required.
             </span>
           </div>
           <DownloadButtons />
@@ -108,8 +127,8 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
                 Create your account
               </h2>
               <p class="text-sm text-base-content/60">
-                Public sign‑up is open. After purchase, we’ll email your
-                download with support.
+                Sign up to start your free 14-day trial. No credit card
+                required.
               </p>
             </div>
             <form id="register-form" class="space-y-5" novalidate>
@@ -316,18 +335,40 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         const data = await response.json();
 
         if (!response.ok) {
-          let message = "Registration failed";
-          const err = data?.error;
-          if (err) {
-            if (typeof err === "string") message = err;
-            else if (typeof err.message === "string") message = err.message;
-            else if (Array.isArray(err) && err[0]?.message)
-              message = err[0].message;
-            else if (err.details?.errors?.length) {
-              message = err.details.errors[0].message || message;
-            }
+          // Handle structured API errors (Stage 6A format: { ok, code, message })
+          const code = data?.code || null;
+          const rawMessage = data?.message || null;
+
+          // Map error codes to user-friendly messages
+          let friendlyMessage: string;
+
+          switch (code) {
+            case "EMAIL_ALREADY_EXISTS":
+              friendlyMessage =
+                "That email is already in use. Try signing in instead.";
+              break;
+            case "VALIDATION_ERROR":
+              friendlyMessage =
+                rawMessage || "Please check the form fields and try again.";
+              break;
+            default:
+              // For unknown codes or missing codes, try to extract something safe
+              // but default to generic message to avoid leaking internals
+              if (response.status === 409) {
+                // 409 Conflict without code - likely duplicate email
+                friendlyMessage =
+                  "That email is already in use. Try signing in instead.";
+              } else if (response.status === 400) {
+                // 400 Bad Request - validation issue
+                friendlyMessage =
+                  rawMessage || "Please check the form fields and try again.";
+              } else {
+                // 5xx or unexpected - generic message
+                friendlyMessage = "Registration failed. Please try again.";
+              }
           }
-          throw new Error(message);
+
+          throw new Error(friendlyMessage);
         }
 
         // Store the customer token
@@ -344,34 +385,61 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
 
         // Check URL parameters for product selection and redirect
         const urlParams = new URLSearchParams(window.location.search);
+        const fromPricing = urlParams.get("from") === "pricing";
+        const actionType = urlParams.get("action");
         const productId = urlParams.get("product");
         const redirectType = urlParams.get("redirect");
 
         // Check if there's a selected product in localStorage
         const selectedProduct = localStorage.getItem("selectedProduct");
 
-        if ((productId && redirectType === "checkout") || selectedProduct) {
-          // Show success message for purchase flow
-          successDiv.classList.remove("hidden");
-          successText.textContent =
-            "Account created successfully! Redirecting to checkout...";
+        // Handle pricing page flow (trial or purchase)
+        if (fromPricing || selectedProduct) {
+          const parsed = selectedProduct ? JSON.parse(selectedProduct) : null;
+          const isTrial =
+            actionType === "trial" || parsed?.mode === "subscription";
 
-          // Redirect to checkout flow
-          setTimeout(async () => {
-            const priceId =
-              productId ||
-              (selectedProduct ? JSON.parse(selectedProduct).priceId : null);
-            if (
-              priceId &&
-              typeof (window as any).proceedToCheckout === "function"
-            ) {
-              await (window as any).proceedToCheckout(priceId);
-            } else {
+          if (isTrial) {
+            // Free trial flow - redirect to dashboard to start trial
+            successDiv.classList.remove("hidden");
+            successText.textContent =
+              "Account created! Starting your 14-day free trial...";
+
+            setTimeout(() => {
               window.location.href = "/customer/dashboard";
-            }
-          }, 2000);
+            }, 1500);
+          } else if (
+            (productId && redirectType === "checkout") ||
+            parsed?.priceId
+          ) {
+            // Direct purchase flow (legacy support)
+            successDiv.classList.remove("hidden");
+            successText.textContent =
+              "Account created successfully! Redirecting to checkout...";
+
+            setTimeout(async () => {
+              const priceId = productId || parsed?.priceId;
+              if (
+                priceId &&
+                typeof (window as any).proceedToCheckout === "function"
+              ) {
+                await (window as any).proceedToCheckout(priceId);
+              } else {
+                window.location.href = "/customer/dashboard";
+              }
+            }, 2000);
+          } else {
+            // Default to dashboard
+            successDiv.classList.remove("hidden");
+            successText.textContent =
+              "Account created! Redirecting to your dashboard...";
+
+            setTimeout(() => {
+              window.location.href = "/customer/dashboard";
+            }, 1500);
+          }
         } else {
-          // Normal registration flow
+          // Normal registration flow (not from pricing)
           successDiv.classList.remove("hidden");
           successText.textContent =
             "Account created successfully! Redirecting to dashboard...";
