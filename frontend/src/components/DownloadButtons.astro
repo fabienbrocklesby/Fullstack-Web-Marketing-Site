@@ -17,12 +17,19 @@ const {
 const DOWNLOAD_BASE_URL = "https://downloads.lightlane.app";
 // Default to the rolling "latest" folder in R2 unless an explicit version is provided via env
 const fallbackVersion = "latest";
+
+// @ts-ignore - Astro injects env at build time
+const useBeta = import.meta.env?.PUBLIC_USE_BETA_DOWNLOADS === "true";
+
 // @ts-ignore - Astro injects env at build time
 const rawVersion = import.meta.env?.PUBLIC_DOWNLOAD_VERSION ?? fallbackVersion;
 const normalizedVersion = rawVersion.trim().replace(/^\/+|\/+$/g, "");
 const resolvedVersion =
   normalizedVersion.length > 0 ? normalizedVersion : fallbackVersion;
-const baseUrl = `${DOWNLOAD_BASE_URL.replace(/\/$/, "")}/${resolvedVersion}`;
+
+// If beta flag is set, prepend "beta/" to the path
+const versionPath = useBeta ? `beta/${resolvedVersion}` : resolvedVersion;
+const baseUrl = `${DOWNLOAD_BASE_URL.replace(/\/$/, "")}/${versionPath}`;
 const macArmHref = `${baseUrl}/Light-Lane-macOS-arm64.dmg`;
 const macIntelHref = `${baseUrl}/Light-Lane-macOS-amd64.dmg`;
 const windowsHref = `${baseUrl}/Light-Lane-Windows-amd64.exe`;
