@@ -19,10 +19,10 @@ const DOWNLOAD_BASE_URL = "https://downloads.lightlane.app";
 const fallbackVersion = "latest";
 
 // @ts-ignore - Astro injects env at build time
-const useBeta = import.meta.env?.PUBLIC_USE_BETA_DOWNLOADS === "true";
+const useBeta = (import.meta.env.PUBLIC_USE_BETA_DOWNLOADS || "").toLowerCase() === "true";
 
 // @ts-ignore - Astro injects env at build time
-const rawVersion = import.meta.env?.PUBLIC_DOWNLOAD_VERSION ?? fallbackVersion;
+const rawVersion = import.meta.env.PUBLIC_DOWNLOAD_VERSION || fallbackVersion;
 const normalizedVersion = rawVersion.trim().replace(/^\/+|\/+$/g, "");
 const resolvedVersion =
   normalizedVersion.length > 0 ? normalizedVersion : fallbackVersion;
