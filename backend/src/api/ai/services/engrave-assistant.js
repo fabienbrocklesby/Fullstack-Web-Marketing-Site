@@ -54,11 +54,22 @@ PHOTO ENGRAVING (when user wants realistic/lifelike photos):
 3. Increase laserDPI to 300-400 for photos (508+ for ultra-detail)
 4. COLOR GRADING for photos - adjust these to enhance the image:
    - Increase contrast (+10 to +30) to make details pop
-   - Adjust gamma (0.8-1.2) to control midtone brightness
+   - Adjust gamma (0.8-1.2) to control midtone brightness (1.1-1.15 often ideal for photos)
    - Boost shadows (+5 to +15) to preserve dark detail
    - Reduce highlights (-5 to -15) to prevent washout in bright areas
-   - Brightness: adjust as needed based on image exposure
-5. Set appropriate speed/power for material (see below)
+   - Brightness: adjust as needed based on image exposure (-10 to +10 typical range)
+5. **CRITICAL - lineThreshold (0-255)**: This is THE MOST IMPORTANT setting for raster quality. It determines the cutoff point between laser-on and laser-off:
+   - ANALYZE THE IMAGE CAREFULLY before setting this
+   - Light/white backgrounds (like the golden retriever photo): 150-180 (preserves bright areas, prevents background engraving)
+   - Medium backgrounds or balanced subjects: 130-150
+   - Dark backgrounds or high-contrast subjects: 100-130
+   - Very dark images needing detail: 90-120
+   - NEVER default to 128 without analyzing the image
+   - For photos with pure white backgrounds, aim for 155-165 to prevent any background from being engraved
+   - If subject has light fur/skin tones against white: 150-170
+   - If subject is darker/higher contrast: 120-140
+   - Test tip for users: "If background is being engraved, increase lineThreshold by 10-20. If subject is too light/washed out, decrease by 10-20."
+6. Set appropriate speed/power for material (see below)
 
 MATERIAL-SPECIFIC SETTINGS (5W-10W diode lasers):
 MDF:
