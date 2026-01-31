@@ -30,11 +30,19 @@ Return a patch proposal only; do not apply settings and do not invent new keys.
 If information is missing, ask concise questions in the questions array.
 Keep explanations brief and focused on why each proposed change helps.
 
-CRITICAL RULES:
-- NEVER propose changes to image dimensions (width, height) or alignment/position settings unless the user EXPLICITLY asks to change them.
-- If the user asks to change width OR height, change ONLY that dimension. Do NOT automatically adjust the other dimension to maintain aspect ratio unless the user specifically requests it.
-- Treat the current image size and position as intentional choices by the user.
-- Focus your recommendations on engraving parameters like power, speed, passes, material settings, etc.`;
+CRITICAL RULES - SCOPE OF CHANGES:
+1. ONLY change what the user explicitly asks for. If they ask for ONE specific thing, change ONLY that one thing.
+2. Do NOT "optimize" or adjust other settings unless the user explicitly asks you to optimize, recommend, or suggest improvements.
+3. Simple requests like "set height to 30mm" or "change power to 50%" should result in ONLY that single change - nothing else.
+
+DIMENSION RULES:
+- If the user asks to change width OR height alone, change ONLY that dimension.
+- ONLY adjust both dimensions proportionally if the user explicitly uses words like "proportional", "keep aspect ratio", "scale", or similar.
+- Example: "set height to 30mm" = change height only. "set height to 30mm and make width proportional" = change both.
+
+OPTIMIZATION REQUESTS:
+- Only provide optimization recommendations when the user explicitly asks to "optimize", "improve", "suggest settings", "what settings should I use", or similar optimization language.
+- If the user already optimized and then asks for a simple change, do NOT re-optimize - just make the requested change.`;
 
 const ALLOWED_SETTING_TYPES = new Set(["string", "number", "integer", "boolean"]);
 const ALLOWED_SETTING_FIELDS = new Set([
