@@ -19,7 +19,17 @@ const DOWNLOAD_BASE_URL = "https://downloads.lightlane.app";
 const fallbackVersion = "latest";
 
 // @ts-ignore - Astro injects env at build time
-const useBeta = (import.meta.env.PUBLIC_USE_BETA_DOWNLOADS || "").toLowerCase() === "true";
+const betaEnvRaw = import.meta.env.PUBLIC_USE_BETA_DOWNLOADS;
+// Handle various truthy values: "true", true, "1", etc.
+const useBeta =
+  betaEnvRaw === true || betaEnvRaw === "true" || betaEnvRaw === "1";
+
+console.log(
+  "DEBUG: PUBLIC_USE_BETA_DOWNLOADS =",
+  betaEnvRaw,
+  "useBeta =",
+  useBeta,
+);
 
 // @ts-ignore - Astro injects env at build time
 const rawVersion = import.meta.env.PUBLIC_DOWNLOAD_VERSION || fallbackVersion;
