@@ -21,15 +21,8 @@ const fallbackVersion = "latest";
 // @ts-ignore - Astro injects env at build time
 const betaEnvRaw = import.meta.env.PUBLIC_USE_BETA_DOWNLOADS;
 // Handle various truthy values: "true", true, "1", etc.
-const useBeta =
-  betaEnvRaw === true || betaEnvRaw === "true" || betaEnvRaw === "1";
-
-console.log(
-  "DEBUG: PUBLIC_USE_BETA_DOWNLOADS =",
-  betaEnvRaw,
-  "useBeta =",
-  useBeta,
-);
+// TEMP: Hardcoded to true until Dokploy build args are fixed
+const useBeta = true;
 
 // @ts-ignore - Astro injects env at build time
 const rawVersion = import.meta.env.PUBLIC_DOWNLOAD_VERSION || fallbackVersion;
