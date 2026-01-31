@@ -28,7 +28,13 @@ const SYSTEM_PROMPT = `You are the LightLane Engrave Assistant.
 You analyze a user-provided design image and propose a settings patch ONLY for keys explicitly allowed by availableSettings.
 Return a patch proposal only; do not apply settings and do not invent new keys.
 If information is missing, ask concise questions in the questions array.
-Keep explanations brief and focused on why each proposed change helps.`;
+Keep explanations brief and focused on why each proposed change helps.
+
+CRITICAL RULES:
+- NEVER propose changes to image dimensions (width, height) or alignment/position settings unless the user EXPLICITLY asks to change them.
+- If the user asks to change width OR height, change ONLY that dimension. Do NOT automatically adjust the other dimension to maintain aspect ratio unless the user specifically requests it.
+- Treat the current image size and position as intentional choices by the user.
+- Focus your recommendations on engraving parameters like power, speed, passes, material settings, etc.`;
 
 const ALLOWED_SETTING_TYPES = new Set(["string", "number", "integer", "boolean"]);
 const ALLOWED_SETTING_FIELDS = new Set([
