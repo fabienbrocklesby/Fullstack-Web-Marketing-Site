@@ -1,0 +1,936 @@
+<div id="laser-sketch-container">
+  <dialog id="laser-modal" class="modal">
+    <div
+      class="modal-box bg-base-300/95 max-w-3xl w-full border border-base-content/10 shadow-2xl rounded-xl p-0 overflow-hidden"
+    >
+      <div class="px-5 pt-4 pb-3 border-b border-base-content/10 bg-base-300">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3
+              class="font-semibold text-lg text-base-content flex items-center gap-2"
+            >
+              <span class="text-primary">✦</span>
+              You found the secret!
+            </h3>
+            <p class="text-base-content/50 text-xs mt-0.5">
+              Mini Lightlane workspace - draw to simulate laser engraving
+            </p>
+          </div>
+          <button
+            id="laser-close-btn"
+            class="btn btn-sm btn-circle btn-ghost hover:bg-error/20 hover:text-error transition-colors"
+            aria-label="Close"
+          >
+            <svg
+              class="size-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="px-4 py-2 border-b border-base-content/10 bg-base-200/50 flex flex-wrap items-center gap-3"
+      >
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-base-content/60 font-medium"
+            >Material</label
+          >
+          <select
+            id="laser-material"
+            class="select select-xs select-bordered bg-base-300 min-w-[100px]"
+          >
+            <option>Plywood 3mm</option>
+            <option>Acrylic 5mm</option>
+            <option>MDF 6mm</option>
+            <option>Leather</option>
+            <option>Cardstock</option>
+          </select>
+        </div>
+
+        <div class="divider divider-horizontal mx-0 h-6"></div>
+
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-base-content/60 font-medium">Power</label>
+          <input
+            type="range"
+            min="10"
+            max="100"
+            value="80"
+            class="range range-xs range-primary w-16"
+          />
+          <span class="text-xs text-base-content/50 w-8">80%</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-base-content/60 font-medium">Speed</label>
+          <input
+            type="range"
+            min="100"
+            max="1000"
+            value="400"
+            class="range range-xs range-secondary w-16"
+          />
+          <span class="text-xs text-base-content/50 w-12">400</span>
+        </div>
+
+        <div class="divider divider-horizontal mx-0 h-6"></div>
+
+        <div class="flex items-center gap-1">
+          <label class="text-xs text-base-content/60 font-medium">Passes</label>
+          <div class="join">
+            <button class="btn btn-xs join-item bg-base-300">-</button>
+            <span
+              class="btn btn-xs join-item bg-base-300 pointer-events-none px-3"
+              >1</span
+            >
+            <button class="btn btn-xs join-item bg-base-300">+</button>
+          </div>
+        </div>
+
+        <div class="flex-1"></div>
+
+        <button
+          id="laser-clear-btn"
+          class="btn btn-xs btn-ghost text-base-content/60 hover:text-error hover:bg-error/10"
+        >
+          <svg
+            class="size-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            ></path>
+          </svg>
+          Clear
+        </button>
+      </div>
+
+      <div class="p-4 bg-base-200/30">
+        <div class="relative mx-auto max-w-[500px]">
+          <canvas
+            id="laser-canvas"
+            class="aspect-square w-full rounded-lg border border-base-content/20 bg-base-300"
+          ></canvas>
+          <div
+            id="laser-coords"
+            class="absolute bottom-2 left-2 text-[10px] font-mono text-base-content/40 pointer-events-none select-none"
+          >
+            X: 0 Y: 0
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="px-5 py-3 border-t border-base-content/10 bg-base-300 flex justify-end"
+      >
+        <button id="laser-done-btn" class="btn btn-sm btn-primary">Done</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+</div>
+
+<style>
+  #laser-canvas {
+    cursor: none;
+    touch-action: none;
+    box-shadow:
+      inset 0 0 40px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(0, 200, 255, 0.05);
+  }
+
+  @keyframes ll-pulse {
+    0% {
+      transform: scale(var(--pulse-scale, 1.04));
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes ll-glow {
+    0% {
+      filter: drop-shadow(
+        0 0 var(--glow-size, 4px) rgba(0, 200, 255, var(--glow-alpha, 0.4))
+      );
+    }
+    100% {
+      filter: drop-shadow(0 0 0 rgba(0, 200, 255, 0));
+    }
+  }
+
+  @keyframes ll-lock-ring {
+    0% {
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 1;
+      border-width: 3px;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(2.5);
+      opacity: 0;
+      border-width: 1px;
+    }
+  }
+
+  @keyframes ll-spark {
+    0% {
+      transform: translate(var(--spark-x, 0), var(--spark-y, 0)) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(
+          calc(var(--spark-x, 0) * 3),
+          calc(var(--spark-y, 0) * 3 - 10px)
+        )
+        scale(0);
+      opacity: 0;
+    }
+  }
+
+  :global(.ll-egg-pulse-2) {
+    animation:
+      ll-pulse 150ms ease-out,
+      ll-glow 250ms ease-out;
+    --pulse-scale: 1.04;
+    --glow-size: 8px;
+    --glow-alpha: 0.5;
+  }
+
+  :global(.ll-egg-pulse-3) {
+    animation:
+      ll-pulse 150ms ease-out,
+      ll-glow 300ms ease-out;
+    --pulse-scale: 1.06;
+    --glow-size: 12px;
+    --glow-alpha: 0.6;
+  }
+
+  :global(.ll-egg-pulse-4) {
+    animation:
+      ll-pulse 150ms ease-out,
+      ll-glow 350ms ease-out;
+    --pulse-scale: 1.08;
+    --glow-size: 16px;
+    --glow-alpha: 0.7;
+  }
+
+  :global(.ll-egg-lock) {
+    animation:
+      ll-pulse 100ms ease-out,
+      ll-glow 200ms ease-out;
+    --pulse-scale: 1.1;
+    --glow-size: 20px;
+    --glow-alpha: 0.9;
+  }
+
+  :global(.ll-lock-ring) {
+    position: fixed;
+    pointer-events: none;
+    border: 3px solid rgba(0, 200, 255, 0.8);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: ll-lock-ring 400ms ease-out forwards;
+    z-index: 9999;
+  }
+
+  :global(.ll-spark) {
+    position: fixed;
+    pointer-events: none;
+    width: 6px;
+    height: 6px;
+    background: radial-gradient(
+      circle,
+      rgba(0, 220, 255, 1) 0%,
+      rgba(0, 200, 255, 0) 70%
+    );
+    border-radius: 50%;
+    animation: ll-spark 400ms ease-out forwards;
+    z-index: 9999;
+  }
+</style>
+
+<script>
+  interface Particle {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    life: number;
+    maxLife: number;
+    size: number;
+  }
+
+  interface GlowSegment {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    age: number;
+  }
+
+  const GRID = {
+    minor: 16,
+    majorEvery: 4,
+    colorMinor: "rgba(255,255,255,0.04)",
+    colorMajor: "rgba(255,255,255,0.08)",
+    colorCenter: "rgba(0,180,255,0.15)",
+  };
+
+  const LASER = {
+    core: "#00d4ff",
+    glow: "#0099cc",
+    scorch: "rgba(40, 20, 10, 0.6)",
+    coreWidth: 1.5,
+    glowWidth: 4,
+    scorchWidth: 8,
+  };
+
+  const PARTICLE = {
+    max: 150,
+    spawnRate: 0.4,
+    lifeMin: 15,
+    lifeMax: 35,
+    speed: 3,
+    gravity: 0.15,
+    drag: 0.97,
+  };
+
+  const CROSSHAIR = { size: 12, gap: 4 };
+  const GLOW_SEGMENT_LIFE = 20;
+
+  const TAP = { required: 5, timeout: 600, scrollThreshold: 20 };
+  const TRIGGER_WORD = "laser";
+  const PULSE_CLASSES = [
+    "ll-egg-pulse-2",
+    "ll-egg-pulse-3",
+    "ll-egg-pulse-4",
+    "ll-egg-lock",
+  ];
+
+  let keyBuffer: string[] = [];
+  let isDrawing = false;
+  let pointerX = -100;
+  let pointerY = -100;
+  let lastX = 0;
+  let lastY = 0;
+
+  let particles: Particle[] = [];
+  let glowSegments: GlowSegment[] = [];
+  let animationId: number | null = null;
+  let canvasRect: DOMRect | null = null;
+  let dpr = 1;
+  let cssWidth = 0;
+  let cssHeight = 0;
+
+  const modal = document.getElementById("laser-modal") as HTMLDialogElement;
+  const canvas = document.getElementById("laser-canvas") as HTMLCanvasElement;
+  const closeBtn = document.getElementById("laser-close-btn");
+  const clearBtn = document.getElementById("laser-clear-btn");
+  const doneBtn = document.getElementById("laser-done-btn");
+  const coordsDisplay = document.getElementById("laser-coords");
+
+  let ctx: CanvasRenderingContext2D | null = null;
+  let gridCanvas: HTMLCanvasElement | null = null;
+  let gridCtx: CanvasRenderingContext2D | null = null;
+  let persistentCanvas: HTMLCanvasElement | null = null;
+  let persistentCtx: CanvasRenderingContext2D | null = null;
+
+  function initCanvas() {
+    canvasRect = canvas.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    cssWidth = canvasRect.width;
+    cssHeight = canvasRect.height;
+
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+
+    ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    initOffscreenCanvases();
+    drawGrid();
+
+    particles = [];
+    glowSegments = [];
+    pointerX = -100;
+    pointerY = -100;
+
+    if (animationId === null) {
+      animationId = requestAnimationFrame(renderLoop);
+    }
+  }
+
+  function initOffscreenCanvases() {
+    gridCanvas = document.createElement("canvas");
+    gridCanvas.width = Math.round(cssWidth * dpr);
+    gridCanvas.height = Math.round(cssHeight * dpr);
+    gridCtx = gridCanvas.getContext("2d");
+    gridCtx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    persistentCanvas = document.createElement("canvas");
+    persistentCanvas.width = Math.round(cssWidth * dpr);
+    persistentCanvas.height = Math.round(cssHeight * dpr);
+    persistentCtx = persistentCanvas.getContext("2d");
+    persistentCtx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawGrid() {
+    if (!gridCtx) return;
+
+    const w = cssWidth;
+    const h = cssHeight;
+    const minor = GRID.minor;
+    const major = minor * GRID.majorEvery;
+
+    gridCtx.clearRect(0, 0, w, h);
+
+    gridCtx.strokeStyle = GRID.colorMinor;
+    gridCtx.lineWidth = 0.5;
+    gridCtx.beginPath();
+    for (let x = minor; x < w; x += minor) {
+      if (x % major !== 0) {
+        gridCtx.moveTo(x, 0);
+        gridCtx.lineTo(x, h);
+      }
+    }
+    for (let y = minor; y < h; y += minor) {
+      if (y % major !== 0) {
+        gridCtx.moveTo(0, y);
+        gridCtx.lineTo(w, y);
+      }
+    }
+    gridCtx.stroke();
+
+    gridCtx.strokeStyle = GRID.colorMajor;
+    gridCtx.lineWidth = 0.5;
+    gridCtx.beginPath();
+    for (let x = major; x < w; x += major) {
+      if (Math.abs(x - w / 2) > 1) {
+        gridCtx.moveTo(x, 0);
+        gridCtx.lineTo(x, h);
+      }
+    }
+    for (let y = major; y < h; y += major) {
+      if (Math.abs(y - h / 2) > 1) {
+        gridCtx.moveTo(0, y);
+        gridCtx.lineTo(w, y);
+      }
+    }
+    gridCtx.stroke();
+
+    gridCtx.strokeStyle = GRID.colorCenter;
+    gridCtx.lineWidth = 1;
+    gridCtx.beginPath();
+    gridCtx.moveTo(w / 2, 0);
+    gridCtx.lineTo(w / 2, h);
+    gridCtx.moveTo(0, h / 2);
+    gridCtx.lineTo(w, h / 2);
+    gridCtx.stroke();
+  }
+
+  function getPointerCoords(e: PointerEvent) {
+    canvasRect ??= canvas.getBoundingClientRect();
+    return { x: e.clientX - canvasRect?.left, y: e.clientY - canvasRect.top };
+  }
+
+  function handlePointerDown(e: PointerEvent) {
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+
+    const coords = getPointerCoords(e);
+    const pointerX = coords.x;
+    const pointerY = coords.y;
+
+    lastX = coords.x;
+    lastY = coords.y;
+    isDrawing = true;
+  }
+
+  function handlePointerMove(e: PointerEvent) {
+    e.preventDefault();
+    const coords = getPointerCoords(e);
+    pointerX = coords.x;
+    pointerY = coords.y;
+
+    if (coordsDisplay) {
+      coordsDisplay.textContent = `X: ${Math.round(coords.x)} Y: ${Math.round(coords.y)}`;
+    }
+
+    if (!isDrawing || !persistentCtx) return;
+
+    drawLaserStroke(persistentCtx, lastX, lastY, coords.x, coords.y);
+
+    glowSegments.push({
+      x1: lastX,
+      y1: lastY,
+      x2: coords.x,
+      y2: coords.y,
+      age: 0,
+    });
+    spawnParticlesAlongStroke(lastX, lastY, coords.x, coords.y);
+
+    lastX = coords.x;
+    lastY = coords.y;
+  }
+
+  function handlePointerUp(e: PointerEvent) {
+    canvas.releasePointerCapture(e.pointerId);
+    isDrawing = false;
+  }
+
+  function handlePointerLeave() {
+    pointerX = -100;
+    pointerY = -100;
+  }
+
+  function handlePointerEnter(e: PointerEvent) {
+    const coords = getPointerCoords(e);
+    pointerX = coords.x;
+    pointerY = coords.y;
+  }
+
+  function drawLaserStroke(
+    targetCtx: CanvasRenderingContext2D,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ) {
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = "multiply";
+    targetCtx.strokeStyle = LASER.scorch;
+    targetCtx.lineWidth = LASER.scorchWidth;
+    targetCtx.lineCap = "round";
+    targetCtx.lineJoin = "round";
+    targetCtx.beginPath();
+    targetCtx.moveTo(x1, y1);
+    targetCtx.lineTo(x2, y2);
+    targetCtx.stroke();
+    targetCtx.restore();
+
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = "lighter";
+    targetCtx.strokeStyle = LASER.glow;
+    targetCtx.lineWidth = LASER.glowWidth;
+    targetCtx.lineCap = "round";
+    targetCtx.lineJoin = "round";
+    targetCtx.shadowBlur = 12;
+    targetCtx.shadowColor = LASER.core;
+    targetCtx.beginPath();
+    targetCtx.moveTo(x1, y1);
+    targetCtx.lineTo(x2, y2);
+    targetCtx.stroke();
+    targetCtx.restore();
+
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = "lighter";
+    targetCtx.strokeStyle = LASER.core;
+    targetCtx.lineWidth = LASER.coreWidth;
+    targetCtx.lineCap = "round";
+    targetCtx.lineJoin = "round";
+    targetCtx.shadowBlur = 6;
+    targetCtx.shadowColor = "#ffffff";
+    targetCtx.beginPath();
+    targetCtx.moveTo(x1, y1);
+    targetCtx.lineTo(x2, y2);
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  function spawnParticlesAlongStroke(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const count = Math.floor(dist * PARTICLE.spawnRate);
+
+    for (let i = 0; i < count && particles.length < PARTICLE.max; i++) {
+      const t = Math.random();
+      const px = x1 + dx * t;
+      const py = y1 + dy * t;
+
+      const perpX = -dy / (dist || 1);
+      const angle = (Math.random() - 0.5) * Math.PI;
+      const speed = PARTICLE.speed * (0.5 + Math.random() * 0.5);
+
+      particles.push({
+        x: px,
+        y: py,
+        vx:
+          (perpX * Math.cos(angle) + Math.sin(angle)) *
+          speed *
+          (Math.random() > 0.5 ? 1 : -1),
+        vy: -Math.abs(Math.random() * speed * 0.8) - 1,
+        life:
+          PARTICLE.lifeMin +
+          Math.random() * (PARTICLE.lifeMax - PARTICLE.lifeMin),
+        maxLife: PARTICLE.lifeMax,
+        size: 1 + Math.random() * 2,
+      });
+    }
+  }
+
+  function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vy += PARTICLE.gravity;
+      p.vx *= PARTICLE.drag;
+      p.vy *= PARTICLE.drag;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+      }
+    }
+  }
+
+  function renderParticles(targetCtx: CanvasRenderingContext2D) {
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = "lighter";
+
+    for (const p of particles) {
+      const alpha = (p.life / p.maxLife) * 0.9;
+      const hue = 30 + Math.random() * 30;
+
+      targetCtx.fillStyle = `hsla(${hue}, 100%, 70%, ${alpha})`;
+      targetCtx.shadowBlur = 4;
+      targetCtx.shadowColor = `hsla(${hue}, 100%, 50%, ${alpha})`;
+
+      targetCtx.beginPath();
+      targetCtx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+
+    targetCtx.restore();
+  }
+
+  function updateGlowSegments() {
+    for (let i = glowSegments.length - 1; i >= 0; i--) {
+      glowSegments[i].age++;
+      if (glowSegments[i].age > GLOW_SEGMENT_LIFE) {
+        glowSegments.splice(i, 1);
+      }
+    }
+  }
+
+  function renderGlowSegments(targetCtx: CanvasRenderingContext2D) {
+    if (glowSegments.length === 0) return;
+
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = "lighter";
+    targetCtx.lineCap = "round";
+    targetCtx.lineJoin = "round";
+
+    for (const seg of glowSegments) {
+      const progress = seg.age / GLOW_SEGMENT_LIFE;
+      const alpha = (1 - progress) * 0.3;
+
+      targetCtx.strokeStyle = `rgba(0, 200, 255, ${alpha})`;
+      targetCtx.lineWidth = 8 + progress * 6;
+      targetCtx.shadowBlur = 15;
+      targetCtx.shadowColor = `rgba(0, 200, 255, ${alpha})`;
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(seg.x1, seg.y1);
+      targetCtx.lineTo(seg.x2, seg.y2);
+      targetCtx.stroke();
+    }
+
+    targetCtx.restore();
+  }
+
+  function renderCrosshair(targetCtx: CanvasRenderingContext2D) {
+    if (
+      pointerX < 0 ||
+      pointerY < 0 ||
+      pointerX > cssWidth ||
+      pointerY > cssHeight
+    )
+      return;
+
+    const { size, gap } = CROSSHAIR;
+
+    targetCtx.save();
+    targetCtx.strokeStyle = "rgba(0, 220, 255, 0.9)";
+    targetCtx.lineWidth = 1;
+    targetCtx.shadowBlur = 4;
+    targetCtx.shadowColor = "#00dcff";
+
+    targetCtx.beginPath();
+    targetCtx.moveTo(pointerX, pointerY - size);
+    targetCtx.lineTo(pointerX, pointerY - gap);
+    targetCtx.moveTo(pointerX, pointerY + gap);
+    targetCtx.lineTo(pointerX, pointerY + size);
+    targetCtx.moveTo(pointerX - size, pointerY);
+    targetCtx.lineTo(pointerX - gap, pointerY);
+    targetCtx.moveTo(pointerX + gap, pointerY);
+    targetCtx.lineTo(pointerX + size, pointerY);
+    targetCtx.stroke();
+
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+    targetCtx.fillStyle = `rgba(0, 220, 255, ${0.4 + pulse * 0.4})`;
+    targetCtx.beginPath();
+    targetCtx.arc(pointerX, pointerY, 1.5, 0, Math.PI * 2);
+    targetCtx.fill();
+
+    targetCtx.restore();
+  }
+
+  function renderLoop() {
+    if (!modal?.open) {
+      animationId = null;
+      return;
+    }
+
+    if (!ctx || !gridCanvas || !persistentCanvas) {
+      animationId = requestAnimationFrame(renderLoop);
+      return;
+    }
+
+    updateParticles();
+    updateGlowSegments();
+
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    ctx.drawImage(gridCanvas, 0, 0, cssWidth, cssHeight);
+    renderGlowSegments(ctx);
+    ctx.drawImage(persistentCanvas, 0, 0, cssWidth, cssHeight);
+    renderParticles(ctx);
+    renderCrosshair(ctx);
+
+    animationId = requestAnimationFrame(renderLoop);
+  }
+
+  function clearCanvas() {
+    persistentCtx?.clearRect(0, 0, cssWidth, cssHeight);
+    particles = [];
+    glowSegments = [];
+  }
+
+  function showModal() {
+    modal?.showModal();
+    requestAnimationFrame(initCanvas);
+  }
+
+  function hideModal() {
+    modal?.close();
+    if (animationId !== null) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    clearCanvas();
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement ||
+      e.target instanceof HTMLSelectElement
+    ) {
+      return;
+    }
+
+    keyBuffer.push(e.key.toLowerCase());
+
+    if (keyBuffer.length > TRIGGER_WORD.length) {
+      keyBuffer.shift();
+    }
+
+    if (keyBuffer.join("") === TRIGGER_WORD) {
+      keyBuffer = [];
+      showModal();
+    }
+  }
+
+  document.addEventListener("keydown", handleKeyDown);
+
+  closeBtn?.addEventListener("click", hideModal);
+  doneBtn?.addEventListener("click", hideModal);
+  clearBtn?.addEventListener("click", clearCanvas);
+
+  canvas?.addEventListener("pointerdown", handlePointerDown);
+  canvas?.addEventListener("pointermove", handlePointerMove);
+  canvas?.addEventListener("pointerup", handlePointerUp);
+  canvas?.addEventListener("pointercancel", handlePointerUp);
+  canvas?.addEventListener("pointerleave", handlePointerLeave);
+  canvas?.addEventListener("pointerenter", handlePointerEnter);
+
+  window.addEventListener("resize", () => {
+    if (modal?.open) {
+      if (animationId !== null) cancelAnimationFrame(animationId);
+      initCanvas();
+    }
+  });
+
+  let tapCount = 0;
+  let tapTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastScrollY = window.scrollY;
+  let footerLogo: HTMLAnchorElement | null = null;
+  let logoVisual: Element | null = null;
+
+  function findFooterLogo(): HTMLAnchorElement | null {
+    const byAttr = document.querySelector('[data-easter-egg="footer-logo"]');
+    if (byAttr instanceof HTMLAnchorElement) return byAttr;
+
+    const byHref = document.querySelector('footer a[href="/"]');
+    if (byHref instanceof HTMLAnchorElement) return byHref;
+
+    for (const link of document.querySelectorAll("footer a")) {
+      const hasLogo = link.querySelector(
+        'img[alt*="logo" i], svg[aria-label*="logo" i]',
+      );
+      if (hasLogo && link instanceof HTMLAnchorElement) return link;
+    }
+
+    return null;
+  }
+
+  function resetTapSequence(navigate = false) {
+    if (navigate && tapCount === 1 && footerLogo?.href) {
+      window.location.href = footerLogo.href;
+    }
+    tapCount = 0;
+    if (tapTimer) {
+      clearTimeout(tapTimer);
+      tapTimer = null;
+    }
+  }
+
+  function removePulseClasses(el: Element) {
+    el.classList.remove(...PULSE_CLASSES);
+  }
+
+  function playClass(el: Element, className: string, durationMs: number) {
+    removePulseClasses(el);
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add(className);
+    setTimeout(() => el.classList.remove(className), durationMs);
+  }
+
+  function createSparks(rect: DOMRect) {
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const count = 5 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < count; i++) {
+      const spark = document.createElement("span");
+      spark.className = "ll-spark";
+
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      const distance = 20 + Math.random() * 15;
+
+      spark.style.left = `${centerX}px`;
+      spark.style.top = `${centerY}px`;
+      spark.style.setProperty("--spark-x", `${Math.cos(angle) * distance}px`);
+      spark.style.setProperty("--spark-y", `${Math.sin(angle) * distance}px`);
+
+      document.body.appendChild(spark);
+      setTimeout(() => spark.remove(), 450);
+    }
+  }
+
+  function createLockRing(rect: DOMRect) {
+    const ring = document.createElement("span");
+    ring.className = "ll-lock-ring";
+    ring.style.left = `${rect.left + rect.width / 2}px`;
+    ring.style.top = `${rect.top + rect.height / 2}px`;
+    document.body.appendChild(ring);
+    setTimeout(() => ring.remove(), 450);
+  }
+
+  function applyTapFeedback(el: Element, count: number) {
+    const rect = el.getBoundingClientRect();
+
+    switch (count) {
+      case 2:
+        playClass(el, "ll-egg-pulse-2", 300);
+        break;
+      case 3:
+        playClass(el, "ll-egg-pulse-3", 350);
+        break;
+      case 4:
+        playClass(el, "ll-egg-pulse-4", 400);
+        createSparks(rect);
+        break;
+      case 5:
+        playClass(el, "ll-egg-lock", 250);
+        createLockRing(rect);
+        break;
+    }
+  }
+
+  function handleFooterLogoTap(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (modal?.open) {
+      resetTapSequence(false);
+      return;
+    }
+
+    const currentScrollY = window.scrollY;
+    if (
+      tapCount > 0 &&
+      Math.abs(currentScrollY - lastScrollY) > TAP.scrollThreshold
+    ) {
+      resetTapSequence(false);
+    }
+    lastScrollY = currentScrollY;
+
+    tapCount++;
+
+    if (tapTimer) clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => resetTapSequence(true), TAP.timeout);
+
+    if (logoVisual && tapCount >= 2) {
+      applyTapFeedback(logoVisual, tapCount);
+    }
+
+    if (tapCount >= TAP.required) {
+      if (tapTimer) clearTimeout(tapTimer);
+      tapTimer = null;
+
+      setTimeout(() => {
+        showModal();
+        tapCount = 0;
+      }, 150);
+    }
+  }
+
+  function initFooterLogoTrigger() {
+    footerLogo = findFooterLogo();
+    if (!footerLogo) return;
+
+    logoVisual = footerLogo.querySelector("img, svg") ?? footerLogo;
+    footerLogo.addEventListener("click", handleFooterLogoTap as EventListener);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFooterLogoTrigger);
+  } else {
+    setTimeout(initFooterLogoTrigger, 100);
+  }
+</script>

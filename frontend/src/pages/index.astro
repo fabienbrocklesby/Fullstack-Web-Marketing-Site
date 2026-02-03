@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import EasterEgg from "../components/EasterEgg.astro";
+import LaserSketch from "../components/LaserSketch.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
 import { pricingOffers } from "../data/pricing";
 import { homepageFaq } from "../data/faq";
@@ -902,7 +903,8 @@ const structuredData = [
             <div class="card-body">
               <h3 class="card-title">
                 AI Assistant <span class="badge badge-secondary badge-xs"
-                  >Pro</span>
+                  >Pro</span
+                >
               </h3>
               <p class="text-sm opacity-80">
                 Describe your goal and let AI tune contrast, tone, and settings
@@ -1338,4 +1340,5 @@ const structuredData = [
 
   <Footer />
   <EasterEgg />
+  <LaserSketch />
 </Layout>
