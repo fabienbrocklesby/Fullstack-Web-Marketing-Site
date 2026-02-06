@@ -1,4 +1,6 @@
 ---
+import Icon from "../icons/Icon.astro";
+
 interface FeatureItem {
   icon: string;
   title: string;
@@ -29,7 +31,7 @@ const transformedFeatures = features.map((feature) => {
       badge: feature.badge,
       badgeStyle: feature.badgeStyle || "primary",
       link: feature.link,
-      iconStyle: feature.iconStyle || "emoji",
+      iconStyle: feature.iconStyle || "none",
       size: feature.size || "md",
     };
   }
@@ -37,7 +39,7 @@ const transformedFeatures = features.map((feature) => {
   return {
     ...feature,
     badgeStyle: feature.badgeStyle || "primary",
-    iconStyle: feature.iconStyle || "emoji",
+    iconStyle: feature.iconStyle || "none",
     size: feature.size || "md",
   };
 });
@@ -59,10 +61,10 @@ const transformedFeatures = features.map((feature) => {
 
           const iconSizeClass =
             feature.size === "sm"
-              ? "text-xl"
+              ? "w-5 h-5"
               : feature.size === "lg"
-                ? "text-4xl"
-                : "text-2xl";
+                ? "w-10 h-10"
+                : "w-6 h-6";
           const cardSizeClass =
             feature.size === "sm"
               ? "p-4"
@@ -79,16 +81,26 @@ const transformedFeatures = features.map((feature) => {
                 <div class="flex items-start gap-3 mb-3">
                   {feature.iconStyle === "circle" ? (
                     <div class="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center flex-shrink-0">
-                      <span class={iconSizeClass}>{feature.icon}</span>
+                      <Icon
+                        name={feature.icon || "rocket"}
+                        class={iconSizeClass}
+                        ariaLabel={feature.title || "Feature icon"}
+                      />
                     </div>
                   ) : feature.iconStyle === "square" ? (
                     <div class="w-12 h-12 rounded-lg bg-primary text-primary-content flex items-center justify-center">
-                      <span class={iconSizeClass}>{feature.icon}</span>
+                      <Icon
+                        name={feature.icon || "rocket"}
+                        class={iconSizeClass}
+                        ariaLabel={feature.title || "Feature icon"}
+                      />
                     </div>
                   ) : (
-                    <span class={`${iconSizeClass} flex-shrink-0`}>
-                      {feature.icon}
-                    </span>
+                    <Icon
+                      name={feature.icon || "rocket"}
+                      class={`${iconSizeClass} flex-shrink-0 text-primary`}
+                      ariaLabel={feature.title || "Feature icon"}
+                    />
                   )}
                   <div class="flex-1">
                     <div class="flex items-center gap-2 mb-2">

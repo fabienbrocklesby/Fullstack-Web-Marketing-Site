@@ -336,7 +336,7 @@ class JourneyTracker {
 
       this.lastActivity = Date.now();
       console.log(
-        `🛤️ Tracked ${action} on ${page} for affiliate ${this.affiliateCode}`,
+        `[Journey] Tracked ${action} on ${page} for affiliate ${this.affiliateCode}`,
       );
     } catch (error) {
       console.warn("Failed to track action:", error);
@@ -370,7 +370,7 @@ class JourneyTracker {
       });
 
       console.log(
-        `🎯 Tracked conversion event: ${eventType} for affiliate ${this.affiliateCode}`,
+        `[Conversion] Tracked conversion event: ${eventType} for affiliate ${this.affiliateCode}`,
       );
     } catch (error) {
       console.warn("Failed to track conversion event:", error);

@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
+import Icon from "../components/icons/Icon.astro";
 import { STRAPI_URL } from "../config/strapi";
 
 const fallbackSite = new URL("https://lightlane.app");
@@ -8,10 +9,10 @@ const siteBase = Astro.site ?? fallbackSite;
 const toAbsolute = (path: string) => new URL(path, siteBase).href;
 
 const contactKeywords = [
-  "contact Lightlane",
+  "contact Light Lane",
   "laser engraving software support",
   "laser cutter software sales",
-  "Lightlane partnerships",
+  "Light Lane partnerships",
   "laser engraving software help",
 ];
 
@@ -20,8 +21,8 @@ const structuredData = [
     "@context": "https://schema.org",
     "@type": "ContactPage",
     "@id": `${toAbsolute("/contact")}#contact-page`,
-    name: "Contact Lightlane",
-    description: "Reach the Lightlane support, sales, and partnerships teams.",
+    name: "Contact Light Lane",
+    description: "Reach the Light Lane support, sales, and partnerships teams.",
     url: toAbsolute("/contact"),
     keywords: contactKeywords.join(", "),
     mainEntity: [
@@ -52,8 +53,8 @@ const structuredData = [
 ---
 
 <Layout
-  title="Contact - Lightlane"
-  description="Reach the Lightlane team: support, sales & partnership enquiries."
+  title="Contact - Light Lane"
+  description="Reach the Light Lane team: support, sales & partnership enquiries."
   keywords={contactKeywords.join(", ")}
   structuredData={structuredData}
   breadcrumbs={[
@@ -89,7 +90,7 @@ const structuredData = [
           <p
             class="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto"
           >
-            Questions about Lightlane laser engraving software licensing,
+            Questions about Light Lane laser engraving software licensing,
             controller support, or partnerships? Send a note and the right team
             will reply shortly with expert help for your laser cutter workflow.
           </p>
@@ -230,7 +231,7 @@ const structuredData = [
                   <div
                     class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary"
                   >
-                    💡
+                    <Icon name="lightbulb" class="w-5 h-5" ariaLabel="Tip" />
                   </div>
                   <h3 class="font-semibold">Need faster support?</h3>
                 </div>
@@ -254,9 +255,10 @@ const structuredData = [
                 <ul class="space-y-4 text-sm">
                   <li class="flex gap-3">
                     <span
-                      class="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-base"
-                      >✉️</span
+                      class="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center"
                     >
+                      <Icon name="mail" class="w-4 h-4" ariaLabel="Support" />
+                    </span>
                     <div>
                       <p class="font-medium">Support</p>
                       <a
@@ -268,9 +270,14 @@ const structuredData = [
                   </li>
                   <li class="flex gap-3">
                     <span
-                      class="w-9 h-9 rounded-full bg-secondary/15 text-secondary flex items-center justify-center text-base"
-                      >🤝</span
+                      class="w-9 h-9 rounded-full bg-secondary/15 text-secondary flex items-center justify-center"
                     >
+                      <Icon
+                        name="handshake"
+                        class="w-4 h-4"
+                        ariaLabel="Partnerships"
+                      />
+                    </span>
                     <div>
                       <p class="font-medium">Partnerships</p>
                       <a
@@ -282,9 +289,10 @@ const structuredData = [
                   </li>
                   <li class="flex gap-3">
                     <span
-                      class="w-9 h-9 rounded-full bg-accent/15 text-accent flex items-center justify-center text-base"
-                      >💼</span
+                      class="w-9 h-9 rounded-full bg-accent/15 text-accent flex items-center justify-center"
                     >
+                      <Icon name="briefcase" class="w-4 h-4" ariaLabel="Sales" />
+                    </span>
                     <div>
                       <p class="font-medium">Sales</p>
                       <a
@@ -296,17 +304,9 @@ const structuredData = [
                   </li>
                   <li class="flex gap-3">
                     <span
-                      class="w-9 h-9 rounded-full bg-info/15 text-info flex items-center justify-center text-base"
+                      class="w-9 h-9 rounded-full bg-info/15 text-info flex items-center justify-center"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                      </svg>
+                      <Icon name="linkedin" class="w-4 h-4" ariaLabel="LinkedIn" />
                     </span>
                     <div>
                       <p class="font-medium">LinkedIn</p>
@@ -319,11 +319,32 @@ const structuredData = [
                       >
                     </div>
                   </li>
+                  <li class="flex gap-3">
+                    <span
+                      class="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center"
+                    >
+                      <Icon
+                        name="instagram"
+                        class="w-4 h-4"
+                        ariaLabel="Instagram"
+                      />
+                    </span>
+                    <div>
+                      <p class="font-medium">Instagram</p>
+                      <a
+                        href="https://www.instagram.com/lightlane.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="link link-primary break-all"
+                        >@lightlane.app</a
+                      >
+                    </div>
+                  </li>
                 </ul>
                 <div class="mt-4 text-xs text-base-content/50 leading-relaxed">
                   <p>Office hours: Mon-Fri 9am-6pm (UTC)</p>
                   <p>
-                    Lightlane is globally distributed - replies may come from
+                    Light Lane is globally distributed - replies may come from
                     multiple time zones.
                   </p>
                 </div>

@@ -8,7 +8,7 @@ class JourneyTracker {
     this.lastActivity = Date.now();
     this.currentPage = window.location.pathname;
 
-    console.log(`🔗 Journey tracker initialized:`, {
+    console.log(`[Tracker] Journey tracker initialized:`, {
       visitorId: this.visitorId,
       sessionId: this.sessionId,
       affiliateCode: this.affiliateCode,
@@ -19,7 +19,7 @@ class JourneyTracker {
     // Don't track anything on team authentication pages (but allow customer pages)
     if (this.isTeamAuthPage(this.currentPage)) {
       console.log(
-        "📊 Team authentication page detected - tracking completely disabled",
+        "[Stats] Team authentication page detected - tracking completely disabled",
       );
       return;
     }
@@ -31,10 +31,10 @@ class JourneyTracker {
 
     if (this.affiliateCode) {
       console.log(
-        `📊 Affiliate tracking active with code: ${this.affiliateCode}`,
+        `[Stats] Affiliate tracking active with code: ${this.affiliateCode}`,
       );
     } else {
-      console.log("📊 General tracking active (no affiliate code)");
+      console.log("[Stats] General tracking active (no affiliate code)");
     }
   }
 
@@ -70,7 +70,7 @@ class JourneyTracker {
         `🆕 New visitor created (persistent across tabs): ${visitorId}`,
       );
     } else {
-      console.log(`🔄 Existing visitor loaded: ${visitorId}`);
+      console.log(`[Refresh] Existing visitor loaded: ${visitorId}`);
     }
     return visitorId;
   }
@@ -205,7 +205,7 @@ class JourneyTracker {
   async handlePageChange() {
     const newPage = window.location.pathname;
     if (newPage !== this.currentPage) {
-      console.log(`📍 Page changed from ${this.currentPage} to ${newPage}`);
+      console.log(`[Page] Page changed from ${this.currentPage} to ${newPage}`);
       this.currentPage = newPage;
       await this.trackAction("page_view", newPage, {
         title: document.title,
@@ -382,7 +382,7 @@ class JourneyTracker {
           required: el.required || false,
         }));
 
-      console.log(`📝 Form submitted on page: ${actualPage}`, {
+      console.log(`[Form] Form submitted on page: ${actualPage}`, {
         formId:
           form.id || form.getAttribute("data-form-name") || "unnamed-form",
         fieldCount: formFields.length,
@@ -453,7 +453,7 @@ class JourneyTracker {
           target.placeholder ||
           "unknown-field";
 
-        console.log(`🎯 Form field focus tracked on ${actualPage}:`, {
+        console.log(`[Conversion] Form field focus tracked on ${actualPage}:`, {
           fieldName,
           fieldLabel,
           formId,
@@ -533,7 +533,7 @@ class JourneyTracker {
           target.placeholder ||
           "unknown-field";
 
-        console.log(`📝 Form field changed on ${actualPage}:`, {
+        console.log(`[Form] Form field changed on ${actualPage}:`, {
           fieldName,
           formId,
           valueData,
@@ -592,7 +592,7 @@ class JourneyTracker {
     // Don't track anything on team authentication pages
     const actualPage = window.location.pathname;
     if (this.isTeamAuthPage(actualPage)) {
-      console.log("📊 Skipping tracking on team authentication page");
+      console.log("[Stats] Skipping tracking on team authentication page");
       return;
     }
 
@@ -607,7 +607,7 @@ class JourneyTracker {
       // If there's an affiliate code, track for affiliate attribution
       if (this.affiliateCode) {
         console.log(
-          `🛤️ Tracking ${action} on actual page: ${actualPage} (stored: ${page}) for affiliate: ${this.affiliateCode}`,
+          `[Journey] Tracking ${action} on actual page: ${actualPage} (stored: ${page}) for affiliate: ${this.affiliateCode}`,
         );
 
         // FIXED: Send both visitor ID and session ID for proper tracking
@@ -653,7 +653,7 @@ class JourneyTracker {
     // Only track conversion events if there's an affiliate code (these are for affiliate attribution)
     if (!this.affiliateCode) {
       console.log(
-        `🎯 Skipping conversion event ${eventType} - no affiliate code for attribution`,
+        `[Conversion] Skipping conversion event ${eventType} - no affiliate code for attribution`,
       );
       return;
     }
@@ -679,7 +679,7 @@ class JourneyTracker {
       });
 
       console.log(
-        `🎯 Tracked conversion event: ${eventType} for affiliate ${this.affiliateCode}`,
+        `[Conversion] Tracked conversion event: ${eventType} for affiliate ${this.affiliateCode}`,
       );
     } catch (error) {
       console.warn("Failed to track conversion event:", error);
@@ -738,7 +738,7 @@ class JourneyTracker {
     sessionStorage.removeItem("session_start_time");
     sessionStorage.removeItem("affiliate_code");
     sessionStorage.removeItem("affiliate_visit_timestamp");
-    console.log("🧹 Tracking data reset for this tab");
+    console.log("[Cleanup] Tracking data reset for this tab");
   }
 
   async trackPurchaseComplete(purchaseId, amount, priceId) {

@@ -16,7 +16,7 @@ class AuthGuard {
 
     const currentPath = window.location.pathname;
 
-    console.log("🔍 Auth Guard checking:", {
+    console.log("[Debug] Auth Guard checking:", {
       path: currentPath,
       hasCustomerToken: !!customerToken,
       hasAffiliateJWT: !!affiliateJWT,
@@ -27,7 +27,7 @@ class AuthGuard {
     // If customer is authenticated and tries to access login/register pages
     if (customerToken && customer && this.isCustomerAuthPage(currentPath)) {
       console.log(
-        "👤 Customer already authenticated, redirecting to dashboard",
+        "[Customer] Customer already authenticated, redirecting to dashboard",
       );
       window.location.href = "/customer/dashboard";
       return;
@@ -36,7 +36,7 @@ class AuthGuard {
     // If affiliate is authenticated and tries to access login pages
     if (affiliateJWT && user && this.isAffiliateAuthPage(currentPath)) {
       console.log(
-        "👔 Affiliate already authenticated, redirecting to dashboard",
+        "[Affiliate] Affiliate already authenticated, redirecting to dashboard",
       );
       window.location.href = "/dashboard";
       return;
@@ -45,7 +45,7 @@ class AuthGuard {
     // If accessing protected customer pages without authentication
     if (!customerToken && this.isProtectedCustomerPage(currentPath)) {
       console.log(
-        "🚫 Customer page requires authentication, redirecting to login",
+        "[Auth] Customer page requires authentication, redirecting to login",
       );
       window.location.href = "/customer/login";
       return;
@@ -54,13 +54,13 @@ class AuthGuard {
     // If accessing protected affiliate pages without authentication
     if (!affiliateJWT && this.isProtectedAffiliatePage(currentPath)) {
       console.log(
-        "🚫 Affiliate page requires authentication, redirecting to login",
+        "[Auth] Affiliate page requires authentication, redirecting to login",
       );
       window.location.href = "/login";
       return;
     }
 
-    console.log("✅ Auth guard check passed");
+    console.log("[OK] Auth guard check passed");
   }
 
   isCustomerAuthPage(path) {

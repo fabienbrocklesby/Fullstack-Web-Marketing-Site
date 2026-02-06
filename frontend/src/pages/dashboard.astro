@@ -458,7 +458,7 @@ import Layout from "../layouts/Layout.astro";
 
         if (statsResponse.ok) {
           affiliateStats = await statsResponse.json();
-          console.log("📊 Affiliate stats loaded:", affiliateStats);
+          console.log("[Stats] Affiliate stats loaded:", affiliateStats);
         } else {
           console.warn("Failed to load affiliate stats:", statsResponse.status);
         }
@@ -738,7 +738,7 @@ import Layout from "../layouts/Layout.astro";
 
         if (journeyResponse.ok) {
           const journeyData = await journeyResponse.json();
-          console.log("📊 Visitor journeys loaded:", journeyData);
+          console.log("[Stats] Visitor journeys loaded:", journeyData);
           displayVisitorJourneys(journeyData);
 
           // Show the visitor journeys section

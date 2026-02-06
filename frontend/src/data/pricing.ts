@@ -26,7 +26,7 @@ export function getPriceValidUntil(): string {
 export const pricingOffers: PricingOffer[] = [
   {
     name: "Maker",
-    schemaName: "Lightlane Maker Plan",
+    schemaName: "Light Lane Maker Plan",
     sku: "lightlane-maker-subscription",
     priceCurrency: "USD",
     monthlyPrice: 12,
@@ -40,7 +40,7 @@ export const pricingOffers: PricingOffer[] = [
   },
   {
     name: "Pro",
-    schemaName: "Lightlane Pro Plan",
+    schemaName: "Light Lane Pro Plan",
     sku: "lightlane-pro-subscription",
     priceCurrency: "USD",
     monthlyPrice: 24,
@@ -55,7 +55,7 @@ export const pricingOffers: PricingOffer[] = [
   },
   {
     name: "Enterprise",
-    schemaName: "Lightlane Enterprise Deployment",
+    schemaName: "Light Lane Enterprise Deployment",
     priceCurrency: "USD",
     description:
       "Custom rollouts for production facilities requiring governance, automation APIs, and roadmap alignment.",
@@ -65,7 +65,7 @@ export const pricingOffers: PricingOffer[] = [
   },
   {
     name: "Education",
-    schemaName: "Lightlane Education Program",
+    schemaName: "Light Lane Education Program",
     priceCurrency: "USD",
     description:
       "Institutional access for labs, classrooms, and maker programs needing managed stations and central resources.",

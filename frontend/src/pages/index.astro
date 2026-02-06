@@ -22,7 +22,7 @@ const homepageKeywords = [
   "AI image prep for laser engraving",
   "smart laser engraving settings",
   "best AI laser engraving software",
-  "Lightlane AI laser engraving",
+  "Light Lane AI laser engraving",
 ];
 
 const workflowSteps = [
@@ -31,7 +31,7 @@ const workflowSteps = [
     anchor: "/#workflow-step-1",
     name: "Import Your Design",
     description:
-      "Drop in SVGs, images, or design files. Lightlane normalizes layers and paths so you can get straight to work.",
+      "Drop in SVGs, images, or design files. Light Lane normalizes layers and paths so you can get straight to work.",
     video: "/landing/drag&drop.mp4",
   },
   {
@@ -82,7 +82,7 @@ const howToSchema = {
   "@context": "https://schema.org",
   "@type": "HowTo",
   "@id": `${toAbsolute("/")}#laser-engraving-workflow`,
-  name: "How to engrave with Lightlane laser engraving software",
+  name: "How to engrave with Light Lane laser engraving software",
   description:
     "Import your design, set up your job with material presets, preview the result, and stream to your laser. Supports G-code, GRBL, and Ruida controllers.",
   image: toAbsolute("/landing/basicscreen.png"),
@@ -90,7 +90,7 @@ const howToSchema = {
   tool: [
     {
       "@type": "HowToTool",
-      name: "Lightlane laser engraving software",
+      name: "Light Lane laser engraving software",
     },
   ],
   supply: [
@@ -100,7 +100,7 @@ const howToSchema = {
     },
     {
       "@type": "HowToSupply",
-      name: "Material presets or saved Lightlane templates",
+      name: "Material presets or saved Light Lane templates",
     },
   ],
   step: workflowSteps.map((step, index) => ({
@@ -116,7 +116,7 @@ const videoStructuredData = workflowSteps.map((step) => ({
   "@context": "https://schema.org",
   "@type": "VideoObject",
   "@id": `${toAbsolute("/")}#${step.id}-video`,
-  name: `${step.name} - Lightlane laser engraving software`,
+  name: `${step.name} - Light Lane laser engraving software`,
   description: step.description,
   thumbnailUrl: [toAbsolute("/NotRoundedLogo.png")],
   uploadDate: new Date().toISOString().slice(0, 10),
@@ -130,7 +130,7 @@ const structuredData = [
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "@id": `${toAbsolute("/")}#lightlane-software`,
-    name: "Lightlane",
+    name: "Light Lane",
     description:
       "AI-powered laser engraving software: drop an image, tell AI your material and goal, get optimized settings and engrave. Smart, fast, pro-grade.",
     applicationCategory: "DesignApplication",
@@ -149,12 +149,12 @@ const structuredData = [
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${toAbsolute("/")}#lightlane-product`,
-    name: "Lightlane AI Laser Engraving Software",
+    name: "Light Lane AI Laser Engraving Software",
     description:
       "AI-powered laser engraving software that handles image prep, suggests optimal settings, and streams to your machine. Full manual control when you want it.",
     brand: {
       "@type": "Brand",
-      name: "Lightlane",
+      name: "Light Lane",
       logo: toAbsolute("/LogoHorizontal.webp"),
     },
     category: "Software",
@@ -193,7 +193,7 @@ const structuredData = [
 ---
 
 <Layout
-  title="Lightlane - AI-Powered Laser Engraving Software"
+  title="Light Lane - AI-Powered Laser Engraving Software"
   description="AI laser engraving software: drop an image, choose your material, let AI prep and suggest settings, then engrave. Full manual control when you need it."
   keywords={homepageKeywords.join(", ")}
   structuredData={structuredData}
@@ -295,14 +295,15 @@ const structuredData = [
             </li>
             <li class="flex gap-3">
               <span class="text-accent">•</span><span
-                >Most tools offer no help—just endless menus and
+                >Most tools offer no help-just endless menus and
                 trial-and-error.</span
               >
             </li>
           </ul>
           <p class="text-base-content/80 text-sm">
-            Lightlane's AI Assistant tunes images and suggests settings for your
-            material and laser. You stay in control—override anything, anytime.
+            Light Lane's AI Assistant tunes images and suggests settings for
+            your material and laser. You stay in control-override anything,
+            anytime.
           </p>
           <div class="flex flex-wrap gap-4">
             <a
@@ -320,7 +321,7 @@ const structuredData = [
             <div class="border-t border-base-300 bg-base-100 overflow-hidden">
               <img
                 src="/landing/basicscreen.png"
-                alt="Lightlane basic engraving workspace screen"
+                alt="Light Lane basic engraving workspace screen"
                 loading="eager"
                 width={1920}
                 height={1027}
@@ -382,7 +383,7 @@ const structuredData = [
                   <div class="space-y-3">
                     <h3 class="text-xl font-semibold">Import Your Design</h3>
                     <p class="text-sm text-base-content/70">
-                      Drop in SVGs, images, or design files. Lightlane
+                      Drop in SVGs, images, or design files. Light Lane
                       normalizes layers and paths so you can get straight to
                       work.
                     </p>
@@ -687,7 +688,7 @@ const structuredData = [
               </div>
               <h3 class="font-semibold">Full Manual Control</h3>
               <p class="text-sm text-base-content/70">
-                AI suggests, you decide. Override any parameter—power, speed,
+                AI suggests, you decide. Override any parameter-power, speed,
                 passes, layers. Always in control.
               </p>
             </div>
@@ -720,7 +721,7 @@ const structuredData = [
               <h3 class="font-semibold">Materials Database</h3>
               <p class="text-sm text-base-content/70">
                 AI draws from curated presets per material. Power, speed,
-                passes—all tuned for real-world results.
+                passes-all tuned for real-world results.
               </p>
             </div>
             <!-- Material Test Grid -->
@@ -858,7 +859,7 @@ const structuredData = [
           <div class="text-center space-y-4">
             <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">FAQ</h2>
             <p class="text-sm text-base-content/60 max-w-2xl mx-auto">
-              What makers ask first about using Lightlane day-to-day.
+              What makers ask first about using Light Lane day-to-day.
             </p>
           </div>
           <div class="join join-vertical w-full" id="faq">
@@ -891,7 +892,7 @@ const structuredData = [
       <div class="container">
         <div class="page-header">
           <h2 class="text-3xl md:text-4xl font-bold text-ll-gradient">
-            Why makers choose Lightlane
+            Why makers choose Light Lane
           </h2>
           <p class="mt-4 text-base-content/70 max-w-2xl mx-auto">
             Pro tools that speed up your workflow. Full control when you need
@@ -1180,7 +1181,7 @@ const structuredData = [
           Engrave smarter. Ship faster.
         </h2>
         <p class="text-lg text-base-content/70 mb-8">
-          Download Lightlane today and explore every Pro feature for 14 days,
+          Download Light Lane today and explore every Pro feature for 14 days,
           free. No credit card required. When you're ready, choose the plan that
           fits your workflow and keep your subscription running.
         </p>

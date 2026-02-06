@@ -30,19 +30,19 @@ export const coreFaq: FaqEntry[] = [
     id: "manage-billing",
     question: "Where do I manage my plan and billing?",
     answer:
-      "Everything lives in your Lightlane Portal. Log in at lightlane.app/customer/dashboard to view your subscription, update payment details, switch plans, or download invoices.",
+      "Everything lives in your Light Lane Portal. Log in at lightlane.app/customer/dashboard to view your subscription, update payment details, switch plans, or download invoices.",
   },
   {
     id: "cancel-anytime",
     question: "Can I cancel anytime?",
     answer:
-      "Yes. Cancel from your dashboard whenever you like. You keep access until the end of your billing period — no surprise charges, no questions asked.",
+      "Yes. Cancel from your dashboard whenever you like. You keep access until the end of your billing period - no surprise charges, no questions asked.",
   },
   {
     id: "controllers-supported",
     question: "Which controllers are supported?",
     answer:
-      "G-code and GRBL controllers are fully supported on all plans. Ruida support is included in Pro as an early alpha — functional but still being refined. K40 / M2-Nano is on the roadmap.",
+      "G-code and GRBL controllers are fully supported on all plans. Ruida support is included in Pro as an early alpha - functional but still being refined. K40 / M2-Nano is on the roadmap.",
   },
   {
     id: "ruida-status",
@@ -54,13 +54,13 @@ export const coreFaq: FaqEntry[] = [
     id: "ai-features",
     question: "What does the AI do?",
     answer:
-      "The AI Assistant (Pro plan) tunes your image for engraving—adjusting contrast, tone, and color balance for how lasers interact with materials. Tell it your material, laser, and desired look, and it suggests power, speed, and pass settings as a starting point. You stay in control of the final result.",
+      "The AI Assistant (Pro plan) tunes your image for engraving-adjusting contrast, tone, and color balance for how lasers interact with materials. Tell it your material, laser, and desired look, and it suggests power, speed, and pass settings as a starting point. You stay in control of the final result.",
   },
   {
     id: "manual-control",
     question: "Do I still get manual control?",
     answer:
-      "Absolutely. AI suggestions are optional hints. You have full manual control over every parameter — power, speed, passes, layers, and device settings. Override or ignore suggestions whenever you want.",
+      "Absolutely. AI suggestions are optional hints. You have full manual control over every parameter - power, speed, passes, layers, and device settings. Override or ignore suggestions whenever you want.",
   },
 ];
 

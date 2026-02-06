@@ -1,7 +1,7 @@
 /**
  * Subscription pricing utilities
  * 
- * Lightlane uses a subscription model with monthly and yearly billing options.
+ * Light Lane uses a subscription model with monthly and yearly billing options.
  * 14-day free trial included with all plans - no credit card required.
  */
 
@@ -24,7 +24,7 @@ export function getSaleTitle(): string {
  * Get the description for the pricing page
  */
 export function getSaleDescription(): string {
-  return 'Try Lightlane <span class="font-semibold text-primary">free for 14 days</span>. Full access to every feature. No credit card required to start.';
+  return 'Try Light Lane <span class="font-semibold text-primary">free for 14 days</span>. Full access to every feature. No credit card required to start.';
 }
 
 /**

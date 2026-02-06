@@ -225,15 +225,15 @@
         if (refParam) {
           if (trackerAffiliateCode === refParam) {
             console.log(
-              "✅ SUCCESS: URL parameter correctly detected and stored",
+              "[OK] SUCCESS: URL parameter correctly detected and stored",
             );
           } else {
             console.error(
-              "❌ FAILED: URL parameter not correctly stored in tracker",
+              "[ERROR] FAILED: URL parameter not correctly stored in tracker",
             );
           }
         } else {
-          console.log("ℹ️ No ref parameter in URL to test");
+          console.log("[INFO] No ref parameter in URL to test");
         }
 
         updateStatus();
@@ -254,10 +254,10 @@
             timestamp: new Date().toISOString(),
           })
           .then(() => {
-            console.log("✅ Button tracking successful");
+            console.log("[OK] Button tracking successful");
           })
           .catch((error) => {
-            console.error("❌ Button tracking failed:", error);
+            console.error("[ERROR] Button tracking failed:", error);
           });
       }
 
@@ -275,10 +275,10 @@
             timestamp: new Date().toISOString(),
           })
           .then(() => {
-            console.log("✅ Page view tracking successful");
+            console.log("[OK] Page view tracking successful");
           })
           .catch((error) => {
-            console.error("❌ Page view tracking failed:", error);
+            console.error("[ERROR] Page view tracking failed:", error);
           });
       }
 
@@ -286,23 +286,23 @@
         localStorage.removeItem("affiliate_code");
         sessionStorage.removeItem("affiliate_code");
         document.cookie = "affiliate_code=; path=/; max-age=0";
-        console.log("🧹 Cleared all affiliate storage");
+        console.log("[Cleanup] Cleared all affiliate storage");
         updateStatus();
       }
 
       function refreshStatus() {
         updateStatus();
-        console.log("🔄 Status refreshed");
+        console.log("[Refresh] Status refreshed");
       }
 
       // Initialize when page loads
       document.addEventListener("DOMContentLoaded", () => {
-        console.log("📄 Test page loaded");
+        console.log("[PageView] Test page loaded");
         updateStatus();
 
         // Wait a bit for the journey tracker to initialize
         setTimeout(() => {
-          console.log("🔍 Running initial affiliate detection test...");
+          console.log("[Debug] Running initial affiliate detection test...");
           testAffiliateDetection();
         }, 1000);
       });

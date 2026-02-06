@@ -2,7 +2,7 @@
 // Open browser console and run this script on any page with ?ref=test
 
 function testAffiliateTracking() {
-  console.log("🔍 AFFILIATE TRACKING TEST STARTING...");
+  console.log("[Debug] AFFILIATE TRACKING TEST STARTING...");
   console.log("=====================================");
 
   // Test URL parameter detection
@@ -16,7 +16,7 @@ function testAffiliateTracking() {
 
   if (!trackerExists) {
     console.error(
-      "❌ Journey tracker not found! Check if script is loading properly.",
+      "[ERROR] Journey tracker not found! Check if script is loading properly.",
     );
     return;
   }
@@ -64,10 +64,10 @@ function testAffiliateTracking() {
         timestamp: new Date().toISOString(),
       })
       .then(() => {
-        console.log("✅ Manual tracking test successful");
+        console.log("[OK] Manual tracking test successful");
       })
       .catch((error) => {
-        console.error("❌ Manual tracking test failed:", error);
+        console.error("[ERROR] Manual tracking test failed:", error);
       });
   }
 
@@ -78,7 +78,7 @@ function testAffiliateTracking() {
     window.journeyTracker &&
     window.journeyTracker.affiliateCode === refParam
   ) {
-    console.log("✅ SUCCESS: Affiliate tracking is working correctly!");
+    console.log("[OK] SUCCESS: Affiliate tracking is working correctly!");
     console.log("   - URL parameter detected and stored");
     console.log("   - Tracker initialized properly");
     console.log("   - Should persist across page navigation");
@@ -87,21 +87,21 @@ function testAffiliateTracking() {
     (!window.journeyTracker || !window.journeyTracker.affiliateCode)
   ) {
     console.log(
-      "❌ ISSUE: Affiliate parameter found but not stored in tracker",
+      "[ERROR] ISSUE: Affiliate parameter found but not stored in tracker",
     );
     console.log("   - Check for JavaScript errors");
     console.log("   - Verify tracker initialization");
   } else if (!refParam && window.journeyTracker) {
-    console.log("ℹ️ INFO: No affiliate parameter in URL, but tracker is ready");
+    console.log("[INFO] INFO: No affiliate parameter in URL, but tracker is ready");
     console.log("   - Add ?ref=testcode to URL to test affiliate tracking");
   } else {
-    console.log("❌ CRITICAL: Tracker not loaded or major issue");
+    console.log("[ERROR] CRITICAL: Tracker not loaded or major issue");
     console.log("   - Check if journey-tracker.js is loading");
     console.log("   - Check browser console for errors");
   }
 
   console.log(
-    "🔍 Test complete. Check Network tab for API calls if affiliate code was detected.",
+    "[Debug] Test complete. Check Network tab for API calls if affiliate code was detected.",
   );
 }
 

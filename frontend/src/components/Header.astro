@@ -39,6 +39,7 @@
         <li><a href="/pricing" class="text-base">Pricing</a></li>
         <li><a href="/blog" class="text-base">Blog</a></li>
         <li><a href="/contact" class="text-base">Contact</a></li>
+        <li><a href="/instagram" class="text-base">Instagram</a></li>
 
         <!-- Default Mobile Menu (shown when not authenticated) -->
         <li class="border-t border-base-200 mt-2 pt-2 auth-default">
@@ -83,7 +84,7 @@
         <!-- SVG fallback -->
         <img
           src="https://publicassets.lightlane.app/LightLane(SVG).svg"
-          alt="Lightlane"
+          alt="Light Lane"
           class="h-10 w-auto flex-shrink-0"
           loading="eager"
           decoding="async"
@@ -98,6 +99,7 @@
       <li><a href="/pricing" class="btn btn-ghost btn-sm">Pricing</a></li>
       <li><a href="/blog" class="btn btn-ghost btn-sm">Blog</a></li>
       <li><a href="/contact" class="btn btn-ghost btn-sm">Contact</a></li>
+      <li><a href="/instagram" class="btn btn-ghost btn-sm">Instagram</a></li>
     </ul>
   </div>
 
@@ -203,13 +205,13 @@
 
       if (customerToken && customer) {
         this.showCustomerUI(customer);
-        console.log("🔐 Customer authenticated:", customer.email);
+        console.log("[Auth] Customer authenticated:", customer.email);
       } else if (affiliateJWT && user) {
         this.showAffiliateUI(user);
-        console.log("🔐 Affiliate authenticated:", user.email);
+        console.log("[Auth] Affiliate authenticated:", user.email);
       } else {
         this.showDefaultUI();
-        console.log("🔓 No authentication found");
+        console.log("[Auth] No authentication found");
       }
     }
 
@@ -269,7 +271,7 @@
       localStorage.removeItem("customer");
       localStorage.removeItem("jwt");
       localStorage.removeItem("user");
-      console.log("🚪 User logged out");
+      console.log("[Auth] User logged out");
       window.location.href = "/";
     }
 

@@ -2,11 +2,12 @@
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import DownloadButtons from "../components/DownloadButtons.astro";
+import Icon from "../components/icons/Icon.astro";
 ---
 
 <Layout
   title="Success - Subscription Started"
-  description="Welcome to Lightlane!"
+  description="Welcome to Light Lane!"
 >
   <!-- Header rendered by Layout.astro -->
 
@@ -14,10 +15,16 @@ import DownloadButtons from "../components/DownloadButtons.astro";
     <section class="py-20">
       <div class="container mx-auto px-4">
         <div class="text-center max-w-2xl mx-auto">
-          <div class="text-6xl mb-8">🎉</div>
+          <div class="flex justify-center mb-8">
+            <div
+              class="w-16 h-16 rounded-2xl bg-success/10 text-success flex items-center justify-center"
+            >
+              <Icon name="sparkles" class="w-9 h-9" ariaLabel="Success" />
+            </div>
+          </div>
           <h1 class="text-4xl font-bold mb-4">Subscription Started!</h1>
           <p class="text-xl text-base-content/70 mb-6">
-            Welcome to Lightlane. Download the app below and sign in to start
+            Welcome to Light Lane. Download the app below and sign in to start
             using all features. Manage your subscription anytime in your
             dashboard.
           </p>
@@ -51,7 +58,20 @@ import DownloadButtons from "../components/DownloadButtons.astro";
 
     if (sessionId && priceId && amount) {
       try {
-        console.log("🔄 Creating purchase record for session:", sessionId);
+        console.log("[Purchase] Creating purchase record for session:", sessionId);
+
+        const inlineIcon = (path: string) =>
+          `<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"inline-block w-4 h-4 mr-1 align-text-bottom\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"${path}\"></path></svg>`;
+
+        const fileIcon = inlineIcon(
+          "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",
+        );
+        const coinsIcon = inlineIcon(
+          "M3 6c0 1.1 2.7 2 6 2s6-.9 6-2-2.7-2-6-2-6 .9-6 2z M3 12c0 1.1 2.7 2 6 2s6-.9 6-2 M3 18c0 1.1 2.7 2 6 2s6-.9 6-2",
+        );
+        const warningIcon = inlineIcon(
+          "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+        );
 
         const cmsUrl =
           document.documentElement.getAttribute("data-cms-url") ||
@@ -82,14 +102,14 @@ import DownloadButtons from "../components/DownloadButtons.astro";
 
         if (response.ok) {
           const result = await response.json();
-          console.log("✅ Purchase record created:", result);
+          console.log("[Purchase] Purchase record created:", result);
 
           // Show success message with purchase details
           const purchaseInfo = document.createElement("div");
           purchaseInfo.className = "alert alert-success mt-4";
           purchaseInfo.innerHTML = `
             <div>
-              <h3>📄 Purchase Details</h3>
+              <h3>${fileIcon}Purchase Details</h3>
               <p><strong>Session ID:</strong> ${sessionId}</p>
               <p><strong>Amount:</strong> $${result.purchase.amount}</p>
               <p><strong>Product:</strong> ${priceId}</p>
@@ -103,7 +123,7 @@ import DownloadButtons from "../components/DownloadButtons.astro";
             affiliateInfo.className = "alert alert-info mt-4";
             affiliateInfo.innerHTML = `
               <div>
-                <h3>💰 Affiliate Credit Applied!</h3>
+                <h3>${coinsIcon}Affiliate Credit Applied!</h3>
                 <p>Affiliate <strong>${result.affiliate.name}</strong> (${result.affiliate.code}) will receive a commission of $${result.purchase.commissionAmount}.</p>
               </div>
             `;
@@ -113,23 +133,23 @@ import DownloadButtons from "../components/DownloadButtons.astro";
           document.querySelector(".text-center")?.appendChild(purchaseInfo);
         } else {
           const error = await response.json();
-          console.error("❌ Failed to create purchase record:", error);
+          console.error("[Purchase] Failed to create purchase record:", error);
 
           const errorInfo = document.createElement("div");
           errorInfo.className = "alert alert-warning mt-4";
           errorInfo.innerHTML = `
             <div>
-              <h3>⚠️ Note</h3>
+              <h3>${warningIcon}Note</h3>
               <p>Your payment was successful, but we couldn't automatically create the purchase record. Please contact support with session ID: ${sessionId}</p>
             </div>
           `;
           document.querySelector(".text-center")?.appendChild(errorInfo);
         }
       } catch (error) {
-        console.error("❌ Error creating purchase record:", error);
+        console.error("[Purchase] Error creating purchase record:", error);
       }
     } else {
-      console.log("ℹ️ No session details found in URL");
+      console.log("[Purchase] No session details found in URL");
     }
   });
 </script>

@@ -59,7 +59,7 @@ Authorization: Bearer <ai_token>
 
 ---
 
-## Stage 1 — Settings Assistant
+## Stage 1 - Settings Assistant
 
 ### Endpoint
 
@@ -135,7 +135,7 @@ All errors follow the standard envelope:
 
 ---
 
-## Stage 2 — Background Removal (planned, NOT IMPLEMENTED)
+## Stage 2 - Background Removal (planned, NOT IMPLEMENTED)
 
 **Status:** No route/handler exists yet. This stage is planned only.
 
@@ -151,7 +151,7 @@ All errors follow the standard envelope:
 
 ---
 
-## Stage 3 — Engrave Assistant (Image-based)
+## Stage 3 - Engrave Assistant (Image-based)
 
 ### Endpoint
 

@@ -13,8 +13,8 @@ export interface Props {
 }
 
 const {
-  title = "Lightlane - Laser Engraving Software",
-  description = "Lightlane is the faster, smarter, gradient-driven laser engraving software: import → preview → engrave in fewer clicks.",
+  title = "Light Lane - Laser Engraving Software",
+  description = "Light Lane is the faster, smarter, gradient-driven laser engraving software: import → preview → engrave in fewer clicks.",
   keywords = "",
   image = "/NotRoundedLogo.png",
   canonical = Astro.url.href,
@@ -48,8 +48,12 @@ const baseStructuredData = [
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": organizationId,
-    name: "Lightlane",
+    name: "Light Lane",
     url: absoluteUrl("/"),
+    sameAs: [
+      "https://www.instagram.com/lightlane.app/",
+      "https://www.linkedin.com/company/light-lane/",
+    ],
     logo: {
       "@type": "ImageObject",
       url: logoUrl,
@@ -83,7 +87,7 @@ const baseStructuredData = [
     "@type": "WebSite",
     "@id": websiteId,
     url: absoluteUrl("/"),
-    name: "Lightlane",
+    name: "Light Lane",
     description,
     inLanguage: "en-US",
     publisher: { "@id": organizationId },
@@ -136,12 +140,12 @@ const combinedStructuredData = [
       name="robots"
       content={`${noindex ? "noindex" : "index"}, ${nofollow ? "nofollow" : "follow"}`}
     />
-    <meta name="application-name" content="Lightlane" />
-    <meta name="author" content="Lightlane" />
+    <meta name="application-name" content="Light Lane" />
+    <meta name="author" content="Light Lane" />
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
-    <meta property="og:site_name" content="Lightlane" />
+    <meta property="og:site_name" content="Light Lane" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={title} />

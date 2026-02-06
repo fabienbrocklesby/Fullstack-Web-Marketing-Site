@@ -64,10 +64,10 @@ const blogKeywords = currentPost
   ? ([
       currentPost.title,
       "laser engraving software blog",
-      "Lightlane product updates",
-      currentPost.author ? `${currentPost.author} Lightlane` : undefined,
+      "Light Lane product updates",
+      currentPost.author ? `${currentPost.author} Light Lane` : undefined,
     ].filter(Boolean) as string[])
-  : ["laser engraving software blog", "Lightlane blog"];
+  : ["laser engraving software blog", "Light Lane blog"];
 
 const structuredData = currentPost
   ? [
@@ -83,7 +83,7 @@ const structuredData = currentPost
           : [toAbsolute("/NotRoundedLogo.png")],
         author: {
           "@type": "Person",
-          name: currentPost.author || "Lightlane Editorial",
+          name: currentPost.author || "Light Lane Editorial",
         },
         datePublished: currentPost.date,
         dateModified: currentPost.date,

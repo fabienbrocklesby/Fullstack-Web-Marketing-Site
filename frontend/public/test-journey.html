@@ -73,7 +73,7 @@
             document.getElementById("visitor-display").textContent =
               window.journeyTracker.visitorId || "None";
           } else {
-            console.log("❌ Journey tracker not found on window object");
+            console.log("[ERROR] Journey tracker not found on window object");
           }
         }, 1000);
       });
@@ -84,9 +84,9 @@
             buttonText: "Manual Test Button",
             timestamp: new Date().toISOString(),
           });
-          console.log("✅ Manual button click tracked");
+          console.log("[OK] Manual button click tracked");
         } else {
-          console.log("❌ Journey tracker not available");
+          console.log("[ERROR] Journey tracker not available");
         }
       }
 
@@ -96,9 +96,9 @@
             title: "Test Page",
             timestamp: new Date().toISOString(),
           });
-          console.log("✅ Manual page view tracked");
+          console.log("[OK] Manual page view tracked");
         } else {
-          console.log("❌ Journey tracker not available");
+          console.log("[ERROR] Journey tracker not available");
         }
       }
 
@@ -108,9 +108,9 @@
             testData: "This is a test event",
             timestamp: new Date().toISOString(),
           });
-          console.log("✅ Custom event tracked");
+          console.log("[OK] Custom event tracked");
         } else {
-          console.log("❌ Journey tracker not available");
+          console.log("[ERROR] Journey tracker not available");
         }
       }
     </script>

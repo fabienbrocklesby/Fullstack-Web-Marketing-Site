@@ -8,7 +8,7 @@
 import PortalLayout from "../../layouts/PortalLayout.astro";
 ---
 
-<PortalLayout title="Account - Lightlane" activeTab="account">
+<PortalLayout title="Account - Light Lane" activeTab="account">
   <h1 class="text-2xl font-bold mb-6 text-ll-gradient">Account Settings</h1>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -221,7 +221,7 @@ import PortalLayout from "../../layouts/PortalLayout.astro";
     <div class="stats stats-vertical sm:stats-horizontal bg-base-200 w-full">
       <div class="stat">
         <div class="stat-title">Member Since</div>
-        <div class="stat-value text-lg" id="stat-member-since">—</div>
+        <div class="stat-value text-lg" id="stat-member-since">-</div>
       </div>
       <div class="stat">
         <div class="stat-title">Active Plans</div>
@@ -299,7 +299,7 @@ import PortalLayout from "../../layouts/PortalLayout.astro";
 
       // Update stats
       document.getElementById("stat-member-since")!.textContent =
-        formatDate(c.createdAt) || "—";
+        formatDate(c.createdAt) || "-";
       document.getElementById("stat-status")!.textContent = c.isActive
         ? "Active"
         : "Inactive";

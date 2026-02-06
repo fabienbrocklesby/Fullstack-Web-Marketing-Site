@@ -14,6 +14,8 @@ import { urgencyPill, urgencyPillCompact } from "./urgency-pill";
 // ============================================================
 const TRIAL_BANNER_DISMISS_KEY = "trialBannerDismissedUntil";
 const BANNER_DISMISS_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const checkIconSvg =
+  '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0"></path></svg>';
 
 function isTrialBannerDismissed(): boolean {
   const dismissedUntil = localStorage.getItem(TRIAL_BANNER_DISMISS_KEY);
@@ -110,7 +112,7 @@ function updateTrialOnlyUI(): void {
   if (step3Toggle && step3Text && hasActivatedDevices) {
     // Mark as completed
     step3Toggle.className = "flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0";
-    step3Toggle.textContent = "✓";
+    step3Toggle.innerHTML = checkIconSvg;
     step3Text.className = "text-sm text-base-content/70 line-through";
   }
 }

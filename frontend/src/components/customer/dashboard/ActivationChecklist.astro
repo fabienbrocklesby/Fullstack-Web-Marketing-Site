@@ -3,6 +3,7 @@
  * Activation Checklist - Shows activation progress steps
  * Used in the dashboard hero section across different states
  */
+import DashboardIcon from "./DashboardIcon.astro";
 
 interface Props {
   /**
@@ -60,7 +61,7 @@ const {
         step1Complete || allComplete ? (
           <>
             <span class="flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0">
-              ✓
+              <DashboardIcon name="check" class="w-4 h-4" />
             </span>
             <span class="text-sm text-base-content/70 line-through">
               Buy a subscription
@@ -86,7 +87,7 @@ const {
         allComplete ? (
           <div class="flex items-start gap-3">
             <span class="flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0">
-              ✓
+              <DashboardIcon name="check" class="w-4 h-4" />
             </span>
             <span class="text-sm text-base-content/70 line-through">
               Download the app
@@ -131,7 +132,7 @@ const {
         allComplete ? (
           <div class="flex items-start gap-3">
             <span class="flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0">
-              ✓
+              <DashboardIcon name="check" class="w-4 h-4" />
             </span>
             <span class="text-sm text-base-content/70 line-through">
               Sign in, choose plan, activate

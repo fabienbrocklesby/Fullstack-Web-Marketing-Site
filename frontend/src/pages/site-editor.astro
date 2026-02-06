@@ -547,6 +547,50 @@ import Layout from "../layouts/Layout.astro";
 
   let apiHelpers, componentRegistry;
 
+  const ICON_PATHS = {
+    rocket:
+      "M5 13c0 3 2 6 2 6s3-2 6-2l4-4c2-2 3-5 2-8-3-1-6 0-8 2l-4 4c0 3-2 6-2 6z M15 9h.01 M9 21l-2 2 M3 15l-2 2",
+    "layout-grid": "M3 3h8v8H3z M13 3h8v8h-8z M3 13h8v8H3z M13 13h8v8h-8z",
+    "message-square":
+      "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+    target:
+      "M12 2v4 M12 18v4 M4.93 4.93l2.83 2.83 M16.24 16.24l2.83 2.83 M2 12h4 M18 12h4 M4.93 19.07l2.83-2.83 M16.24 7.76l2.83-2.83 M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8",
+    "file-text":
+      "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",
+    coins: "M3 6c0 1.1 2.7 2 6 2s6-.9 6-2-2.7-2-6-2-6 .9-6 2z M3 12c0 1.1 2.7 2 6 2s6-.9 6-2 M3 18c0 1.1 2.7 2 6 2s6-.9 6-2",
+    "credit-card":
+      "M3 10h18 M7 15h1m4 0h1 m-7 4h12a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3z",
+    link: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71",
+    "check-circle": "M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z",
+    circle: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z",
+  };
+
+  const ICON_EMOJI_ALIASES = {
+    "\u{1F680}": "rocket",
+    "\u{1F4CB}": "layout-grid",
+    "\u{1F4AC}": "message-square",
+    "\u{1F3AF}": "target",
+    "\u{1F4DD}": "file-text",
+    "\u{1F4B0}": "coins",
+    "\u{1F4B3}": "credit-card",
+    "\u{1F517}": "link",
+  };
+
+  const resolveEditorIconName = (value) => {
+    const normalized = ICON_EMOJI_ALIASES[value] || value;
+    return ICON_PATHS[normalized] ? normalized : "circle";
+  };
+
+  const renderEditorIcon = (
+    value,
+    className = "w-5 h-5 text-primary",
+    ariaLabel = "Icon",
+  ) => {
+    const name = resolveEditorIconName(value);
+    const path = ICON_PATHS[name];
+    return `<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"${className}\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-label=\"${ariaLabel}\"><path d=\"${path}\"></path></svg>`;
+  };
+
   const loadModules = async () => {
     try {
       console.log("Loading modules...");
@@ -596,6 +640,10 @@ import Layout from "../layouts/Layout.astro";
       this.boundHandleFieldChange = this.handleFieldChange.bind(this);
 
       this.init();
+    }
+
+    getIconSVG(value, className = "w-5 h-5 text-primary", ariaLabel = "Icon") {
+      return renderEditorIcon(value, className, ariaLabel);
     }
 
     async init() {
@@ -707,13 +755,16 @@ import Layout from "../layouts/Layout.astro";
           ) {
             console.log("Transforming feature-grid section:", section);
             transformedSection.features = section.features.map((feature) => ({
-              icon: feature.icon || "🚀",
+              icon: feature.icon || "rocket",
               title: feature.title || "",
               description: feature.description || "",
               badge: feature.badge || "",
               badgeStyle: feature.badgeStyle || "primary",
               link: feature.link || "",
-              iconStyle: feature.iconStyle || "emoji",
+              iconStyle:
+                feature.iconStyle && feature.iconStyle !== "emoji"
+                  ? feature.iconStyle
+                  : "none",
               size: feature.size || "md",
             }));
             console.log("Transformed features:", transformedSection.features);
@@ -1042,7 +1093,7 @@ import Layout from "../layouts/Layout.astro";
                           ${(plan.features || [])
                             .map(
                               (feature) =>
-                                `<li class="flex items-center gap-2"><span class="text-success text-lg">✓</span> <span class="text-sm">${feature}</span></li>`,
+                                `<li class="flex items-center gap-2">${this.getIconSVG("check-circle", "w-4 h-4 text-success", "Included")}<span class="text-sm">${feature}</span></li>`,
                             )
                             .join("")}
                         </ul>
@@ -1072,10 +1123,10 @@ import Layout from "../layouts/Layout.astro";
                     .map((f) => {
                       const iconSizeClass =
                         f.size === "sm"
-                          ? "text-xl"
+                          ? "w-5 h-5"
                           : f.size === "lg"
-                            ? "text-4xl"
-                            : "text-2xl";
+                            ? "w-10 h-10"
+                            : "w-6 h-6";
                       const cardSizeClass =
                         f.size === "sm"
                           ? "p-4"
@@ -1091,17 +1142,17 @@ import Layout from "../layouts/Layout.astro";
                                   f.iconStyle === "circle"
                                     ? `
                                   <div class="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center flex-shrink-0">
-                                    <span class="${iconSizeClass}">${f.icon || "🚀"}</span>
+                                    ${this.getIconSVG(f.icon || "rocket", iconSizeClass, f.title || "Feature icon")}
                                   </div>       
                                 `
                                     : f.iconStyle === "square"
                                       ? `
                                   <div class="w-12 h-12 rounded-lg bg-primary text-primary-content flex items-center justify-center">
-                                    <span class="${iconSizeClass}">${f.icon || "🚀"}</span>
+                                    ${this.getIconSVG(f.icon || "rocket", iconSizeClass, f.title || "Feature icon")}
                                   </div>
                                 `
                                       : `
-                                  <span class="${iconSizeClass} flex-shrink-0">${f.icon || "🚀"}</span>
+                                  ${this.getIconSVG(f.icon || "rocket", `${iconSizeClass} flex-shrink-0 text-primary`, f.title || "Feature icon")}
                                 `
                                 }
                                 <div class="flex-1">
@@ -1186,7 +1237,7 @@ import Layout from "../layouts/Layout.astro";
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-2">
                 <span class="drag-handle cursor-move text-lg">⋮⋮</span>
-                <span class="text-lg">${meta.icon}</span>
+                ${this.getIconSVG(meta.icon, "w-5 h-5 text-primary", `${meta.name} icon`)}
                 <span class="font-semibold">${meta.name}</span>
                 ${this.selectedSectionIndex === null ? `<span class="badge badge-outline">Section ${index + 1}</span>` : ""}
               </div>
@@ -1437,9 +1488,9 @@ import Layout from "../layouts/Layout.astro";
               <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
                 <div class="form-control">
                   <label class="label"><span class="label-text">Icon</span></label>
-                  <input type="text" class="input input-bordered input-sm" value="${feature.icon || "🚀"}" 
-                         data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="icon" placeholder="🚀">
-                  <label class="label"><span class="label-text-alt">Emoji or text</span></label>
+                  <input type="text" class="input input-bordered input-sm" value="${feature.icon || "rocket"}" 
+                         data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="icon" placeholder="rocket">
+                  <label class="label"><span class="label-text-alt">Lucide icon name</span></label>
                 </div>
                 <div class="form-control lg:col-span-3">
                   <label class="label"><span class="label-text">Title</span></label>
@@ -1492,10 +1543,9 @@ import Layout from "../layouts/Layout.astro";
                   <label class="label"><span class="label-text">Icon Style</span></label>
                   <select class="select select-bordered select-sm" 
                           data-field="features" data-section="${sectionIndex}" data-feature-index="${index}" data-feature-field="iconStyle">
-                    <option value="emoji" ${feature.iconStyle === "emoji" ? "selected" : ""}>Emoji</option>
+                    <option value="none" ${feature.iconStyle === "none" || feature.iconStyle === "emoji" ? "selected" : ""}>No Background</option>
                     <option value="circle" ${feature.iconStyle === "circle" ? "selected" : ""}>Circle Background</option>
                     <option value="square" ${feature.iconStyle === "square" ? "selected" : ""}>Square Background</option>
-                    <option value="none" ${feature.iconStyle === "none" ? "selected" : ""}>No Background</option>
                   </select>
                 </div>
                 <div class="form-control">
@@ -1784,7 +1834,7 @@ import Layout from "../layouts/Layout.astro";
           "card bg-base-200 shadow-sm cursor-pointer hover:bg-base-300 transition-colors";
         card.innerHTML = `
           <div class="card-body p-4 text-center">
-            <div class="text-3xl mb-2">${component.icon}</div>
+            <div class="flex justify-center mb-2">${this.getIconSVG(component.icon, "w-8 h-8 text-primary", `${component.name} icon`)}</div>
             <h3 class="font-semibold">${component.name}</h3>
             <p class="text-sm text-base-content/70">${component.description}</p>
           </div>
@@ -2333,13 +2383,13 @@ import Layout from "../layouts/Layout.astro";
       }
 
       this.sections[sectionIndex].features.push({
-        icon: "🚀",
+        icon: "rocket",
         title: "New Feature",
         description: "Feature description",
         badge: "",
         badgeStyle: "primary",
         link: "",
-        iconStyle: "emoji",
+        iconStyle: "none",
         size: "md",
       });
 
@@ -2498,13 +2548,16 @@ import Layout from "../layouts/Layout.astro";
                 // Transform features array to Strapi component format
                 cleanSection[key] = section[key].map((feature) => ({
                   __component: "elements.feature-item",
-                  icon: feature.icon || "🚀",
+                  icon: feature.icon || "rocket",
                   title: feature.title || "",
                   description: feature.description || "",
                   badge: feature.badge || "",
                   badgeStyle: feature.badgeStyle || "primary",
                   link: feature.link || "",
-                  iconStyle: feature.iconStyle || "emoji",
+                  iconStyle:
+                    feature.iconStyle && feature.iconStyle !== "emoji"
+                      ? feature.iconStyle
+                      : "none",
                   size: feature.size || "md",
                 }));
               } else if (

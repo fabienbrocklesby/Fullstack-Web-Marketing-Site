@@ -243,7 +243,7 @@ const buttonId = `buy-button-${priceId}`;
         }),
       });
 
-      console.log(`📊 Tracked visit for affiliate: ${affiliateCode}`);
+      console.log(`[Stats] Tracked visit for affiliate: ${affiliateCode}`);
     } catch (error) {
       console.warn("Failed to track affiliate visit:", error);
     }
@@ -273,7 +273,7 @@ const buttonId = `buy-button-${priceId}`;
       });
 
       console.log(
-        `📄 Tracked page view for affiliate: ${affiliateCode} on ${page}`,
+        `[PageView] Tracked page view for affiliate: ${affiliateCode} on ${page}`,
       );
     } catch (error) {
       console.warn("Failed to track page view:", error);
@@ -304,7 +304,7 @@ const buttonId = `buy-button-${priceId}`;
       });
 
       console.log(
-        `🎯 Tracked conversion event: ${eventType} for affiliate: ${affiliateCode}`,
+        `[Conversion] Tracked conversion event: ${eventType} for affiliate: ${affiliateCode}`,
       );
     } catch (error) {
       console.warn("Failed to track conversion event:", error);

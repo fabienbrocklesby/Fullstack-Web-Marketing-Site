@@ -21,10 +21,10 @@ const toAbsolute = (path: string) => new URL(path, siteBase).href;
 const pricingKeywords = [
   "laser engraving software pricing",
   "laser cutter software cost",
-  "Lightlane laser engraving subscription",
+  "Light Lane laser engraving subscription",
   "laser engraving software free trial",
   "Ruida laser software pricing",
-  "Lightlane pricing plans",
+  "Light Lane pricing plans",
 ];
 
 // Get subscription offers for schema
@@ -93,12 +93,12 @@ const structuredData = [
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${toAbsolute("/")}#lightlane-pricing`,
-    name: "Lightlane Laser Engraving Software",
+    name: "Light Lane Laser Engraving Software",
     description:
-      "Pricing for Lightlane's laser engraving workflow software with flexible subscription options.",
+      "Pricing for Light Lane's laser engraving workflow software with flexible subscription options.",
     brand: {
       "@type": "Brand",
-      name: "Lightlane",
+      name: "Light Lane",
     },
     image: toAbsolute("/NotRoundedLogo.png"),
     offers: aggregateOffer ?? offerSchemas,
@@ -107,7 +107,7 @@ const structuredData = [
   {
     "@context": "https://schema.org",
     "@type": "OfferCatalog",
-    name: "Lightlane Pricing Plans",
+    name: "Light Lane Pricing Plans",
     url: toAbsolute("/pricing"),
     itemListElement: offerSchemas.map((offer, index) => ({
       "@type": "ListItem",
@@ -126,8 +126,8 @@ const proOffer = pricingOffers.find(o => o.tier === "pro");
 ---
 
 <Layout
-  title="Lightlane Pricing - Start Your Free Trial"
-  description="Try Lightlane free for 14 days. No credit card required. Simple monthly plans for laser engraving software."
+  title="Light Lane Pricing - Start Your Free Trial"
+  description="Try Light Lane free for 14 days. No credit card required. Simple monthly plans for laser engraving software."
   keywords={pricingKeywords.join(", ")}
   structuredData={structuredData}
   breadcrumbs={[
@@ -320,15 +320,15 @@ const proOffer = pricingOffers.find(o => o.tier === "pro");
                   </li>
                   <li class="flex gap-3 items-start">
                     <svg class="w-4 h-4 text-primary mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                    <span><strong>AI Assistant</strong> — image color grading & tone prep for engraving</span>
+                    <span><strong>AI Assistant</strong> - image color grading & tone prep for engraving</span>
                   </li>
                   <li class="flex gap-3 items-start">
                     <svg class="w-4 h-4 text-primary mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                    <span><strong>Smart Settings</strong> — AI suggests power, speed & passes for your material + goal</span>
+                    <span><strong>Smart Settings</strong> - AI suggests power, speed & passes for your material + goal</span>
                   </li>
                   <li class="flex gap-3 items-start">
                     <svg class="w-4 h-4 text-primary mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                    <span><strong>Material Test Grid</strong> — quickly dial in settings for new materials</span>
+                    <span><strong>Material Test Grid</strong> - quickly dial in settings for new materials</span>
                   </li>
                   <li class="flex gap-3 items-start">
                     <svg class="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -402,8 +402,8 @@ const proOffer = pricingOffers.find(o => o.tier === "pro");
             </div>
             <h3 class="text-xl font-semibold">Risk-Free Guarantee</h3>
             <p class="text-base-content/70 max-w-xl mx-auto">
-              Try Lightlane free for 14 days with full access to every feature. 
-              No credit card required to start. Cancel anytime from your dashboard — no questions asked.
+              Try Light Lane free for 14 days with full access to every feature. 
+              No credit card required to start. Cancel anytime from your dashboard - no questions asked.
             </p>
             <div class="flex flex-wrap justify-center gap-4 pt-2">
               <span class="text-sm text-base-content/60 flex items-center gap-2">
@@ -438,7 +438,7 @@ const proOffer = pricingOffers.find(o => o.tier === "pro");
             Prefer to try before you sign up?
           </h2>
           <p class="text-base-content/70 max-w-xl mx-auto">
-            Download Lightlane and explore the full app. Your 14-day trial starts when you create your free account.
+            Download Light Lane and explore the full app. Your 14-day trial starts when you create your free account.
           </p>
           <DownloadButtons align="center" />
           <p class="text-sm text-base-content/50">
@@ -538,7 +538,7 @@ const proOffer = pricingOffers.find(o => o.tier === "pro");
             Frequently Asked Questions
           </h2>
           <p class="mt-4 text-base-content/70">
-            Everything you need to know about Lightlane pricing and trials.
+            Everything you need to know about Light Lane pricing and trials.
           </p>
         </div>
         <div class="space-y-4">
@@ -565,7 +565,7 @@ const proOffer = pricingOffers.find(o => o.tier === "pro");
           Ready to streamline your laser workflow?
         </h2>
         <p class="text-lg text-base-content/70 mb-8 max-w-xl mx-auto">
-          Join makers who switched to Lightlane for faster, more intuitive engraving. Start your free trial today.
+          Join makers who switched to Light Lane for faster, more intuitive engraving. Start your free trial today.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <button class="btn btn-primary btn-lg pricing-cta" data-tier="pro" data-action="subscribe">

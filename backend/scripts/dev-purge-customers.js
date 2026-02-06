@@ -309,7 +309,7 @@ function displayCustomerList(customers) {
     const email = c.email || "(no email)";
     const name = [c.firstName, c.lastName].filter(Boolean).join(" ") || "";
     const created = c.createdAt ? c.createdAt.substring(0, 10) : "N/A";
-    const nameDisplay = name ? ` — ${name}` : "";
+    const nameDisplay = name ? ` - ${name}` : "";
     console.log(`  ${idx}) ${email}${nameDisplay} (created ${created}) [id: ${c.id}]`);
   });
 
@@ -319,7 +319,7 @@ function displayCustomerList(customers) {
 
 function displayDryRunSummary(customer, counts) {
   const name = [customer.firstName, customer.lastName].filter(Boolean).join(" ") || "(no name)";
-  console.log(`\n  📧 ${customer.email} — ${name} [id: ${customer.id}]`);
+  console.log(`\n  📧 ${customer.email} - ${name} [id: ${customer.id}]`);
   console.log(`     Created: ${customer.createdAt}`);
   console.log(`     Related records:`);
   console.log(`       Entitlements:       ${counts.entitlements}`);

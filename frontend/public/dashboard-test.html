@@ -121,9 +121,9 @@
             "success",
           );
 
-          addStatus("✅ All dashboard APIs working correctly!", "success");
+          addStatus("[OK] All dashboard APIs working correctly!", "success");
         } catch (error) {
-          addStatus(`❌ Dashboard test failed: ${error.message}`, "error");
+          addStatus(`[ERROR] Dashboard test failed: ${error.message}`, "error");
           console.error("Dashboard test error:", error);
         }
       }

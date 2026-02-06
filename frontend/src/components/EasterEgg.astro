@@ -1,6 +1,7 @@
 ---
 // Easter Egg Component
 // Trigger: Scroll to footer + press spacebar 3 times quickly
+import Icon from "./icons/Icon.astro";
 ---
 
 <!-- Easter Egg Modal -->
@@ -8,18 +9,28 @@
   <div class="modal-box text-center max-w-md">
     <button
       class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-      id="close-easter-egg">✕</button
+      id="close-easter-egg"
+      aria-label="Close easter egg modal"
     >
+      <Icon name="x" class="w-4 h-4" />
+    </button>
 
     <div class="py-4">
-      <!-- Animated laser beam emoji -->
-      <div class="text-6xl mb-4 animate-bounce" id="easter-egg-icon">🔦</div>
+      <div
+        class="text-primary mb-4 animate-bounce flex justify-center"
+        id="easter-egg-icon"
+      >
+        <Icon name="sparkles" class="w-14 h-14" ariaLabel="Secret unlocked" />
+      </div>
 
-      <h3 class="font-bold text-xl mb-2">You found the secret! 🎉</h3>
+      <h3 class="font-bold text-xl mb-2 inline-flex items-center gap-2">
+        <Icon name="sparkles" class="w-5 h-5 text-primary" />
+        You found the secret!
+      </h3>
 
       <p class="py-2 text-base-content/80">
         Congrats, you're officially a <span class="font-bold text-primary"
-          >Lightlane Explorer</span
+          >Light Lane Explorer</span
         >!
       </p>
 
@@ -31,14 +42,22 @@
           "We spent 3 hours adding this easter egg instead of fixing bugs. Worth
           it."
         </p>
-        <p class="text-xs opacity-50 mt-2">- The Lightlane Team</p>
+        <p class="text-xs opacity-50 mt-2">- The Light Lane Team</p>
       </div>
 
       <div class="mt-4 flex justify-center gap-2 flex-wrap">
-        <span class="badge badge-primary badge-outline"
-          >🥚 Easter Egg Found</span
+        <span
+          class="badge badge-primary badge-outline inline-flex items-center gap-1"
         >
-        <span class="badge badge-secondary badge-outline">⌨️ Spacebar x3</span>
+          <Icon name="egg" class="w-3.5 h-3.5" />
+          Easter Egg Found
+        </span>
+        <span
+          class="badge badge-secondary badge-outline inline-flex items-center gap-1"
+        >
+          <Icon name="check-circle" class="w-3.5 h-3.5" />
+          Spacebar x3
+        </span>
       </div>
     </div>
 
@@ -95,11 +114,25 @@
       modal.showModal();
 
       if (icon) {
-        const emojis = ["🔦", "✨", "🔥", "💎", "🚀", "🎯", "⚡"];
+        const iconPaths = {
+          sparkles: "M12 3l2.1 6.3L20 12l-5.9 2.7L12 21l-2.1-6.3L4 12l5.9-2.7z",
+          zap: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+          rocket:
+            "M5 13c0 3 2 6 2 6s3-2 6-2l4-4c2-2 3-5 2-8-3-1-6 0-8 2l-4 4c0 3-2 6-2 6z M15 9h.01 M9 21l-2 2 M3 15l-2 2",
+          target:
+            "M12 2v4 M12 18v4 M4.93 4.93l2.83 2.83 M16.24 16.24l2.83 2.83 M2 12h4 M18 12h4 M4.93 19.07l2.83-2.83 M16.24 7.76l2.83-2.83 M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8",
+          lightbulb:
+            "M9 18h6 M10 22h4 M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 2.5V18h6v-1.5c0-1 .5-2 1-2.5A7 7 0 0 0 12 2z",
+        };
+        const sequence = ["sparkles", "zap", "rocket", "target", "lightbulb"];
+        const iconSvg = (name) =>
+          `<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"w-14 h-14\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"${iconPaths[name]}\"></path></svg>`;
+
         let idx = 0;
 
         const interval = setInterval(() => {
-          icon.textContent = emojis[idx % emojis.length];
+          const name = sequence[idx % sequence.length];
+          icon.innerHTML = iconSvg(name);
           idx++;
           if (idx > 10) clearInterval(interval);
         }, 200);

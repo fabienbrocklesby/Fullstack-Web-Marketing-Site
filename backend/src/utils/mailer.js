@@ -202,7 +202,7 @@ module.exports = {
                 <td style="padding:16px 32px 8px 32px;font-size:15px;line-height:1.55;">${body}</td>
               </tr>
               ${signature}
-              <tr><td style="padding:28px 32px 24px 32px;font-size:12px;color:#6b7280;border-top:1px solid #eef0f4;">© ${new Date().getFullYear()} Light Lane. All rights reserved.</td></tr>
+              <tr><td style="padding:28px 32px 24px 32px;font-size:12px;color:#6b7280;border-top:1px solid #eef0f4;">© ${new Date().getFullYear()} Light Lane Limited. All rights reserved.</td></tr>
             </table>
             <div style="font-size:11px;color:#9ca3af;margin-top:12px;max-width:620px;">You are receiving this because you interacted with Light Lane.</div>
           </td>

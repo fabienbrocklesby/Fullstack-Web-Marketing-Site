@@ -9,7 +9,7 @@ import PortalLayout from "../../layouts/PortalLayout.astro";
 import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
-<PortalLayout title="Subscription Active - Lightlane" activeTab="dashboard">
+<PortalLayout title="Subscription Active - Light Lane" activeTab="dashboard">
   <div class="max-w-2xl mx-auto">
     <!-- Hero Card -->
     <section class="surface rounded-2xl p-8 text-center mb-6">
@@ -103,7 +103,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         <div class="flex items-start gap-3">
           <div class="badge badge-primary badge-lg">1</div>
           <div>
-            <p class="font-medium">Download Lightlane</p>
+            <p class="font-medium">Download Light Lane</p>
             <p class="text-sm text-base-content/60">
               Get the app for your platform
             </p>
@@ -238,13 +238,13 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
     const auth = getAuthState();
 
     if (!sessionId) {
-      console.log("ℹ️ No session_id in URL");
+      console.log("[Purchase] No session_id in URL");
       window.location.href = "/customer/dashboard";
       return;
     }
 
     if (!auth) {
-      console.log("ℹ️ No customer token - redirecting to login");
+      console.log("[Purchase] No customer token - redirecting to login");
       window.location.href =
         "/customer/login?redirect=" + encodeURIComponent(window.location.href);
       return;
@@ -257,11 +257,11 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
     const heroPending = document.getElementById("hero-pending")!;
 
     try {
-      console.log("🔄 Polling for purchase completion:", sessionId);
+      console.log("[Purchase] Polling for purchase completion:", sessionId);
 
       const result = await pollPurchaseStatus(sessionId, auth.token, cmsUrl);
 
-      console.log("✅ Purchase confirmed:", result);
+      console.log("[Purchase] Purchase confirmed:", result);
 
       // Set flag so dashboard refreshes data when user navigates there
       try {
@@ -337,7 +337,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       // Clear selected product from localStorage
       localStorage.removeItem("selectedProduct");
     } catch (error) {
-      console.error("❌ Error polling subscription status:", error);
+      console.error("[Purchase] Error polling subscription status:", error);
 
       // Show pending state
       heroLoading.classList.add("hidden");

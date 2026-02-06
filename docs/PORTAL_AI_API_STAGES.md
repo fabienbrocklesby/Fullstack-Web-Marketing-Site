@@ -3,7 +3,7 @@
 This is the staged delivery plan for the Portal + AI API layer.
 Stage naming is a documentation convention; endpoints remain callable regardless of stage labels.
 
-## Stage 0 — Baseline + Contract Lock
+## Stage 0 - Baseline + Contract Lock
 
 ### Goals
 
@@ -25,7 +25,7 @@ Stage naming is a documentation convention; endpoints remain callable regardless
 
 - Contract doc matches implementation or has a tracked gap list with owners.
 
-## Stage 1 — Settings Assistant (MVP) via Portal AI API
+## Stage 1 - Settings Assistant (MVP) via Portal AI API
 
 ### Goals
 
@@ -48,7 +48,7 @@ Stage naming is a documentation convention; endpoints remain callable regardless
 - Unit tests for gating + payload validation.
 - Integration/smoke tests in repo.
 
-## Stage 2 — Background Removal (MVP) via Portal AI API (planned, not implemented)
+## Stage 2 - Background Removal (MVP) via Portal AI API (planned, not implemented)
 
 ### Goals
 
@@ -74,9 +74,9 @@ Stage naming is a documentation convention; endpoints remain callable regardless
   - oversized payload failure
   - provider errors mapped cleanly
 
-## Stage 3 — Engrave Assistant (Image-based, implemented)
+## Stage 3 - Engrave Assistant (Image-based, implemented)
 
-Note: Older docs marked Stage 3 as out of scope, but reality has changed — Engrave Assistant is implemented.
+Note: Older docs marked Stage 3 as out of scope, but reality has changed - Engrave Assistant is implemented.
 
 ### Goals
 

@@ -37,20 +37,20 @@
           if (response.ok) {
             const data = await response.json();
             jwt = data.jwt;
-            await log(`✅ Login successful, JWT: ${jwt.substring(0, 20)}...`);
+            await log(`[OK] Login successful, JWT: ${jwt.substring(0, 20)}...`);
           } else {
             await log(
-              `❌ Login failed: ${response.status} ${response.statusText}`,
+              `[ERROR] Login failed: ${response.status} ${response.statusText}`,
             );
           }
         } catch (error) {
-          await log(`❌ Login error: ${error.message}`);
+          await log(`[ERROR] Login error: ${error.message}`);
         }
       }
 
       async function testStats() {
         if (!jwt) {
-          await log("❌ Please login first");
+          await log("[ERROR] Please login first");
           return;
         }
 
@@ -67,21 +67,21 @@
           if (response.ok) {
             const data = await response.json();
             await log(
-              `✅ Stats loaded: ${JSON.stringify(data).substring(0, 100)}...`,
+              `[OK] Stats loaded: ${JSON.stringify(data).substring(0, 100)}...`,
             );
           } else {
             await log(
-              `❌ Stats failed: ${response.status} ${response.statusText}`,
+              `[ERROR] Stats failed: ${response.status} ${response.statusText}`,
             );
           }
         } catch (error) {
-          await log(`❌ Stats error: ${error.message}`);
+          await log(`[ERROR] Stats error: ${error.message}`);
         }
       }
 
       async function testJourneys() {
         if (!jwt) {
-          await log("❌ Please login first");
+          await log("[ERROR] Please login first");
           return;
         }
 
@@ -98,15 +98,15 @@
           if (response.ok) {
             const data = await response.json();
             await log(
-              `✅ Journeys loaded: ${data.journeys.length} journeys found`,
+              `[OK] Journeys loaded: ${data.journeys.length} journeys found`,
             );
           } else {
             await log(
-              `❌ Journeys failed: ${response.status} ${response.statusText}`,
+              `[ERROR] Journeys failed: ${response.status} ${response.statusText}`,
             );
           }
         } catch (error) {
-          await log(`❌ Journeys error: ${error.message}`);
+          await log(`[ERROR] Journeys error: ${error.message}`);
         }
       }
     </script>

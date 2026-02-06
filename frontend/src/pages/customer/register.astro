@@ -4,7 +4,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
 ---
 
 <Layout title="Customer Registration">
-  <main class="relative min-h-screen flex items-stretch overflow-hidden">
+  <main class="relative min-h-screen overflow-hidden">
     <div class="pointer-events-none absolute inset-0 -z-10">
       <div
         class="absolute inset-0 bg-gradient-to-br from-accent/10 via-base-200 to-base-100"
@@ -20,7 +20,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
       </div>
     </div>
     <div
-      class="container mx-auto px-5 py-10 flex flex-col lg:flex-row gap-14 lg:gap-20 items-center"
+      class="container mx-auto max-w-6xl px-5 pt-4 pb-8 md:pt-6 md:pb-10 flex flex-col lg:flex-row lg:justify-center gap-8 md:gap-10 lg:gap-16 items-center"
     >
       <div
         id="pricing-context-banner"
@@ -41,7 +41,9 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
           </div>
         </div>
       </div>
-      <div class="w-full max-w-xl space-y-10 text-center lg:text-left">
+      <div
+        class="w-full max-w-xl space-y-8 lg:space-y-10 text-center lg:text-left"
+      >
         <a
           href="/"
           class="btn btn-ghost btn-sm -ml-2 lg:ml-0 inline-flex items-center gap-2"
@@ -61,7 +63,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
           <p
             class="text-base md:text-lg text-base-content/70 max-w-lg mx-auto lg:mx-0"
           >
-            Create your account to start using Lightlane.
+            Create your account to start using Light Lane.
           </p>
           <div role="alert" class="alert alert-info mt-3">
             <svg
@@ -76,40 +78,43 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
             </svg>
             <span>
               <strong>14-day free trial included.</strong> Create an account to unlock
-              full access — no credit card required.
+              full access - no credit card required.
             </span>
           </div>
-          <DownloadButtons />
+          <DownloadButtons class="justify-center lg:justify-start" />
           <ul class="grid sm:grid-cols-2 gap-4 text-sm">
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-primary badge-soft mt-0.5">Preview</span
+              <span class="badge badge-primary badge-soft mt-0 sm:mt-0.5"
+                >Preview</span
               ><span class="text-base-content/70"
                 >Real-time path & power feedback for confident first runs.</span
               >
             </li>
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-success badge-soft mt-0.5"
+              <span class="badge badge-success badge-soft mt-0 sm:mt-0.5"
                 >Throughput</span
               ><span class="text-base-content/70"
                 >Fewer modal hops. Rapid template reuse. High repeatability.</span
               >
             </li>
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-accent badge-soft mt-0.5">Offline</span
+              <span class="badge badge-accent badge-soft mt-0 sm:mt-0.5"
+                >Offline</span
               ><span class="text-base-content/70"
                 >Activation & licensing resilient to patchy networks.</span
               >
             </li>
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-secondary badge-soft mt-0.5">Scale</span
+              <span class="badge badge-secondary badge-soft mt-0 sm:mt-0.5"
+                >Scale</span
               ><span class="text-base-content/70"
                 >Materials DB & smart parameter memory reduce setup drift.</span
               >
@@ -121,7 +126,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
         <div
           class="card shadow-2xl bg-base-100/90 backdrop-blur border border-base-300/60"
         >
-          <div class="card-body p-8 space-y-6">
+          <div class="card-body p-6 sm:p-8 space-y-6">
             <div class="space-y-2 text-center">
               <h2 class="text-2xl font-bold tracking-tight">
                 Create your account
@@ -132,7 +137,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
               </p>
             </div>
             <form id="register-form" class="space-y-5" novalidate>
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="form-control gap-2">
                   <label class="text-sm font-medium" for="firstName"
                     >First Name</label
@@ -166,7 +171,7 @@ import DownloadButtons from "../../components/DownloadButtons.astro";
                   required
                 />
               </div>
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="form-control gap-2">
                   <label class="text-sm font-medium" for="password"
                     >Password</label

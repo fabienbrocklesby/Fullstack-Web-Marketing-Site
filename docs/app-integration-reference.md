@@ -138,7 +138,7 @@ Authorization: Bearer <token>
 
 #### Login
 
-**`POST /api/customers/login`** — Unauthenticated
+**`POST /api/customers/login`** - Unauthenticated
 
 **Request:**
 
@@ -178,7 +178,7 @@ Authorization: Bearer <token>
 
 #### List Entitlements
 
-**`GET /api/customers/me/entitlements`** — Requires `customer-auth`
+**`GET /api/customers/me/entitlements`** - Requires `customer-auth`
 
 **Response (200):**
 
@@ -245,7 +245,7 @@ Authorization: Bearer <token>
 
 #### Register Device
 
-**`POST /api/device/register`** — Requires `customer-auth`
+**`POST /api/device/register`** - Requires `customer-auth`
 
 **Request:**
 
@@ -293,7 +293,7 @@ Authorization: Bearer <token>
 
 #### List Devices
 
-**`GET /api/customers/me/devices`** — Requires `customer-auth`
+**`GET /api/customers/me/devices`** - Requires `customer-auth`
 
 **Response (200):**
 
@@ -329,7 +329,7 @@ Authorization: Bearer <token>
 
 #### Activate
 
-**`POST /api/licence/activate`** — Requires `customer-auth`
+**`POST /api/licence/activate`** - Requires `customer-auth`
 
 **Request:**
 
@@ -382,7 +382,7 @@ Authorization: Bearer <token>
 
 #### Refresh (Online)
 
-**`POST /api/licence/refresh`** — Requires `customer-auth`
+**`POST /api/licence/refresh`** - Requires `customer-auth`
 
 **Request:**
 
@@ -393,7 +393,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response (200) — Subscription:**
+**Response (200) - Subscription:**
 
 ```json
 {
@@ -411,7 +411,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response (200) — Lifetime:**
+**Response (200) - Lifetime:**
 
 ```json
 {
@@ -443,7 +443,7 @@ Authorization: Bearer <token>
 
 #### Deactivate (Online)
 
-**`POST /api/licence/deactivate`** — Requires `customer-auth`
+**`POST /api/licence/deactivate`** - Requires `customer-auth`
 
 **Request:**
 
@@ -482,13 +482,13 @@ The trial system provides a 14-day free trial for new customers. Trials behave l
 
 #### Trial Eligibility Rules
 
-1. **One trial per account (ever).** Once a customer has started a trial, they cannot start another — even if that trial has expired.
+1. **One trial per account (ever).** Once a customer has started a trial, they cannot start another - even if that trial has expired.
 2. **No trial if customer has any entitlements.** If a customer already has ANY entitlement (paid or otherwise), they are not eligible for a trial.
 3. **Trial is retired on paid purchase.** When the customer purchases a paid subscription, any active trial is immediately set to `status: "expired"` and `expiresAt: now`. This happens automatically via the webhook handler.
 
 #### Start Trial
 
-**`POST /api/trial/start`** — Requires `customer-auth`
+**`POST /api/trial/start`** - Requires `customer-auth`
 
 **Request:** (empty body)
 
@@ -519,11 +519,11 @@ The trial system provides a 14-day free trial for new customers. Trials behave l
 **Key Fields:**
 
 - `tier`: Always `"trial"` for trial entitlements
-- `isLifetime`: Always `false` — trials are never lifetime
-- `leaseRequired`: Always `true` — trials need lease tokens like subscriptions
+- `isLifetime`: Always `false` - trials are never lifetime
+- `leaseRequired`: Always `true` - trials need lease tokens like subscriptions
 - `expiresAt`: Exactly 14 days from creation
-- `maxDevices`: `1` — trials are limited to one device
-- `source`: `"manual"` — not from Stripe subscription
+- `maxDevices`: `1` - trials are limited to one device
+- `source`: `"manual"` - not from Stripe subscription
 
 **Errors:**
 
@@ -540,7 +540,7 @@ The trial system provides a 14-day free trial for new customers. Trials behave l
 
 #### Check Trial Eligibility
 
-**`GET /api/trial/status`** — Requires `customer-auth`
+**`GET /api/trial/status`** - Requires `customer-auth`
 
 **Response (200):**
 
@@ -604,7 +604,7 @@ When fetching `GET /api/customers/me/entitlements`, trial entitlements appear li
 
 #### Trial Expiry and Retirement
 
-**Natural Expiry:** When the current time passes `expiresAt`, the trial is considered expired. The server does not actively update the status — the app should check `expiresAt` against the current time.
+**Natural Expiry:** When the current time passes `expiresAt`, the trial is considered expired. The server does not actively update the status - the app should check `expiresAt` against the current time.
 
 **Retirement on Paid Purchase:** When the customer purchases a paid subscription, the webhook handler calls `retireTrialsForCustomer()` which:
 

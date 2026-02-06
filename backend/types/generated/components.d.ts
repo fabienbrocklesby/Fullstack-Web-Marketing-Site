@@ -113,9 +113,7 @@ export interface ElementsFeatureItem extends Schema.Component {
     description: 'Individual feature with icon, title, description and customization options';
   };
   attributes: {
-    icon: Attribute.String &
-      Attribute.Required &
-      Attribute.DefaultTo<'\uD83D\uDE80'>;
+    icon: Attribute.String & Attribute.Required & Attribute.DefaultTo<'rocket'>;
     title: Attribute.String & Attribute.Required;
     description: Attribute.Text & Attribute.Required;
     badge: Attribute.String;
@@ -125,7 +123,7 @@ export interface ElementsFeatureItem extends Schema.Component {
       Attribute.DefaultTo<'primary'>;
     link: Attribute.String;
     iconStyle: Attribute.Enumeration<['emoji', 'circle', 'square', 'none']> &
-      Attribute.DefaultTo<'emoji'>;
+      Attribute.DefaultTo<'none'>;
     size: Attribute.Enumeration<['sm', 'md', 'lg']> & Attribute.DefaultTo<'md'>;
   };
 }

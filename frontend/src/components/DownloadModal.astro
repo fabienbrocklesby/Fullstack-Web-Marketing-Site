@@ -1,12 +1,16 @@
 ---
 import DownloadButtons from "./DownloadButtons.astro";
+import Icon from "./icons/Icon.astro";
 ---
 
 <dialog id="download-modal" class="modal">
   <div class="modal-box max-w-lg space-y-4">
     <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
-        ✕
+      <button
+        class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+        aria-label="Close download modal"
+      >
+        <Icon name="x" class="w-4 h-4" />
       </button>
     </form>
     <div class="space-y-2 text-center">
@@ -15,7 +19,7 @@ import DownloadButtons from "./DownloadButtons.astro";
       </p>
       <h3 class="text-2xl font-semibold">Choose your platform</h3>
       <p class="text-sm text-base-content/70">
-        Lightlane installs on macOS and Windows with a full-featured 14-day
+        Light Lane installs on macOS and Windows with a full-featured 14-day
         trial included in every download. Pick your OS to get started.
       </p>
     </div>

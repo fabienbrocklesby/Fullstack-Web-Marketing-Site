@@ -15,11 +15,11 @@ LightLane uses a **subscription + lease token** licensing model:
 - **Entitlements** represent a customer's right to use the software (subscription or lifetime).
 - **Devices** are registered and bound to entitlements.
 - **Lease tokens** (RS256 JWTs, 7-day TTL) prove the device has an active subscription.
-- **Lifetime entitlements** do not require lease tokens; they are valid forever. However, lifetime entitlements only work with **online verification** — the desktop app must reach the API to confirm activation status. Offline endpoints (challenge-based and air-gapped) reject lifetime entitlements with `LIFETIME_NOT_SUPPORTED`.
+- **Lifetime entitlements** do not require lease tokens; they are valid forever. However, lifetime entitlements only work with **online verification** - the desktop app must reach the API to confirm activation status. Offline endpoints (challenge-based and air-gapped) reject lifetime entitlements with `LIFETIME_NOT_SUPPORTED`.
 
 ### What "Offline" Means
 
-1. **Offline refresh (challenge-based):** The desktop device can be briefly offline, but the customer must access the web portal from another computer to generate and redeem a challenge for a new lease token. The portal generates a short-lived challenge JWT, which the customer then submits back to the portal (from the same or different browser session) to receive a lease token. This flow does NOT require a cryptographic response from the app — the challenge JWT itself is redeemed.
+1. **Offline refresh (challenge-based):** The desktop device can be briefly offline, but the customer must access the web portal from another computer to generate and redeem a challenge for a new lease token. The portal generates a short-lived challenge JWT, which the customer then submits back to the portal (from the same or different browser session) to receive a lease token. This flow does NOT require a cryptographic response from the app - the challenge JWT itself is redeemed.
 
 2. **Air-gapped (Stage 6.1):** For fully disconnected environments, the desktop app generates cryptographic codes (USB/copy-paste). These codes are Ed25519-signed by the device. The portal verifies the signatures and returns activation packages or lease tokens as downloadable codes.
 
@@ -38,7 +38,7 @@ Portal customer accounts (not Strapi admin users).
 | Field              | Type           | Description                                       |
 | ------------------ | -------------- | ------------------------------------------------- |
 | `id`               | integer        | Primary key                                       |
-| `email`            | email (unique) | Account email — enforced unique, case-insensitive |
+| `email`            | email (unique) | Account email - enforced unique, case-insensitive |
 | `firstName`        | string         | Customer's first name                             |
 | `lastName`         | string         | Customer's last name                              |
 | `password`         | string         | Bcrypt-hashed password (private)                  |
@@ -79,7 +79,7 @@ Portal customer accounts (not Strapi admin users).
 
 ### Replay Protection (Strapi Collection Types)
 
-**`api::offline-challenge.offline-challenge`** (collection: `offline_challenges`) — Challenge-based offline refresh:
+**`api::offline-challenge.offline-challenge`** (collection: `offline_challenges`) - Challenge-based offline refresh:
 
 | Field                | Type     | Description                     |
 | -------------------- | -------- | ------------------------------- |
@@ -91,7 +91,7 @@ Portal customer accounts (not Strapi admin users).
 | `challengeIssuedAt`  | datetime | When challenge JWT was issued   |
 | `challengeExpiresAt` | datetime | When challenge JWT expires      |
 
-**`api::offline-code-use.offline-code-use`** (collection: `offline_code_uses`) — Air-gapped code replay:
+**`api::offline-code-use.offline-code-use`** (collection: `offline_code_uses`) - Air-gapped code replay:
 
 | Field           | Type                                           | Description                 |
 | --------------- | ---------------------------------------------- | --------------------------- |
@@ -237,7 +237,7 @@ All online endpoints require `customer-auth` middleware (portal JWT in Authoriza
 }
 ```
 
-**Response (200) — Subscription:**
+**Response (200) - Subscription:**
 
 ```json
 {
@@ -255,7 +255,7 @@ All online endpoints require `customer-auth` middleware (portal JWT in Authoriza
 }
 ```
 
-**Response (200) — Lifetime:**
+**Response (200) - Lifetime:**
 
 ```json
 {
@@ -350,7 +350,7 @@ All online endpoints require `customer-auth` middleware (portal JWT in Authoriza
 **Endpoint:** `POST /api/trial/start`  
 **Middleware:** `customer-auth`, `license-rate-limit`
 
-Starts a 14-day free trial for the authenticated customer. One trial per account (ever) — cannot be used again even if the original trial expired.
+Starts a 14-day free trial for the authenticated customer. One trial per account (ever) - cannot be used again even if the original trial expired.
 
 **Request:** (no body required)
 
@@ -394,7 +394,7 @@ Starts a 14-day free trial for the authenticated customer. One trial per account
 
 - Trial entitlements behave like subscriptions: they require lease tokens and support offline refresh
 - After `expiresAt`, the trial becomes unusable (activation/refresh will fail with `ENTITLEMENT_NOT_ACTIVE`)
-- The account can never start another trial — calling this endpoint again returns 409
+- The account can never start another trial - calling this endpoint again returns 409
 - **Retirement on paid purchase:** When customer purchases a paid subscription, the webhook handler calls `retireTrialsForCustomer()` which sets the trial's `status=expired` and `expiresAt=now`. See changelog entry "2026-01-29: Trial Retirement on Paid Purchase" for implementation details.
 
 ### 3.6 Check Trial Eligibility
@@ -530,7 +530,7 @@ For subscription entitlements when the desktop device cannot reach the API direc
 1. Generate a challenge JWT (encodes entitlementId, deviceId, nonce)
 2. Redeem that same challenge JWT to receive a lease token
 
-This is a **portal-to-portal** flow — the challenge JWT is issued by the server and redeemed by the same customer through the portal UI. No cryptographic response from the desktop app is required (unlike the air-gapped flow which uses Ed25519 signatures).
+This is a **portal-to-portal** flow - the challenge JWT is issued by the server and redeemed by the same customer through the portal UI. No cryptographic response from the desktop app is required (unlike the air-gapped flow which uses Ed25519 signatures).
 
 ### 4.1 Generate Offline Challenge
 
@@ -654,7 +654,7 @@ For fully disconnected environments using USB/copy-paste codes. All codes are ba
 
 ### 5.1 Device Setup Code (App → Portal)
 
-Generated by the desktop app. Does **not** include `entitlementId` — binding happens during provisioning.
+Generated by the desktop app. Does **not** include `entitlementId` - binding happens during provisioning.
 
 **Format:**
 
@@ -1060,7 +1060,7 @@ The portal supports:
    - Now renders clock icon + big number + pulsing dot + expiry date
 
 3. **Step 4 subtext updated (hero.ts):**
-   - Replaced plain text with `urgencyPillCompact()` — smaller inline version with pulsing dot
+   - Replaced plain text with `urgencyPillCompact()` - smaller inline version with pulsing dot
    - Shows "ends soon" suffix when ≤3 days
 
 4. **CTA hint text strengthened:**
@@ -1078,13 +1078,13 @@ The portal supports:
 
 **Files touched:**
 
-- `frontend/src/components/customer/dashboard/DashboardIcon.astro` — added clock icon
-- `frontend/src/components/customer/dashboard/TrialUrgencyPill.astro` — new component (static)
-- `frontend/src/lib/customer/dashboard/urgency-pill.ts` — new module (runtime HTML)
-- `frontend/src/lib/customer/dashboard/hero.ts` — uses urgency pill, CTA hint logic
-- `frontend/src/lib/customer/dashboard/plans.ts` — uses urgency pill, Keep access button
-- `frontend/src/components/customer/dashboard/HeroSection.astro` — added #trial-cta-hint id
-- `docs/licensing-portal-current-state.md` — updated docs
+- `frontend/src/components/customer/dashboard/DashboardIcon.astro` - added clock icon
+- `frontend/src/components/customer/dashboard/TrialUrgencyPill.astro` - new component (static)
+- `frontend/src/lib/customer/dashboard/urgency-pill.ts` - new module (runtime HTML)
+- `frontend/src/lib/customer/dashboard/hero.ts` - uses urgency pill, CTA hint logic
+- `frontend/src/lib/customer/dashboard/plans.ts` - uses urgency pill, Keep access button
+- `frontend/src/components/customer/dashboard/HeroSection.astro` - added #trial-cta-hint id
+- `docs/licensing-portal-current-state.md` - updated docs
 
 **API/Backend impact:** None. Frontend-only visual changes.
 
@@ -1128,20 +1128,20 @@ The portal supports:
 
 **Files touched:**
 
-- `frontend/src/lib/customer/dashboard/state.ts` — added `getTrialState()` and `TrialState` interface
-- `frontend/src/lib/portal/types.ts` — added `getDaysLeft()` utility
-- `frontend/src/lib/customer/dashboard/hero.ts` — added banner logic, trial-only UI updates, dismiss handling
-- `frontend/src/lib/customer/dashboard/modals.ts` — added trial preselection, `openPurchaseModalFromTrial()`
-- `frontend/src/lib/customer/dashboard/plans.ts` — trial card display (already updated)
-- `frontend/src/components/customer/dashboard/HeroSection.astro` — trial-only hero redesign, banner markup
-- `docs/licensing-portal-current-state.md` — updated trial-only UX docs
+- `frontend/src/lib/customer/dashboard/state.ts` - added `getTrialState()` and `TrialState` interface
+- `frontend/src/lib/portal/types.ts` - added `getDaysLeft()` utility
+- `frontend/src/lib/customer/dashboard/hero.ts` - added banner logic, trial-only UI updates, dismiss handling
+- `frontend/src/lib/customer/dashboard/modals.ts` - added trial preselection, `openPurchaseModalFromTrial()`
+- `frontend/src/lib/customer/dashboard/plans.ts` - trial card display (already updated)
+- `frontend/src/components/customer/dashboard/HeroSection.astro` - trial-only hero redesign, banner markup
+- `docs/licensing-portal-current-state.md` - updated trial-only UX docs
 
 **API/Backend impact:** None. Frontend-only changes.
 
 **Tests/Scripts run:**
 
-- `pnpm -C frontend lint` — 0 errors (13 pre-existing warnings)
-- VS Code error checking — no errors in changed files
+- `pnpm -C frontend lint` - 0 errors (13 pre-existing warnings)
+- VS Code error checking - no errors in changed files
 - Verification scans confirmed new terms present: `trialDaysLeft`, `Keep access after trial`, `data-trial-purchase`, `trialBannerDismissedUntil`
 
 **git diff --stat:**
@@ -1177,8 +1177,8 @@ The portal supports:
    - Inline checklist markup (not using ActivationChecklist component) to allow JS text updates
 
 3. **New utility functions in types.ts:**
-   - `isActiveTrial(ent)` — true if tier="trial" and active status
-   - `isActivePaid(ent)` — true if tier!="trial" and active status
+   - `isActiveTrial(ent)` - true if tier="trial" and active status
+   - `isActivePaid(ent)` - true if tier!="trial" and active status
 
 4. **Updated hero.ts state logic:**
    - Computes `isTrialOnly = hasActiveTrial && !hasActivePaidEnt`
@@ -1192,25 +1192,25 @@ The portal supports:
 
 | State ID               | Condition                               | Badge                  | Primary CTA    | Secondary CTA           | Step 1                                                   |
 | ---------------------- | --------------------------------------- | ---------------------- | -------------- | ----------------------- | -------------------------------------------------------- |
-| `hero-no-entitlements` | No active entitlements                  | —                      | Start trial    | Buy subscription        | "Buy a subscription or activate a trial" (not completed) |
+| `hero-no-entitlements` | No active entitlements                  | -                      | Start trial    | Buy subscription        | "Buy a subscription or activate a trial" (not completed) |
 | `hero-trial-only`      | Active trial, no paid                   | Trial active (primary) | Download app   | Purchase subscription   | "Activate a trial" (completed)                           |
 | `hero-no-activated`    | Paid subscription, no activated devices | Subscription active    | Download app   | View plans              | "Buy a subscription" (completed)                         |
 | `hero-all-good`        | Has activated devices                   | Activated              | Open Lightlane | Activate another device | All completed                                            |
 
 **Files touched:**
 
-- `frontend/src/lib/portal/types.ts` — added `isActiveTrial()`, `isActivePaid()`
-- `frontend/src/lib/customer/dashboard/hero.ts` — added trial-only state logic
-- `frontend/src/components/customer/dashboard/HeroSection.astro` — added trial-only hero section, inline checklist
-- `frontend/src/lib/customer/dashboard/modals.ts` — wired `hero-trial-buy-btn`
-- `frontend/src/lib/customer/dashboard/tabs.ts` — wired `hero-advanced-link-trial`
-- `docs/licensing-portal-current-state.md` — updated UI behavior docs
+- `frontend/src/lib/portal/types.ts` - added `isActiveTrial()`, `isActivePaid()`
+- `frontend/src/lib/customer/dashboard/hero.ts` - added trial-only state logic
+- `frontend/src/components/customer/dashboard/HeroSection.astro` - added trial-only hero section, inline checklist
+- `frontend/src/lib/customer/dashboard/modals.ts` - wired `hero-trial-buy-btn`
+- `frontend/src/lib/customer/dashboard/tabs.ts` - wired `hero-advanced-link-trial`
+- `docs/licensing-portal-current-state.md` - updated UI behavior docs
 
 **API/Backend impact:** None. Frontend-only changes.
 
 **Tests/Scripts run:**
 
-- VS Code error checking — no errors in changed files
+- VS Code error checking - no errors in changed files
 
 **git diff --stat:**
 
@@ -1255,7 +1255,7 @@ The portal supports:
 
 **Tests/Scripts run:**
 
-- `npm run build` (frontend) — ✅ Success
+- `npm run build` (frontend) - ✅ Success
 
 **git diff --stat:**
 
@@ -1274,14 +1274,14 @@ The portal supports:
 **Changes:**
 
 1. **New `badge.ts` helper (`frontend/src/lib/customer/dashboard/badge.ts`):**
-   - `badge({ text, variant, size, outline })` — Returns badge HTML string
+   - `badge({ text, variant, size, outline })` - Returns badge HTML string
    - `badges` object with shortcuts: `badges.success()`, `badges.warning()`, `badges.ghost()`, `badges.outlineSuccess()`, `badges.outlineInfo()`, etc.
    - Mirrors `ResponsiveBadge.astro` safety classes for consistency
 
 2. **Updated TypeScript modules to use badge helper:**
-   - `plans.ts` — Status badges, device badges, type labels
-   - `devicesOverview.ts` — Device status badges
-   - `devicesTable.ts` — Status badges (already partially updated)
+   - `plans.ts` - Status badges, device badges, type labels
+   - `devicesOverview.ts` - Device status badges
+   - `devicesTable.ts` - Status badges (already partially updated)
 
 3. **Fixed "hidden flex" CSS contradiction in pagination:**
    - Issue: `hidden` and `flex` both set CSS `display` property, causing conflicts
@@ -1302,7 +1302,7 @@ The portal supports:
 
 **Tests/Scripts run:**
 
-- `npm run build` (frontend) — ✅ Success
+- `npm run build` (frontend) - ✅ Success
 
 ---
 
@@ -1326,10 +1326,10 @@ The portal supports:
    - Section uses `space-y-5` for consistent vertical rhythm
 
 3. **Updated dashboard components to use ResponsiveBadge:**
-   - `HeroSection.astro` — Status pills ("Subscription active", "Activated")
-   - `PlansCard.astro` — Plans count badge
-   - `DevicesCard.astro` — Devices count badge
-   - `AirGappedSection.astro` — "Subscription Only" badge
+   - `HeroSection.astro` - Status pills ("Subscription active", "Activated")
+   - `PlansCard.astro` - Plans count badge
+   - `DevicesCard.astro` - Devices count badge
+   - `AirGappedSection.astro` - "Subscription Only" badge
 
 **Files touched:**
 
@@ -1343,7 +1343,7 @@ The portal supports:
 
 **Tests/Scripts run:**
 
-- `npm run build` (frontend) — ✅ Success
+- `npm run build` (frontend) - ✅ Success
 
 **Files created/modified:**
 
@@ -1365,21 +1365,21 @@ docs/licensing-portal-current-state.md                            | ~45 +
 **Changes:**
 
 1. **New module structure in `frontend/src/lib/customer/dashboard/`:**
-   - `index.ts` — Barrel exports for `initCustomerDashboard()`
-   - `init.ts` — Main orchestrator: initializes all modules, handles initial data load
-   - `state.ts` — Entitlements/devices arrays + pagination state with getters/setters
-   - `dom.ts` — DOM helpers: `byId`, `maybeById`, `setHidden`, `setText`, `setHTML`, `setDisabled`, `addClass`, `removeClass`, `toggleClass`
-   - `icons.ts` — Platform icon SVG generator
-   - `tabs.ts` — Tab switching, URL sync, `initTabs()`, `switchTab()`
-   - `checklist.ts` — LocalStorage persistence for activation checklist state
-   - `data.ts` — API data loading functions (`loadEntitlements`, `loadDevices`, `loadAllData`)
-   - `hero.ts` — Hero section state management (`updateHeroState`, `initHero`)
-   - `billing.ts` — Billing portal navigation
-   - `plans.ts` — Plans list rendering with pagination
-   - `devicesOverview.ts` — Devices overview card rendering with pagination
-   - `devicesTable.ts` — Advanced devices table with all action buttons
-   - `modals.ts` — All 6 modal handlers (purchase, register, activate, deactivate, refresh, how-to-activate)
-   - `airgapped.ts` — All air-gapped logic: tab switching, validation, file loaders, provision/refresh/deactivate handlers
+   - `index.ts` - Barrel exports for `initCustomerDashboard()`
+   - `init.ts` - Main orchestrator: initializes all modules, handles initial data load
+   - `state.ts` - Entitlements/devices arrays + pagination state with getters/setters
+   - `dom.ts` - DOM helpers: `byId`, `maybeById`, `setHidden`, `setText`, `setHTML`, `setDisabled`, `addClass`, `removeClass`, `toggleClass`
+   - `icons.ts` - Platform icon SVG generator
+   - `tabs.ts` - Tab switching, URL sync, `initTabs()`, `switchTab()`
+   - `checklist.ts` - LocalStorage persistence for activation checklist state
+   - `data.ts` - API data loading functions (`loadEntitlements`, `loadDevices`, `loadAllData`)
+   - `hero.ts` - Hero section state management (`updateHeroState`, `initHero`)
+   - `billing.ts` - Billing portal navigation
+   - `plans.ts` - Plans list rendering with pagination
+   - `devicesOverview.ts` - Devices overview card rendering with pagination
+   - `devicesTable.ts` - Advanced devices table with all action buttons
+   - `modals.ts` - All 6 modal handlers (purchase, register, activate, deactivate, refresh, how-to-activate)
+   - `airgapped.ts` - All air-gapped logic: tab switching, validation, file loaders, provision/refresh/deactivate handlers
 
 2. **Added missing TypeScript types to `frontend/src/lib/portal/types.ts`:**
    - `OfflineProvisionResponse`
@@ -1395,7 +1395,7 @@ docs/licensing-portal-current-state.md                            | ~45 +
 
 **Architecture notes:**
 
-- Each module has an explicit `initX()` function — no code runs on import
+- Each module has an explicit `initX()` function - no code runs on import
 - State is centralized in `state.ts` with getters/setters; modules read state as needed
 - Module inter-dependencies handled via explicit setter functions (e.g., `setModalOpeners`) rather than circular imports
 - DOM elements are cached inside each module's `init()` function for performance
@@ -1411,7 +1411,7 @@ docs/licensing-portal-current-state.md                            | ~45 +
 
 **Tests/Scripts run:**
 
-- `npm run build` (frontend) — ✅ Success
+- `npm run build` (frontend) - ✅ Success
 
 ---
 
@@ -1468,7 +1468,7 @@ docs/licensing-portal-current-state.md                            | ~45 +
 
 **Tests/Scripts run:**
 
-- `pnpm build` (frontend) — ✅ Success
+- `pnpm build` (frontend) - ✅ Success
 
 ---
 
@@ -1501,7 +1501,7 @@ docs/licensing-portal-current-state.md                            | ~45 +
 
 **Tests/Scripts run:**
 
-- `pnpm build` (frontend) — ✅ Success
+- `pnpm build` (frontend) - ✅ Success
 
 **git diff --stat:**
 
@@ -1522,9 +1522,9 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 **Changes:**
 
 - **Hero section redesigned with 3 clear states:**
-  - **State 1 (No subscriptions):** "Get a subscription to activate Lightlane" — Buy subscription primary CTA
-  - **State 2 (Has subscriptions, no activated devices):** "Activate your first device in the app" — Download app primary CTA (merged old "no-devices" and "not-activated" states)
-  - **State 3 (Has activated devices):** "You're activated" — Open Lightlane primary CTA with expandable instructions for adding another device
+  - **State 1 (No subscriptions):** "Get a subscription to activate Lightlane" - Buy subscription primary CTA
+  - **State 2 (Has subscriptions, no activated devices):** "Activate your first device in the app" - Download app primary CTA (merged old "no-devices" and "not-activated" states)
+  - **State 3 (Has activated devices):** "You're activated" - Open Lightlane primary CTA with expandable instructions for adding another device
 
 - **Added activation checklist sidebar to each hero state:**
   - Shows 3-step flow: Buy subscription → Download app → Sign in & activate
@@ -1552,7 +1552,7 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 
 **Tests/Scripts run:**
 
-- `pnpm build` (frontend) — ✅ Success
+- `pnpm build` (frontend) - ✅ Success
 
 ---
 
@@ -1586,7 +1586,7 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 
 **Tests/Scripts run:**
 
-- `pnpm build` (frontend) — ✅ Success
+- `pnpm build` (frontend) - ✅ Success
 
 ```
  frontend/src/pages/customer/dashboard.astro | 787 +++-----
@@ -1617,7 +1617,7 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 
 **Tests/Scripts run:**
 
-- `pnpm build` (frontend) — ✅ Success
+- `pnpm build` (frontend) - ✅ Success
 
 ---
 
@@ -1643,8 +1643,8 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 
 **Tests/Scripts run:**
 
-- `pnpm build` (frontend) — ✅ Success
-- `node --test tests/offline-codes.test.js` (backend) — ✅ 49/49 tests pass
+- `pnpm build` (frontend) - ✅ Success
+- `node --test tests/offline-codes.test.js` (backend) - ✅ 49/49 tests pass
 
 ---
 
@@ -1675,7 +1675,7 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 
 **Tests/Scripts run:**
 
-- `pnpm build` (frontend) — ✅ Success
+- `pnpm build` (frontend) - ✅ Success
 
 ---
 
@@ -1725,7 +1725,7 @@ frontend/src/pages/customer/dashboard.astro  | 697 ++++++--
 
 **Tests/Scripts run:**
 
-- `pnpm -r lint` — ✅ 0 errors (warnings only, pre-existing)
+- `pnpm -r lint` - ✅ 0 errors (warnings only, pre-existing)
 
 **git diff --stat:**
 
@@ -1791,8 +1791,8 @@ docs/api/http/stage5/smoke-test.sh                                | 22 +++++++++
 
 **Tests/Scripts run:**
 
-- `pnpm -r lint` — ✅ 0 errors (warnings only, pre-existing)
-- `pnpm build` (frontend) — ✅ Success
+- `pnpm -r lint` - ✅ 0 errors (warnings only, pre-existing)
+- `pnpm build` (frontend) - ✅ Success
 
 **git diff --stat:**
 
@@ -1813,7 +1813,7 @@ frontend/src/lib/customer/dashboard/airgapped.ts                   | 95 ++++++++
 **Changes:**
 
 1. **Schema update: Added `trial` to entitlement tier enum:**
-   - `backend/src/api/entitlement/content-types/entitlement/schema.json` — tier now includes: `trial`, `maker`, `pro`, `education`, `enterprise`
+   - `backend/src/api/entitlement/content-types/entitlement/schema.json` - tier now includes: `trial`, `maker`, `pro`, `education`, `enterprise`
 
 2. **New backend endpoint: `POST /api/trial/start`:**
    - Protected by `customer-auth` and `license-rate-limit` middleware
@@ -1827,11 +1827,11 @@ frontend/src/lib/customer/dashboard/airgapped.ts                   | 95 ++++++++
    - Added to `backend/src/utils/api-responses.js`
 
 4. **Frontend: Trial API and dashboard UI:**
-   - `frontend/src/lib/portal/api.ts` — added `startTrial()` function and `StartTrialResponse` type
-   - `frontend/src/lib/customer/dashboard/hero.ts` — added trial button handler with loading/error states
-   - `frontend/src/lib/customer/dashboard/init.ts` — added `refreshAllUI()` export for post-trial refresh
-   - `frontend/src/components/customer/dashboard/HeroSection.astro` — redesigned "no entitlements" hero state with "Start 14-day free trial" primary CTA
-   - `frontend/src/components/customer/dashboard/DashboardIcon.astro` — added `play` icon for trial button
+   - `frontend/src/lib/portal/api.ts` - added `startTrial()` function and `StartTrialResponse` type
+   - `frontend/src/lib/customer/dashboard/hero.ts` - added trial button handler with loading/error states
+   - `frontend/src/lib/customer/dashboard/init.ts` - added `refreshAllUI()` export for post-trial refresh
+   - `frontend/src/components/customer/dashboard/HeroSection.astro` - redesigned "no entitlements" hero state with "Start 14-day free trial" primary CTA
+   - `frontend/src/components/customer/dashboard/DashboardIcon.astro` - added `play` icon for trial button
 
 **Trial Behavior (matching existing entitlement patterns):**
 
@@ -1896,13 +1896,13 @@ frontend/src/lib/customer/dashboard/airgapped.ts                   | 95 ++++++++
    - Handler added to `backend/src/api/custom/controllers/custom.js`
 
 2. **Frontend state management:**
-   - `frontend/src/lib/customer/dashboard/state.ts` — added `trialEligible` and `trialStatusLoaded` state variables with getters/setters
-   - `frontend/src/lib/customer/dashboard/data.ts` — added `loadTrialStatus()` function, integrated into `loadAllData()`
-   - `frontend/src/lib/portal/api.ts` — added `getTrialStatus()` function and `TrialStatusResponse` type
+   - `frontend/src/lib/customer/dashboard/state.ts` - added `trialEligible` and `trialStatusLoaded` state variables with getters/setters
+   - `frontend/src/lib/customer/dashboard/data.ts` - added `loadTrialStatus()` function, integrated into `loadAllData()`
+   - `frontend/src/lib/portal/api.ts` - added `getTrialStatus()` function and `TrialStatusResponse` type
 
 3. **Frontend hero updates:**
-   - `frontend/src/lib/customer/dashboard/hero.ts` — added `updateTrialButtonVisibility()` function that hides trial CTA until eligibility confirmed
-   - `frontend/src/components/customer/dashboard/HeroSection.astro` — trial button now `hidden` by default (no CTA flash before eligibility check)
+   - `frontend/src/lib/customer/dashboard/hero.ts` - added `updateTrialButtonVisibility()` function that hides trial CTA until eligibility confirmed
+   - `frontend/src/components/customer/dashboard/HeroSection.astro` - trial button now `hidden` by default (no CTA flash before eligibility check)
 
 4. **Documentation:**
    - Added section 3.6 "Check Trial Eligibility" with full endpoint spec
@@ -1954,7 +1954,7 @@ frontend/src/lib/customer/dashboard/airgapped.ts                   | 95 ++++++++
 
 ### 2026-01-29: Trial Retirement on Paid Purchase
 
-**Summary:** When a customer successfully purchases a paid subscription (via Stripe checkout), any active trial entitlement is now automatically retired — status set to `expired`, expiresAt set to current time. This ensures trials don't persist alongside paid subscriptions. Additionally, the `entitlementExpiresAt` field is now included in all offline activation packages and lease refresh responses so the app can display accurate trial countdown timers.
+**Summary:** When a customer successfully purchases a paid subscription (via Stripe checkout), any active trial entitlement is now automatically retired - status set to `expired`, expiresAt set to current time. This ensures trials don't persist alongside paid subscriptions. Additionally, the `entitlementExpiresAt` field is now included in all offline activation packages and lease refresh responses so the app can display accurate trial countdown timers.
 
 **Changes:**
 
@@ -1992,12 +1992,12 @@ frontend/src/lib/customer/dashboard/airgapped.ts                   | 95 ++++++++
 
 **Files touched:**
 
-- `backend/src/utils/entitlement-mapping.js` — new `retireTrialsForCustomer()` function
-- `backend/src/utils/stripe-webhook-handler.js` — import and call retirement function
-- `backend/src/utils/offline-codes.js` — updated both package builders
-- `backend/src/api/custom/controllers/custom.js` — pass `expiresAt` to package builders
-- `docs/app-integration-reference.md` — comprehensive trial documentation
-- `docs/licensing-portal-current-state.md` — this changelog entry
+- `backend/src/utils/entitlement-mapping.js` - new `retireTrialsForCustomer()` function
+- `backend/src/utils/stripe-webhook-handler.js` - import and call retirement function
+- `backend/src/utils/offline-codes.js` - updated both package builders
+- `backend/src/api/custom/controllers/custom.js` - pass `expiresAt` to package builders
+- `docs/app-integration-reference.md` - comprehensive trial documentation
+- `docs/licensing-portal-current-state.md` - this changelog entry
 
 **API/Backend impact:**
 
@@ -2058,8 +2058,8 @@ pnpm dev:purge-customers
 
 **Files touched:**
 
-- `backend/scripts/dev-purge-customers.js` — new script
-- `backend/package.json` — added `dev:purge-customers` script
+- `backend/scripts/dev-purge-customers.js` - new script
+- `backend/package.json` - added `dev:purge-customers` script
 
 **API/Backend impact:**
 
@@ -2132,9 +2132,9 @@ pnpm dev:purge-customers
 
 **Files touched:**
 
-- `backend/src/utils/api-responses.js` — added `EMAIL_ALREADY_EXISTS` to `ErrorCodes`
-- `backend/src/api/customer/controllers/customer.js` — email normalization + proper error response
-- `docs/licensing-portal-current-state.md` — added Customer data model section + this changelog
+- `backend/src/utils/api-responses.js` - added `EMAIL_ALREADY_EXISTS` to `ErrorCodes`
+- `backend/src/api/customer/controllers/customer.js` - email normalization + proper error response
+- `docs/licensing-portal-current-state.md` - added Customer data model section + this changelog
 
 **API/Backend impact:**
 
@@ -2205,9 +2205,9 @@ curl -X POST http://localhost:1337/api/customers/login \
 
 **Files touched:**
 
-- `frontend/src/pages/customer/register.astro` — improved error parsing for customer portal signup
-- `frontend/src/pages/register.astro` — improved error parsing for team/staff signup (consistency)
-- `docs/licensing-portal-current-state.md` — this changelog entry
+- `frontend/src/pages/customer/register.astro` - improved error parsing for customer portal signup
+- `frontend/src/pages/register.astro` - improved error parsing for team/staff signup (consistency)
+- `docs/licensing-portal-current-state.md` - this changelog entry
 
 **API/Backend impact:**
 

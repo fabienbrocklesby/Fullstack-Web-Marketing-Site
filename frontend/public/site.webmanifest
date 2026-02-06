@@ -1,7 +1,7 @@
 {
-  "name": "Lightlane",
-  "short_name": "Lightlane",
-  "description": "Lightlane laser engraving software: import → preview → engrave in fewer clicks.",
+  "name": "Light Lane",
+  "short_name": "Light Lane",
+  "description": "Light Lane laser engraving software: import → preview → engrave in fewer clicks.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

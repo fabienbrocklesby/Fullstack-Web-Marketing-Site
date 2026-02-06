@@ -1,5 +1,5 @@
 ---
-
+import Icon from "./icons/Icon.astro";
 ---
 
 <footer class="bg-base-100 border-t border-base-200 text-base-content mt-10">
@@ -14,7 +14,7 @@
         >
           <img
             src="/LogoHorizontal.webp"
-            alt="Lightlane"
+            alt="Light Lane"
             class="h-10 w-auto"
             width="210"
             height="40"
@@ -23,7 +23,7 @@
           />
         </a>
         <p class="text-sm leading-relaxed max-w-xs">
-          Lightlane compresses the laser engraving workflow from import to
+          Light Lane compresses the laser engraving workflow from import to
           engrave. Fast previews, device-ready streaming, offline activation,
           and materials presets built for production shops.
         </p>
@@ -36,21 +36,29 @@
             href="https://www.linkedin.com/company/light-lane/"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Follow Lightlane on LinkedIn"
+            aria-label="Follow Light Lane on LinkedIn"
             class="btn btn-ghost btn-circle btn-sm"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="currentColor"
+            <Icon
+              name="linkedin"
+              size={18}
               class="opacity-70 hover:opacity-100"
-            >
-              <path
-                d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"
-              ></path>
-            </svg>
+              ariaLabel="LinkedIn"
+            />
+          </a>
+          <a
+            href="https://www.instagram.com/lightlane.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Follow Light Lane on Instagram"
+            class="btn btn-ghost btn-circle btn-sm"
+          >
+            <Icon
+              name="instagram"
+              size={18}
+              class="opacity-70 hover:opacity-100"
+              ariaLabel="Instagram"
+            />
           </a>
         </div>
       </div>
@@ -80,9 +88,10 @@
         <ul class="space-y-2 text-sm">
           <li><a href="/blog" class="link link-hover">Blog</a></li>
           <li><a href="/contact" class="link link-hover">Contact</a></li>
+          <li><a href="/instagram" class="link link-hover">Instagram</a></li>
           <li>
             <a
-              href="mailto:partner@lightlane.app?subject=Lightlane%20Affiliate%20%2F%20Partner%20Application&body=Hello%20Lightlane%20team%2C%0A%0AI%27d%20like%20to%20apply%20to%20become%20an%20affiliate%20%2F%20partner.%0A%0AFeel%20free%20to%20rewrite%20this%20email%20if%20any%20section%20isn%27t%20relevant%20or%20if%20you%27d%20like%20to%20add%20your%20own%20context.%0A%0AInfluencer%20%2F%20Creator%20%28ignore%20if%20not%20relevant%29%3A%0A-%20Main%20channels%3A%0A-%20Average%20views%20per%20video%3A%0A-%20Audience%20focus%3A%0A%0ABusiness%20%2F%20Agency%20%28ignore%20if%20not%20relevant%29%3A%0A-%20Business%20name%3A%0A-%20Website%20or%20storefront%3A%0A-%20Customer%20profile%3A%0A%0APersonal%20%2F%20Hobby%20%28ignore%20if%20not%20relevant%29%3A%0A-%20What%20you%20engrave%20today%3A%0A-%20How%20you%20plan%20to%20share%20Lightlane%3A%0A%0AThanks%21%0A"
+              href="mailto:partner@lightlane.app?subject=Light%20Lane%20Affiliate%20%2F%20Partner%20Application&body=Hello%20Light%20Lane%20team%2C%0A%0AI%27d%20like%20to%20apply%20to%20become%20an%20affiliate%20%2F%20partner.%0A%0AFeel%20free%20to%20rewrite%20this%20email%20if%20any%20section%20isn%27t%20relevant%20or%20if%20you%27d%20like%20to%20add%20your%20own%20context.%0A%0AInfluencer%20%2F%20Creator%20%28ignore%20if%20not%20relevant%29%3A%0A-%20Main%20channels%3A%0A-%20Average%20views%20per%20video%3A%0A-%20Audience%20focus%3A%0A%0ABusiness%20%2F%20Agency%20%28ignore%20if%20not%20relevant%29%3A%0A-%20Business%20name%3A%0A-%20Website%20or%20storefront%3A%0A-%20Customer%20profile%3A%0A%0APersonal%20%2F%20Hobby%20%28ignore%20if%20not%20relevant%29%3A%0A-%20What%20you%20engrave%20today%3A%0A-%20How%20you%20plan%20to%20share%20Light%20Lane%3A%0A%0AThanks%21%0A"
               class="link link-hover">Affiliate / Partner</a
             >
           </li>
@@ -110,7 +119,7 @@
       class="mt-12 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-base-200 pt-6"
     >
       <p class="text-xs md:text-sm opacity-70">
-        © {new Date().getFullYear()} Lightlane. All rights reserved.
+        © {new Date().getFullYear()} Light Lane Limited. All rights reserved.
       </p>
     </div>
   </div>

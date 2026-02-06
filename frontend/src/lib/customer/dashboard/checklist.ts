@@ -10,6 +10,9 @@ interface ChecklistState {
   step3: boolean;
 }
 
+const checkIconSvg =
+  '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0"></path></svg>';
+
 /**
  * Get checklist state from localStorage
  */
@@ -48,7 +51,7 @@ function updateChecklistUI(suffix: string, state: ChecklistState): void {
   if (step2Row && step2Toggle && step2Text) {
     step2Row.setAttribute("aria-pressed", String(state.step2));
     if (state.step2) {
-      step2Toggle.innerHTML = "✓";
+      step2Toggle.innerHTML = checkIconSvg;
       step2Toggle.className = "flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0";
       step2Text.className = "text-sm text-base-content/70 line-through";
     } else {
@@ -61,7 +64,7 @@ function updateChecklistUI(suffix: string, state: ChecklistState): void {
   if (step3Row && step3Toggle && step3Text) {
     step3Row.setAttribute("aria-pressed", String(state.step3));
     if (state.step3) {
-      step3Toggle.innerHTML = "✓";
+      step3Toggle.innerHTML = checkIconSvg;
       step3Toggle.className = "flex items-center justify-center w-6 h-6 rounded-full bg-success text-success-content text-xs font-bold shrink-0";
       step3Text.className = "text-sm text-base-content/70 line-through";
     } else {

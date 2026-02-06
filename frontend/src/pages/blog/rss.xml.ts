@@ -26,7 +26,7 @@ export async function GET({ site }) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
-<title>Lightlane Blog</title>
+<title>Light Lane Blog</title>
 <link>${base ? new URL("/blog", base).href : "/blog"}</link>
 <description>Latest insights and tutorials about SaaS development</description>
 <language>en</language>

@@ -5,7 +5,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentMeta> = {
   "blocks.hero": {
     uid: "blocks.hero",
     name: "Hero Section",
-    icon: "🚀",
+    icon: "rocket",
     description: "Hero section with title, subtitle and call-to-action",
     defaultProps: {
       title: "Build Your SaaS Faster",
@@ -19,24 +19,24 @@ export const COMPONENT_REGISTRY: Record<string, ComponentMeta> = {
   "blocks.feature-grid": {
     uid: "blocks.feature-grid",
     name: "Feature Grid",
-    icon: "📋",
+    icon: "layout-grid",
     description: "Grid layout showing multiple features",
     defaultProps: {
       title: "Features",
       subtitle: "Everything you need to build your SaaS",
       features: [
         {
-          icon: "🚀",
+          icon: "rocket",
           title: "Modern Stack",
           description: "Built with the latest technologies",
         },
         {
-          icon: "💳",
+          icon: "credit-card",
           title: "Stripe Integration",
           description: "Complete payment processing",
         },
         {
-          icon: "🔗",
+          icon: "link",
           title: "Affiliate System",
           description: "Built-in affiliate tracking",
         },
@@ -46,7 +46,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentMeta> = {
   "blocks.testimonial": {
     uid: "blocks.testimonial",
     name: "Testimonials",
-    icon: "💬",
+    icon: "message-square",
     description: "Customer testimonials section",
     defaultProps: {
       title: "What Our Customers Say",
@@ -64,7 +64,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentMeta> = {
   "blocks.cta": {
     uid: "blocks.cta",
     name: "Call to Action",
-    icon: "🎯",
+    icon: "target",
     description: "Call-to-action section",
     defaultProps: {
       title: "Ready to Get Started?",
@@ -78,7 +78,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentMeta> = {
   "blocks.content": {
     uid: "blocks.content",
     name: "Content Section",
-    icon: "📝",
+    icon: "file-text",
     description: "Rich text content section",
     defaultProps: {
       title: "Content Section",
@@ -90,7 +90,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentMeta> = {
   "blocks.pricing": {
     uid: "blocks.pricing",
     name: "Pricing",
-    icon: "💰",
+    icon: "coins",
     description: "Pricing plans section",
     defaultProps: {
       title: "Choose Your Plan",

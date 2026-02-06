@@ -9,7 +9,7 @@
     "icon": {
       "type": "string",
       "required": true,
-      "default": "🚀"
+      "default": "rocket"
     },
     "title": {
       "type": "string",
@@ -33,7 +33,7 @@
     "iconStyle": {
       "type": "enumeration",
       "enum": ["emoji", "circle", "square", "none"],
-      "default": "emoji"
+      "default": "none"
     },
     "size": {
       "type": "enumeration",

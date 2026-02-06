@@ -1,4 +1,6 @@
 ---
+import Icon from "../icons/Icon.astro";
+
 interface PricingPlan {
   name: string;
   price: number;
@@ -81,7 +83,7 @@ const transformedPlans = plans.map((plan) => {
               <ul class="space-y-2 mb-6">
                 {plan.features?.map((feature) => (
                   <li class="flex items-center gap-2">
-                    <span class="text-success text-lg">✓</span>
+                    <Icon name="check-circle" class="w-4 h-4 text-success" />
                     <span class="text-sm">{feature}</span>
                   </li>
                 ))}

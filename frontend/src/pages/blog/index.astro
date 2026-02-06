@@ -8,13 +8,13 @@ export const prerender = false;
 
 const { posts, pagination } = await getPaginatedPosts(1, 9);
 
-const blogTitle = "Lightlane Blog";
+const blogTitle = "Light Lane Blog";
 const blogDescription =
-  "Laser engraving workflow guides, Lightlane product updates, and release notes.";
+  "Laser engraving workflow guides, Light Lane product updates, and release notes.";
 const blogKeywords = [
   "laser engraving software blog",
   "laser cutter workflow tips",
-  "Lightlane product updates",
+  "Light Lane product updates",
   "laser engraving tutorials",
   "laser cutter software news",
 ];
@@ -48,7 +48,7 @@ const structuredData = posts.length
           description: p.preview || p.excerpt,
           author: {
             "@type": "Person",
-            name: p.author || "Lightlane Editorial",
+            name: p.author || "Light Lane Editorial",
           },
         })),
       },
@@ -76,7 +76,7 @@ const structuredData = posts.length
         <div class="text-center mb-12">
           <h1 class="text-4xl font-bold mb-4">{blogTitle}</h1>
           <p class="text-xl text-base-content/70">
-            Laser engraving workflow guides, Lightlane product updates, and
+            Laser engraving workflow guides, Light Lane product updates, and
             release notes.
           </p>
         </div>

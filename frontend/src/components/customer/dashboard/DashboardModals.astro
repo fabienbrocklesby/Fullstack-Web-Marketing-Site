@@ -16,13 +16,13 @@ import DashboardIcon from "./DashboardIcon.astro";
 <!-- Purchase Modal -->
 <dialog id="purchase-modal" class="modal">
   <div class="modal-box">
-    <h3 class="font-bold text-lg mb-4">Subscribe to Lightlane</h3>
+    <h3 class="font-bold text-lg mb-4">Subscribe to Light Lane</h3>
     <form id="purchase-form" class="space-y-4">
       <div class="form-control">
         <label class="label"><span class="label-text">Plan</span></label>
         <select id="purchase-tier" class="select select-bordered w-full">
-          <option value="maker">Maker — $12/month</option>
-          <option value="pro" selected>Pro — $24/month</option>
+          <option value="maker">Maker - $12/month</option>
+          <option value="pro" selected>Pro - $24/month</option>
         </select>
       </div>
       <div id="purchase-error" class="alert alert-error hidden text-sm">
@@ -120,7 +120,7 @@ import DashboardIcon from "./DashboardIcon.astro";
   <div class="modal-box">
     <h3 class="font-bold text-lg mb-2">Activate Device</h3>
     <p class="text-sm text-base-content/60 mb-4">
-      Link this device to an entitlement to use Lightlane on it.
+      Link this device to an entitlement to use Light Lane on it.
     </p>
     <form id="activate-form" class="space-y-4">
       <input type="hidden" id="activate-device-id" />
@@ -247,13 +247,27 @@ import DashboardIcon from "./DashboardIcon.astro";
 <dialog id="how-to-activate-modal" class="modal">
   <div class="modal-box max-w-md">
     <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-        >✕</button
+      <button
+        class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+        aria-label="Close how-to-activate modal"
       >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 6L6 18M6 6l12 12"></path>
+        </svg>
+      </button>
     </form>
     <h3 class="font-bold text-lg mb-4">How to activate a plan</h3>
     <p class="text-sm text-base-content/70 mb-4">
-      Activation happens in the <strong>Lightlane desktop app</strong>, not in
+      Activation happens in the <strong>Light Lane desktop app</strong>, not in
       this portal. Follow these steps:
     </p>
     <ol class="space-y-3 mb-6">
@@ -265,7 +279,7 @@ import DashboardIcon from "./DashboardIcon.astro";
         <div>
           <span class="font-medium">Download the app</span>
           <p class="text-xs text-base-content/60">
-            Install Lightlane on your computer
+            Install Light Lane on your computer
           </p>
         </div>
       </li>

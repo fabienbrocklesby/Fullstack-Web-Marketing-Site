@@ -3,7 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 ---
 
 <Layout title="Customer Login">
-  <main class="relative min-h-screen flex items-stretch overflow-hidden">
+  <main class="relative min-h-screen overflow-hidden">
     <!-- Decorative / gradient background -->
     <div class="pointer-events-none absolute inset-0 -z-10">
       <div
@@ -21,10 +21,10 @@ import Layout from "../../layouts/Layout.astro";
     </div>
 
     <div
-      class="container mx-auto px-5 py-10 flex flex-col lg:flex-row gap-14 lg:gap-20 items-center"
+      class="container mx-auto max-w-6xl px-5 pt-4 pb-8 md:pt-6 md:pb-10 flex flex-col lg:flex-row lg:justify-center gap-8 md:gap-10 lg:gap-16 items-center"
     >
       <!-- Marketing / value prop side -->
-      <div class="w-full max-w-xl space-y-10 text-center lg:text-left">
+      <div class="w-full max-w-xl space-y-8 lg:space-y-10 text-center lg:text-left">
         <a
           href="/"
           class="btn btn-ghost btn-sm -ml-2 lg:ml-0 inline-flex items-center gap-2"
@@ -38,7 +38,7 @@ import Layout from "../../layouts/Layout.astro";
           >
             <span
               class="bg-gradient-to-br from-base-content to-base-content/60 bg-clip-text text-transparent"
-              >Login to your Lightlane workspace</span
+              >Login to your Light Lane workspace</span
             >
           </h1>
           <p
@@ -50,18 +50,18 @@ import Layout from "../../layouts/Layout.astro";
           </p>
           <ul class="grid sm:grid-cols-2 gap-4 text-sm">
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-success badge-soft mt-0.5">Speed</span>
+              <span class="badge badge-success badge-soft mt-0 sm:mt-0.5">Speed</span>
               <span class="text-base-content/70"
                 >Import ➜ Preview ➜ Engrave in fewer clicks - smooth, resilient
                 pipeline.</span
               >
             </li>
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-primary badge-soft mt-0.5"
+              <span class="badge badge-primary badge-soft mt-0 sm:mt-0.5"
                 >Precision</span
               >
               <span class="text-base-content/70"
@@ -69,9 +69,9 @@ import Layout from "../../layouts/Layout.astro";
               >
             </li>
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-accent badge-soft mt-0.5"
+              <span class="badge badge-accent badge-soft mt-0 sm:mt-0.5"
                 >Reliability</span
               >
               <span class="text-base-content/70"
@@ -80,9 +80,9 @@ import Layout from "../../layouts/Layout.astro";
               >
             </li>
             <li
-              class="flex items-start gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
+              class="flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-3 rounded-lg bg-base-100/70 backdrop-blur border border-base-300/50"
             >
-              <span class="badge badge-secondary badge-soft mt-0.5">Scale</span>
+              <span class="badge badge-secondary badge-soft mt-0 sm:mt-0.5">Scale</span>
               <span class="text-base-content/70"
                 >Reusable templates & materials database standardise production.</span
               >
@@ -104,7 +104,7 @@ import Layout from "../../layouts/Layout.astro";
         <div
           class="card shadow-2xl bg-base-100/90 backdrop-blur border border-base-300/60"
         >
-          <div class="card-body p-8 space-y-6">
+          <div class="card-body p-6 sm:p-8 space-y-6">
             <div class="space-y-2 text-center">
               <h2 class="text-2xl font-bold tracking-tight">Welcome back</h2>
               <p class="text-sm text-base-content/60">
@@ -156,7 +156,7 @@ import Layout from "../../layouts/Layout.astro";
               class="pt-1 text-center text-[11px] leading-relaxed text-base-content/70"
             >
               <p>
-                New to Lightlane?
+                New to Light Lane?
                 <a href="/customer/register" class="link link-primary"
                   >Create Account</a
                 >.

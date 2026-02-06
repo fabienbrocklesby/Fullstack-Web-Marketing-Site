@@ -3,6 +3,7 @@
 // This page previously provided MAC-based license activation for testing.
 // All activation now uses the Stage 4/5 device-based system via the Customer Portal.
 import Layout from "../layouts/Layout.astro";
+import Icon from "../components/icons/Icon.astro";
 ---
 
 <Layout
@@ -20,7 +21,9 @@ import Layout from "../layouts/Layout.astro";
     <div class="container mx-auto max-w-2xl">
       <div class="card bg-base-100 shadow-2xl">
         <div class="card-body text-center">
-          <div class="text-6xl mb-4">🔒</div>
+          <div class="flex justify-center mb-4">
+            <Icon name="lock" class="w-14 h-14 text-warning" ariaLabel="Lock" />
+          </div>
           <h1 class="card-title text-3xl justify-center mb-4">
             License Portal Retired
           </h1>
