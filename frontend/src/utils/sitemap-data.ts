@@ -54,7 +54,6 @@ const STATIC_ROUTES: Array<{
   { path: "/", changefreq: "daily", priority: 1.0 },
   { path: "/pricing", changefreq: "daily", priority: 0.9 },
   { path: "/contact", changefreq: "monthly", priority: 0.6 },
-  { path: "/instagram", changefreq: "weekly", priority: 0.6 },
   { path: "/blog", changefreq: "daily", priority: 0.8 },
   { path: "/blog/page/2", changefreq: "weekly", priority: 0.5 },
   { path: "/join", changefreq: "monthly", priority: 0.4 },
