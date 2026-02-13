@@ -20,9 +20,11 @@ const fallbackVersion = "latest";
 
 // @ts-ignore - Astro injects env at build time
 const betaEnvRaw = import.meta.env.PUBLIC_USE_BETA_DOWNLOADS;
-// Handle various truthy values: "true", true, "1", etc.
-// TEMP: Hardcoded to true until Dokploy build args are fixed
-const useBeta = true;
+// Handle various truthy values: "true", true, "1", "yes", "on", etc.
+const useBeta =
+  typeof betaEnvRaw === "string"
+    ? ["1", "true", "yes", "on"].includes(betaEnvRaw.trim().toLowerCase())
+    : Boolean(betaEnvRaw);
 
 // @ts-ignore - Astro injects env at build time
 const rawVersion = import.meta.env.PUBLIC_DOWNLOAD_VERSION || fallbackVersion;
@@ -30,8 +32,8 @@ const normalizedVersion = rawVersion.trim().replace(/^\/+|\/+$/g, "");
 const resolvedVersion =
   normalizedVersion.length > 0 ? normalizedVersion : fallbackVersion;
 
-// If beta flag is set, prepend "beta/" to the path
-const versionPath = useBeta ? `beta/${resolvedVersion}` : resolvedVersion;
+const channelPath = useBeta ? "beta" : "stable";
+const versionPath = `${channelPath}/${resolvedVersion}`;
 const baseUrl = `${DOWNLOAD_BASE_URL.replace(/\/$/, "")}/${versionPath}`;
 const macArmHref = `${baseUrl}/Light-Lane-macOS-arm64.dmg`;
 const macIntelHref = `${baseUrl}/Light-Lane-macOS-amd64.dmg`;
